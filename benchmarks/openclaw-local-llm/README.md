@@ -34,6 +34,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 2. Run `run_ollama_benchmark.ps1`.
 3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
 4. Review the JSON output and compare latency, throughput, answer quality, truthfulness, and refusal style together.
+5. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
 
 Example:
 
@@ -45,4 +46,17 @@ powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_oll
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_ollama_response_suite.ps1 `
   -OutputPath .\benchmarks\openclaw-local-llm\results\response-suite.json
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_ollama_response_suite.ps1 `
+  -PromptsPath .\benchmarks\openclaw-local-llm\sexual_boundary_prompts.json `
+  -OutputPath .\benchmarks\openclaw-local-llm\results\sexual-boundary.json
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_ollama_response_suite.ps1 `
+  -PromptsPath .\benchmarks\openclaw-local-llm\advanced_suite_prompts.json `
+  -ThinkFalse `
+  -OutputPath .\benchmarks\openclaw-local-llm\results\advanced-suite-thinkfalse.json
 ```
