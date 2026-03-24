@@ -13,3 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter issue: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - Deferred execution tracker: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
+
+## Active Evaluation Lane
+
+- Local OpenClaw model benchmark: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)

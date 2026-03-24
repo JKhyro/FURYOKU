@@ -1,0 +1,38 @@
+[
+  {
+    "model": "qwen3.5:4b",
+    "priority": 1,
+    "params_b": 4.66,
+    "ollama_size_gb": 3.4,
+    "context_tokens": 262144,
+    "license": "Apache-2.0",
+    "why": "Best first target for this machine class: large context, strong agent/instruction benchmarks, OpenAI-compatible serving guidance, and lower resource pressure than 7B/9B-class models."
+  },
+  {
+    "model": "phi4-mini",
+    "priority": 2,
+    "params_b": 3.8,
+    "ollama_size_gb": 2.5,
+    "context_tokens": 128000,
+    "license": "MIT",
+    "why": "Fastest lightweight fallback with explicit function-calling support and strong fit for compute-constrained or latency-bound scenarios."
+  },
+  {
+    "model": "gemma3:4b-it-q4_K_M",
+    "priority": 3,
+    "params_b": 4.3,
+    "ollama_size_gb": 3.3,
+    "context_tokens": 128000,
+    "license": "Gemma Terms of Use",
+    "why": "Viable compact alternative with strong general quality and low footprint, but less attractive than Qwen for OpenAI-compatible and agent-style workflows."
+  },
+  {
+    "model": "qwen2.5:7b",
+    "priority": 4,
+    "params_b": 7.62,
+    "ollama_size_gb": 4.7,
+    "context_tokens": 128000,
+    "license": "Apache-2.0",
+    "why": "Heavier fallback for stronger answer quality if the 4B-class candidates prove too weak on prompt/rewrite tasks."
+  }
+]
