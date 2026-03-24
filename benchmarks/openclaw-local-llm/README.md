@@ -27,6 +27,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - Best regular fallback to keep testing: `qwen2.5:7b`
 - Uncensored variants tested so far are not recommended on this machine
 - `qwen3.5:4b` remains the strongest upgrade candidate only if the runtime can force `think:false` cleanly
+- Imported experimental candidate tested on 2026-03-25: `gemma3-heretic:4b-q4km` is faster and lighter than the default Gemma path, but it was not promoted because instruction discipline and high-level reasoning were weaker
 
 ## Usage
 

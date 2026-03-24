@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param(
     [string]$HostUrl = "http://127.0.0.1:11434",
-    [string]$CandidatesPath = "$PSScriptRoot\\candidates.json",
-    [string]$PromptsPath = "$PSScriptRoot\\prompts.json",
-    [string]$OutputPath = "$PSScriptRoot\\results.json",
+    [string]$CandidatesPath = "",
+    [string]$PromptsPath = "",
+    [string]$OutputPath = "",
     [int]$RunsPerPrompt = 1,
     [switch]$SkipWarmup
 )
@@ -11,9 +11,22 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+if ([string]::IsNullOrWhiteSpace($CandidatesPath)) {
+    $CandidatesPath = Join-Path $PSScriptRoot "candidates.json"
+}
+
+if ([string]::IsNullOrWhiteSpace($PromptsPath)) {
+    $PromptsPath = Join-Path $PSScriptRoot "prompts.json"
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $OutputPath = Join-Path $PSScriptRoot "results.json"
+}
+
 function Get-JsonFile {
     param([string]$Path)
-    return Get-Content -Raw $Path | ConvertFrom-Json
+    $data = Get-Content -Raw $Path | ConvertFrom-Json
+    Write-Output $data
 }
 
 function Get-OllamaProcessSnapshot {
@@ -104,7 +117,7 @@ function Invoke-OllamaChat {
     }
 }
 
-$candidates = @(Get-JsonFile -Path $CandidatesPath | Sort-Object priority)
+$candidates = @((Get-JsonFile -Path $CandidatesPath) | Sort-Object priority)
 $prompts = @(Get-JsonFile -Path $PromptsPath)
 $results = @()
 
