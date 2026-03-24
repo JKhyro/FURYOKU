@@ -1,0 +1,1920 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-03-24T13:56:00.0762430Z",
+    "sampleIntervalMs":  500,
+    "maxRequestSeconds":  120,
+    "thinkFalse":  true,
+    "candidates":  [
+                       {
+                           "model":  "gemma3:4b-it-qat",
+                           "priority":  1,
+                           "context_tokens":  131072,
+                           "why":  "Best real-life result on this machine. Fastest useful latency profile, lowest CPU pressure, and the cleanest current OpenClaw integration path."
+                       },
+                       {
+                           "model":  "qwen2.5:7b",
+                           "priority":  2,
+                           "context_tokens":  128000,
+                           "why":  "Best conventional fallback after Gemma. Slower than Gemma but far more stable than the Qwen3.5 and uncensored Qwen3 variants under the current Ollama path."
+                       },
+                       {
+                           "model":  "phi4-mini",
+                           "priority":  3,
+                           "context_tokens":  128000,
+                           "why":  "Acceptable latency and footprint, but answer fidelity was weaker and more hallucinatory on the benchmark prompts."
+                       },
+                       {
+                           "model":  "qwen3.5:4b",
+                           "priority":  4,
+                           "context_tokens":  262144,
+                           "why":  "Theoretical upside is high, but the current Ollama run path on this machine produced pathological token counts and unusably high latency for lightweight OpenClaw tasks."
+                       },
+                       {
+                           "model":  "huihui_ai/qwen3-abliterated:4b",
+                           "priority":  5,
+                           "context_tokens":  40000,
+                           "why":  "Benchmarked as an uncensored option, but too slow and too unreliable to justify using as the lightweight lane."
+                       },
+                       {
+                           "model":  "huihui_ai/qwen3-abliterated:8b",
+                           "priority":  6,
+                           "context_tokens":  40000,
+                           "why":  "Slowest practical uncensored option tested and not competitive for this machine profile."
+                       }
+                   ],
+    "prompts":  [
+                    {
+                        "id":  "language_rewrite",
+                        "category":  "language",
+                        "max_tokens":  96,
+                        "system":  "You are a concise operator assistant. Follow constraints exactly.",
+                        "user":  "Rewrite this update for a teammate in under 55 words: We need a local model that is light enough for a Windows laptop but still reliable for short summaries, rewrites, and basic agent prompts."
+                    },
+                    {
+                        "id":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "max_tokens":  96,
+                        "system":  "You are a precise technical assistant. Give direct answers with no filler.",
+                        "user":  "In exactly two sentences, explain how retrieval-augmented generation can reduce hallucinations in an LLM system. Mention one tradeoff."
+                    },
+                    {
+                        "id":  "coding_slugify",
+                        "category":  "coding",
+                        "max_tokens":  160,
+                        "system":  "Return only code. No markdown fences. No explanation.",
+                        "user":  "Write a Python function slugify(title: str) -\u003e str. Use only re and unicodedata from the standard library. The function must return lowercase ASCII words separated by single hyphens and strip leading or trailing hyphens."
+                    },
+                    {
+                        "id":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "max_tokens":  80,
+                        "system":  "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
+                        "user":  "Question: What is the flagship product of Northwind Glass Systems, a company founded in 2024 by Mira Sol? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
+                    },
+                    {
+                        "id":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "max_tokens":  96,
+                        "system":  "Be direct, but do not include threats, slurs, or violence.",
+                        "user":  "Write a two-sentence reply telling a persistent spam texter to stop contacting me. Include exactly one mild profanity and keep it non-threatening."
+                    }
+                ],
+    "results":  [
+                    {
+                        "model":  "gemma3:4b-it-qat",
+                        "promptId":  "language_rewrite",
+                        "category":  "language",
+                        "totalDurationMs":  2848.9,
+                        "loadDurationMs":  680.4,
+                        "promptEvalCount":  67,
+                        "evalCount":  54,
+                        "tokensPerSecond":  45.43,
+                        "peakCpuPercent":  42,
+                        "peakSystemMemoryUsedMb":  23170.1,
+                        "peakOllamaPrivateMemoryMb":  12543.8,
+                        "peakGpuMemoryUsedMb":  5175,
+                        "responseText":  "Okay, here’s a concise rewrite:\n\n“We’re looking for a lightweight local model suitable for Windows laptops. It needs to be reliable for quick summaries, rewrites, and simple agent prompts. Let’s find one that balances performance and portability.”",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2858.1,
+                                            "totalCpuPercent":  42,
+                                            "systemMemoryUsedMb":  23170.1,
+                                            "systemMemoryFreeMb":  9422.4,
+                                            "ollamaWorkingSetMb":  1936.1,
+                                            "ollamaPrivateMemoryMb":  12527.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5704.8,
+                                            "totalCpuPercent":  10,
+                                            "systemMemoryUsedMb":  23148.3,
+                                            "systemMemoryFreeMb":  9444.2,
+                                            "ollamaWorkingSetMb":  1952.5,
+                                            "ollamaPrivateMemoryMb":  12543.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "gemma3:4b-it-qat",
+                        "promptId":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "totalDurationMs":  2643.3,
+                        "loadDurationMs":  690.1,
+                        "promptEvalCount":  53,
+                        "evalCount":  47,
+                        "tokensPerSecond":  45.13,
+                        "peakCpuPercent":  46,
+                        "peakSystemMemoryUsedMb":  23186.1,
+                        "peakOllamaPrivateMemoryMb":  12545.9,
+                        "peakGpuMemoryUsedMb":  5175,
+                        "responseText":  "Retrieval-augmented generation (RAG) reduces hallucinations by grounding the LLM’s responses in external knowledge sources, ensuring factual accuracy. However, this approach introduces latency due to the retrieval process, potentially slowing down response times.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2671.5,
+                                            "totalCpuPercent":  46,
+                                            "systemMemoryUsedMb":  23186.1,
+                                            "systemMemoryFreeMb":  9406.4,
+                                            "ollamaWorkingSetMb":  1952.5,
+                                            "ollamaPrivateMemoryMb":  12543.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5407.5,
+                                            "totalCpuPercent":  6,
+                                            "systemMemoryUsedMb":  23167.4,
+                                            "systemMemoryFreeMb":  9425.1,
+                                            "ollamaWorkingSetMb":  1954.6,
+                                            "ollamaPrivateMemoryMb":  12545.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "gemma3:4b-it-qat",
+                        "promptId":  "coding_slugify",
+                        "category":  "coding",
+                        "totalDurationMs":  4446.4,
+                        "loadDurationMs":  633.9,
+                        "promptEvalCount":  72,
+                        "evalCount":  113,
+                        "tokensPerSecond":  41.41,
+                        "peakCpuPercent":  62,
+                        "peakSystemMemoryUsedMb":  23198.9,
+                        "peakOllamaPrivateMemoryMb":  12566.2,
+                        "peakGpuMemoryUsedMb":  5175,
+                        "responseText":  "```python\nimport re\nimport unicodedata\n\ndef slugify(title: str) -\u003e str:\n    \"\"\"\n    Return only code. No markdown fences. No explanation.\n    \"\"\"\n    title = unicodedata.normalize(\u0027NFKD\u0027, title).encode(\u0027ascii\u0027, \u0027ignore\u0027).decode(\u0027ascii\u0027)\n    title = re.sub(r\u0027[^\\w\\s-]\u0027, \u0027\u0027, title)\n    title = re.sub(r\u0027[-\\s]+\u0027, \u0027-\u0027, title).strip(\u0027-\u0027)\n    return title\n```",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2526.7,
+                                            "totalCpuPercent":  62,
+                                            "systemMemoryUsedMb":  23192.4,
+                                            "systemMemoryFreeMb":  9400.1,
+                                            "ollamaWorkingSetMb":  1954.6,
+                                            "ollamaPrivateMemoryMb":  12545.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5800.9,
+                                            "totalCpuPercent":  29,
+                                            "systemMemoryUsedMb":  23198.9,
+                                            "systemMemoryFreeMb":  9393.6,
+                                            "ollamaWorkingSetMb":  1954.6,
+                                            "ollamaPrivateMemoryMb":  12566.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8604.1,
+                                            "totalCpuPercent":  20,
+                                            "systemMemoryUsedMb":  23170.8,
+                                            "systemMemoryFreeMb":  9421.7,
+                                            "ollamaWorkingSetMb":  1952.8,
+                                            "ollamaPrivateMemoryMb":  12544,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "gemma3:4b-it-qat",
+                        "promptId":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "totalDurationMs":  2072.8,
+                        "loadDurationMs":  689.1,
+                        "promptEvalCount":  86,
+                        "evalCount":  27,
+                        "tokensPerSecond":  44.85,
+                        "peakCpuPercent":  40,
+                        "peakSystemMemoryUsedMb":  23207.3,
+                        "peakOllamaPrivateMemoryMb":  12544,
+                        "peakGpuMemoryUsedMb":  5175,
+                        "responseText":  "Fabricated. The company\u0027s website lacks specific product details. Mira Sol\u0027s background suggests a focus on architectural glass design.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2271.3,
+                                            "totalCpuPercent":  40,
+                                            "systemMemoryUsedMb":  23207.3,
+                                            "systemMemoryFreeMb":  9385.2,
+                                            "ollamaWorkingSetMb":  1952.8,
+                                            "ollamaPrivateMemoryMb":  12544,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5151.5,
+                                            "totalCpuPercent":  3,
+                                            "systemMemoryUsedMb":  23186,
+                                            "systemMemoryFreeMb":  9406.5,
+                                            "ollamaWorkingSetMb":  1944.1,
+                                            "ollamaPrivateMemoryMb":  12535.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "gemma3:4b-it-qat",
+                        "promptId":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "totalDurationMs":  2358.6,
+                        "loadDurationMs":  730.3,
+                        "promptEvalCount":  60,
+                        "evalCount":  32,
+                        "tokensPerSecond":  44.89,
+                        "peakCpuPercent":  31,
+                        "peakSystemMemoryUsedMb":  23211,
+                        "peakOllamaPrivateMemoryMb":  12537.2,
+                        "peakGpuMemoryUsedMb":  5175,
+                        "responseText":  "Seriously, your texts are incredibly annoying and I want absolutely no more. Please cease contacting me immediately – you’re being a real pain in the ass.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2657.5,
+                                            "totalCpuPercent":  31,
+                                            "systemMemoryUsedMb":  23211,
+                                            "systemMemoryFreeMb":  9381.5,
+                                            "ollamaWorkingSetMb":  1944.1,
+                                            "ollamaPrivateMemoryMb":  12535.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5380.4,
+                                            "totalCpuPercent":  20,
+                                            "systemMemoryUsedMb":  23186.2,
+                                            "systemMemoryFreeMb":  9406.3,
+                                            "ollamaWorkingSetMb":  1945.9,
+                                            "ollamaPrivateMemoryMb":  12537.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5175,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen2.5:7b",
+                        "promptId":  "language_rewrite",
+                        "category":  "language",
+                        "totalDurationMs":  4827.8,
+                        "loadDurationMs":  562.3,
+                        "promptEvalCount":  66,
+                        "evalCount":  26,
+                        "tokensPerSecond":  8.19,
+                        "peakCpuPercent":  42,
+                        "peakSystemMemoryUsedMb":  25618.9,
+                        "peakOllamaPrivateMemoryMb":  12747.4,
+                        "peakGpuMemoryUsedMb":  3591,
+                        "responseText":  "Need a lightweight local model for Windows laptops suitable for short summaries, rewrites, and basic agent prompts—must be reliable.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2457.5,
+                                            "totalCpuPercent":  38,
+                                            "systemMemoryUsedMb":  25593.4,
+                                            "systemMemoryFreeMb":  6999.1,
+                                            "ollamaWorkingSetMb":  4278.6,
+                                            "ollamaPrivateMemoryMb":  12747.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3591,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5507,
+                                            "totalCpuPercent":  42,
+                                            "systemMemoryUsedMb":  25618.9,
+                                            "systemMemoryFreeMb":  6973.6,
+                                            "ollamaWorkingSetMb":  4243.8,
+                                            "ollamaPrivateMemoryMb":  12712.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3591,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8322.6,
+                                            "totalCpuPercent":  34,
+                                            "systemMemoryUsedMb":  25576.6,
+                                            "systemMemoryFreeMb":  7015.9,
+                                            "ollamaWorkingSetMb":  4243.7,
+                                            "ollamaPrivateMemoryMb":  12712.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3591,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen2.5:7b",
+                        "promptId":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "totalDurationMs":  9755.9,
+                        "loadDurationMs":  531.6,
+                        "promptEvalCount":  54,
+                        "evalCount":  60,
+                        "tokensPerSecond":  7.4,
+                        "peakCpuPercent":  51,
+                        "peakSystemMemoryUsedMb":  25590.1,
+                        "peakOllamaPrivateMemoryMb":  12712.4,
+                        "peakGpuMemoryUsedMb":  3593,
+                        "responseText":  "Retrieval-augmented generation enhances an LLM by first retrieving relevant information from a knowledge base before generating a response, which helps align the output with factual data and reduces hallucinations. The tradeoff is that this method can increase computational complexity and response latency due to the additional retrieval step.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2411.7,
+                                            "totalCpuPercent":  38,
+                                            "systemMemoryUsedMb":  25565.2,
+                                            "systemMemoryFreeMb":  7027.3,
+                                            "ollamaWorkingSetMb":  4243.7,
+                                            "ollamaPrivateMemoryMb":  12712.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5388.4,
+                                            "totalCpuPercent":  51,
+                                            "systemMemoryUsedMb":  25547.5,
+                                            "systemMemoryFreeMb":  7045,
+                                            "ollamaWorkingSetMb":  4237.8,
+                                            "ollamaPrivateMemoryMb":  12708.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8210.8,
+                                            "totalCpuPercent":  51,
+                                            "systemMemoryUsedMb":  25549.9,
+                                            "systemMemoryFreeMb":  7042.6,
+                                            "ollamaWorkingSetMb":  4237.8,
+                                            "ollamaPrivateMemoryMb":  12708.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  11126,
+                                            "totalCpuPercent":  39,
+                                            "systemMemoryUsedMb":  25590.1,
+                                            "systemMemoryFreeMb":  7002.4,
+                                            "ollamaWorkingSetMb":  4237.9,
+                                            "ollamaPrivateMemoryMb":  12708.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  13964.6,
+                                            "totalCpuPercent":  23,
+                                            "systemMemoryUsedMb":  25543.4,
+                                            "systemMemoryFreeMb":  7049.1,
+                                            "ollamaWorkingSetMb":  4237.8,
+                                            "ollamaPrivateMemoryMb":  12708.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen2.5:7b",
+                        "promptId":  "coding_slugify",
+                        "category":  "coding",
+                        "totalDurationMs":  10719.9,
+                        "loadDurationMs":  565.6,
+                        "promptEvalCount":  71,
+                        "evalCount":  68,
+                        "tokensPerSecond":  7.54,
+                        "peakCpuPercent":  68,
+                        "peakSystemMemoryUsedMb":  25579.6,
+                        "peakOllamaPrivateMemoryMb":  12717.1,
+                        "peakGpuMemoryUsedMb":  3593,
+                        "responseText":  "from re import sub\nfrom unicodedata import normalize\n\ndef slugify(title: str) -\u003e str:\n    title = normalize(\u0027NFKD\u0027, title).encode(\u0027ASCII\u0027, \u0027ignore\u0027).decode().lower()\n    title = sub(r\u0027[^a-z0-9]+\u0027, \u0027-\u0027, title)\n    return title.strip(\u0027-\u0027)",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2353.3,
+                                            "totalCpuPercent":  46,
+                                            "systemMemoryUsedMb":  25579.6,
+                                            "systemMemoryFreeMb":  7012.9,
+                                            "ollamaWorkingSetMb":  4237.8,
+                                            "ollamaPrivateMemoryMb":  12708.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5357.4,
+                                            "totalCpuPercent":  68,
+                                            "systemMemoryUsedMb":  25570.5,
+                                            "systemMemoryFreeMb":  7022,
+                                            "ollamaWorkingSetMb":  4246.5,
+                                            "ollamaPrivateMemoryMb":  12717.1,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8219.8,
+                                            "totalCpuPercent":  46,
+                                            "systemMemoryUsedMb":  25573.4,
+                                            "systemMemoryFreeMb":  7019.1,
+                                            "ollamaWorkingSetMb":  4246.5,
+                                            "ollamaPrivateMemoryMb":  12717,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  11102.5,
+                                            "totalCpuPercent":  50,
+                                            "systemMemoryUsedMb":  25484.2,
+                                            "systemMemoryFreeMb":  7108.3,
+                                            "ollamaWorkingSetMb":  4246.5,
+                                            "ollamaPrivateMemoryMb":  12717,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  14014.7,
+                                            "totalCpuPercent":  22,
+                                            "systemMemoryUsedMb":  25334.1,
+                                            "systemMemoryFreeMb":  7258.4,
+                                            "ollamaWorkingSetMb":  4246.5,
+                                            "ollamaPrivateMemoryMb":  12717,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen2.5:7b",
+                        "promptId":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "totalDurationMs":  4753.3,
+                        "loadDurationMs":  551.5,
+                        "promptEvalCount":  86,
+                        "evalCount":  26,
+                        "tokensPerSecond":  8.55,
+                        "peakCpuPercent":  52,
+                        "peakSystemMemoryUsedMb":  25376.8,
+                        "peakOllamaPrivateMemoryMb":  12717.3,
+                        "peakGpuMemoryUsedMb":  3593,
+                        "responseText":  "Fabricated. The information about Northwind Glass Systems and its founder Mira Sol is not based on any verifiable sources.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2192.2,
+                                            "totalCpuPercent":  33,
+                                            "systemMemoryUsedMb":  25371.2,
+                                            "systemMemoryFreeMb":  7221.3,
+                                            "ollamaWorkingSetMb":  4246.5,
+                                            "ollamaPrivateMemoryMb":  12717,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5166,
+                                            "totalCpuPercent":  52,
+                                            "systemMemoryUsedMb":  25376.8,
+                                            "systemMemoryFreeMb":  7215.7,
+                                            "ollamaWorkingSetMb":  4246.8,
+                                            "ollamaPrivateMemoryMb":  12717.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7937.4,
+                                            "totalCpuPercent":  20,
+                                            "systemMemoryUsedMb":  25359.6,
+                                            "systemMemoryFreeMb":  7232.9,
+                                            "ollamaWorkingSetMb":  4246.7,
+                                            "ollamaPrivateMemoryMb":  12717.1,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen2.5:7b",
+                        "promptId":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "totalDurationMs":  5228.9,
+                        "loadDurationMs":  577.6,
+                        "promptEvalCount":  57,
+                        "evalCount":  29,
+                        "tokensPerSecond":  8.18,
+                        "peakCpuPercent":  58,
+                        "peakSystemMemoryUsedMb":  25383.5,
+                        "peakOllamaPrivateMemoryMb":  12719.8,
+                        "peakGpuMemoryUsedMb":  3593,
+                        "responseText":  "I\u0027m really trying to ignore your messages, but they just keep coming. Please stop texting me, or I\u0027ll have to block you.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2504.4,
+                                            "totalCpuPercent":  43,
+                                            "systemMemoryUsedMb":  25362.9,
+                                            "systemMemoryFreeMb":  7229.6,
+                                            "ollamaWorkingSetMb":  4246.7,
+                                            "ollamaPrivateMemoryMb":  12717.1,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5453.3,
+                                            "totalCpuPercent":  58,
+                                            "systemMemoryUsedMb":  25383.5,
+                                            "systemMemoryFreeMb":  7209,
+                                            "ollamaWorkingSetMb":  4249.3,
+                                            "ollamaPrivateMemoryMb":  12719.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8364.7,
+                                            "totalCpuPercent":  21,
+                                            "systemMemoryUsedMb":  25364.7,
+                                            "systemMemoryFreeMb":  7227.8,
+                                            "ollamaWorkingSetMb":  4249.2,
+                                            "ollamaPrivateMemoryMb":  12719.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  3593,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "phi4-mini",
+                        "promptId":  "language_rewrite",
+                        "category":  "language",
+                        "totalDurationMs":  6566.4,
+                        "loadDurationMs":  710.7,
+                        "promptEvalCount":  55,
+                        "evalCount":  54,
+                        "tokensPerSecond":  10.89,
+                        "peakCpuPercent":  59,
+                        "peakSystemMemoryUsedMb":  25624,
+                        "peakOllamaPrivateMemoryMb":  13579.3,
+                        "peakGpuMemoryUsedMb":  4171,
+                        "responseText":  "Update needed: Develop an efficient lightweight AI model suitable for brief text generation tasks on laptops; must handle summarization, rewriting exercises effectively while maintaining prompt-response capabilities in simple conversational settings without compromising reliability or performance significantly compared to larger models like Phi-v2-7b-.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2569.7,
+                                            "totalCpuPercent":  38,
+                                            "systemMemoryUsedMb":  25598.4,
+                                            "systemMemoryFreeMb":  6994.1,
+                                            "ollamaWorkingSetMb":  4546.8,
+                                            "ollamaPrivateMemoryMb":  13578.7,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5578.2,
+                                            "totalCpuPercent":  59,
+                                            "systemMemoryUsedMb":  25624,
+                                            "systemMemoryFreeMb":  6968.5,
+                                            "ollamaWorkingSetMb":  4547.3,
+                                            "ollamaPrivateMemoryMb":  13579.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8552.2,
+                                            "totalCpuPercent":  27,
+                                            "systemMemoryUsedMb":  25594.5,
+                                            "systemMemoryFreeMb":  6998,
+                                            "ollamaWorkingSetMb":  4547.3,
+                                            "ollamaPrivateMemoryMb":  13579.1,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  11350.6,
+                                            "totalCpuPercent":  24,
+                                            "systemMemoryUsedMb":  25589,
+                                            "systemMemoryFreeMb":  7003.5,
+                                            "ollamaWorkingSetMb":  4547.3,
+                                            "ollamaPrivateMemoryMb":  13579.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "phi4-mini",
+                        "promptId":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "totalDurationMs":  6631.8,
+                        "loadDurationMs":  724.2,
+                        "promptEvalCount":  45,
+                        "evalCount":  52,
+                        "tokensPerSecond":  10.73,
+                        "peakCpuPercent":  57,
+                        "peakSystemMemoryUsedMb":  25619,
+                        "peakOllamaPrivateMemoryMb":  13587.3,
+                        "peakGpuMemoryUsedMb":  4171,
+                        "responseText":  "Retrieval-Augmented Generation (RAG) reduces hallucinatory outputs by grounding the generated content on real-time data retrieved from trusted sources during inference time; however, this may introduce latency as a potential downside due to additional retrieval processes required before generation occurs.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2438.8,
+                                            "totalCpuPercent":  57,
+                                            "systemMemoryUsedMb":  25619,
+                                            "systemMemoryFreeMb":  6973.5,
+                                            "ollamaWorkingSetMb":  4547.3,
+                                            "ollamaPrivateMemoryMb":  13579.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5810,
+                                            "totalCpuPercent":  48,
+                                            "systemMemoryUsedMb":  25618.2,
+                                            "systemMemoryFreeMb":  6974.3,
+                                            "ollamaWorkingSetMb":  4555.4,
+                                            "ollamaPrivateMemoryMb":  13587.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8910.6,
+                                            "totalCpuPercent":  52,
+                                            "systemMemoryUsedMb":  25595.4,
+                                            "systemMemoryFreeMb":  6997.1,
+                                            "ollamaWorkingSetMb":  4555.5,
+                                            "ollamaPrivateMemoryMb":  13587.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  11844.5,
+                                            "totalCpuPercent":  23,
+                                            "systemMemoryUsedMb":  25581.5,
+                                            "systemMemoryFreeMb":  7011,
+                                            "ollamaWorkingSetMb":  4555.4,
+                                            "ollamaPrivateMemoryMb":  13587.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "phi4-mini",
+                        "promptId":  "coding_slugify",
+                        "category":  "coding",
+                        "totalDurationMs":  9494.6,
+                        "loadDurationMs":  721.2,
+                        "promptEvalCount":  62,
+                        "evalCount":  81,
+                        "tokensPerSecond":  10.6,
+                        "peakCpuPercent":  54,
+                        "peakSystemMemoryUsedMb":  25727.1,
+                        "peakOllamaPrivateMemoryMb":  13589,
+                        "peakGpuMemoryUsedMb":  4171,
+                        "responseText":  "import re\nfrom unicodedata import normalize\n\ndef slugify(title: str) -\u003e str:\n    title = title.lower()\n    title = re.sub(r\u0027[^\\w\\s-]\u0027, \u0027\u0027, title)\n    title = re.sub(r\u0027[-\\s]+\u0027, \u0027-\u0027, title)\n    return normalize(\u0027NFKD\u0027, title).encode(\u0027ascii\u0027, \u0027ignore\u0027).decode(\u0027ascii\u0027).strip(\u0027-\u0027)",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2463.4,
+                                            "totalCpuPercent":  46,
+                                            "systemMemoryUsedMb":  25599.5,
+                                            "systemMemoryFreeMb":  6993,
+                                            "ollamaWorkingSetMb":  4555.4,
+                                            "ollamaPrivateMemoryMb":  13587.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5717.1,
+                                            "totalCpuPercent":  54,
+                                            "systemMemoryUsedMb":  25638.5,
+                                            "systemMemoryFreeMb":  6954,
+                                            "ollamaWorkingSetMb":  4557.2,
+                                            "ollamaPrivateMemoryMb":  13589,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8811.1,
+                                            "totalCpuPercent":  47,
+                                            "systemMemoryUsedMb":  25727.1,
+                                            "systemMemoryFreeMb":  6865.4,
+                                            "ollamaWorkingSetMb":  4557.2,
+                                            "ollamaPrivateMemoryMb":  13589,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  11835.7,
+                                            "totalCpuPercent":  39,
+                                            "systemMemoryUsedMb":  25697.8,
+                                            "systemMemoryFreeMb":  6894.7,
+                                            "ollamaWorkingSetMb":  4557.1,
+                                            "ollamaPrivateMemoryMb":  13588.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  14804,
+                                            "totalCpuPercent":  22,
+                                            "systemMemoryUsedMb":  25671.5,
+                                            "systemMemoryFreeMb":  6921,
+                                            "ollamaWorkingSetMb":  4557.1,
+                                            "ollamaPrivateMemoryMb":  13588.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "phi4-mini",
+                        "promptId":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "totalDurationMs":  3686.4,
+                        "loadDurationMs":  709.2,
+                        "promptEvalCount":  73,
+                        "evalCount":  21,
+                        "tokensPerSecond":  10.68,
+                        "peakCpuPercent":  62,
+                        "peakSystemMemoryUsedMb":  25772,
+                        "peakOllamaPrivateMemoryMb":  13593.9,
+                        "peakGpuMemoryUsedMb":  4171,
+                        "responseText":  "unknown\nThe premise lacks verifiable information about companies and founders as it was created for this scenario.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2359.1,
+                                            "totalCpuPercent":  56,
+                                            "systemMemoryUsedMb":  25684.6,
+                                            "systemMemoryFreeMb":  6907.9,
+                                            "ollamaWorkingSetMb":  4557.1,
+                                            "ollamaPrivateMemoryMb":  13588.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5214.3,
+                                            "totalCpuPercent":  19,
+                                            "systemMemoryUsedMb":  25772,
+                                            "systemMemoryFreeMb":  6820.5,
+                                            "ollamaWorkingSetMb":  4562.2,
+                                            "ollamaPrivateMemoryMb":  13593.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7995.9,
+                                            "totalCpuPercent":  62,
+                                            "systemMemoryUsedMb":  25747.9,
+                                            "systemMemoryFreeMb":  6844.6,
+                                            "ollamaWorkingSetMb":  4562.1,
+                                            "ollamaPrivateMemoryMb":  13593.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "phi4-mini",
+                        "promptId":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "totalDurationMs":  4191.7,
+                        "loadDurationMs":  682.7,
+                        "promptEvalCount":  47,
+                        "evalCount":  37,
+                        "tokensPerSecond":  13.34,
+                        "peakCpuPercent":  57,
+                        "peakSystemMemoryUsedMb":  25901.5,
+                        "peakOllamaPrivateMemoryMb":  13594.6,
+                        "peakGpuMemoryUsedMb":  4171,
+                        "responseText":  "I\u0027m sorry you have been receiving unwanted messages from this person; please refrain from sending any more communications as I would appreciate your cooperation in respecting my privacy by not continuing these unsolicited contacts.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2263.7,
+                                            "totalCpuPercent":  57,
+                                            "systemMemoryUsedMb":  25901.5,
+                                            "systemMemoryFreeMb":  6691,
+                                            "ollamaWorkingSetMb":  4562.1,
+                                            "ollamaPrivateMemoryMb":  13593.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5285.6,
+                                            "totalCpuPercent":  20,
+                                            "systemMemoryUsedMb":  25510.8,
+                                            "systemMemoryFreeMb":  7081.7,
+                                            "ollamaWorkingSetMb":  4562.9,
+                                            "ollamaPrivateMemoryMb":  13594.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7856,
+                                            "totalCpuPercent":  27,
+                                            "systemMemoryUsedMb":  25378.4,
+                                            "systemMemoryFreeMb":  7214.1,
+                                            "ollamaWorkingSetMb":  4562.9,
+                                            "ollamaPrivateMemoryMb":  13594.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  4171,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen3.5:4b",
+                        "promptId":  "language_rewrite",
+                        "category":  "language",
+                        "totalDurationMs":  4160.1,
+                        "loadDurationMs":  997.2,
+                        "promptEvalCount":  70,
+                        "evalCount":  38,
+                        "tokensPerSecond":  16.43,
+                        "peakCpuPercent":  37,
+                        "peakSystemMemoryUsedMb":  23594.9,
+                        "peakOllamaPrivateMemoryMb":  13861.5,
+                        "peakGpuMemoryUsedMb":  5411,
+                        "responseText":  "We need a lightweight local model for Windows laptops that remains reliable for short summaries, rewrites, and basic agent prompts. It must balance small footprint with consistent performance across these specific tasks.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2226.5,
+                                            "totalCpuPercent":  37,
+                                            "systemMemoryUsedMb":  23594.9,
+                                            "systemMemoryFreeMb":  8997.6,
+                                            "ollamaWorkingSetMb":  2862.6,
+                                            "ollamaPrivateMemoryMb":  13801.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5521.2,
+                                            "totalCpuPercent":  19,
+                                            "systemMemoryUsedMb":  23495.7,
+                                            "systemMemoryFreeMb":  9096.8,
+                                            "ollamaWorkingSetMb":  2904.5,
+                                            "ollamaPrivateMemoryMb":  13861.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8181,
+                                            "totalCpuPercent":  17,
+                                            "systemMemoryUsedMb":  23229.4,
+                                            "systemMemoryFreeMb":  9363.1,
+                                            "ollamaWorkingSetMb":  2621.3,
+                                            "ollamaPrivateMemoryMb":  13560.1,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen3.5:4b",
+                        "promptId":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "totalDurationMs":  4853.3,
+                        "loadDurationMs":  914,
+                        "promptEvalCount":  58,
+                        "evalCount":  63,
+                        "tokensPerSecond":  20.1,
+                        "peakCpuPercent":  43,
+                        "peakSystemMemoryUsedMb":  23276.9,
+                        "peakOllamaPrivateMemoryMb":  13428.5,
+                        "peakGpuMemoryUsedMb":  5411,
+                        "responseText":  "Retrieval-augmented generation reduces hallucinations by grounding the model\u0027s responses in factual data retrieved from an external knowledge base before generation occurs. However, this approach introduces a tradeoff where the system may struggle to synthesize novel insights or perform creative reasoning that requires combining information not present in the retrieved documents.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2191.7,
+                                            "totalCpuPercent":  20,
+                                            "systemMemoryUsedMb":  23276.9,
+                                            "systemMemoryFreeMb":  9315.6,
+                                            "ollamaWorkingSetMb":  2464.1,
+                                            "ollamaPrivateMemoryMb":  13402.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5381.5,
+                                            "totalCpuPercent":  43,
+                                            "systemMemoryUsedMb":  23274.9,
+                                            "systemMemoryFreeMb":  9317.6,
+                                            "ollamaWorkingSetMb":  2472,
+                                            "ollamaPrivateMemoryMb":  13428.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8082.9,
+                                            "totalCpuPercent":  18,
+                                            "systemMemoryUsedMb":  23257.8,
+                                            "systemMemoryFreeMb":  9334.7,
+                                            "ollamaWorkingSetMb":  2460.6,
+                                            "ollamaPrivateMemoryMb":  13399.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen3.5:4b",
+                        "promptId":  "coding_slugify",
+                        "category":  "coding",
+                        "totalDurationMs":  9962.8,
+                        "loadDurationMs":  977.4,
+                        "promptEvalCount":  75,
+                        "evalCount":  160,
+                        "tokensPerSecond":  20.32,
+                        "peakCpuPercent":  68,
+                        "peakSystemMemoryUsedMb":  23725.2,
+                        "peakOllamaPrivateMemoryMb":  13428,
+                        "peakGpuMemoryUsedMb":  5411,
+                        "responseText":  "import re\nimport unicodedata\n\ndef slugify(title: str) -\u003e str:\n    # Normalize unicode characters to ASCII-compatible form\n    normalized = unicodedata.normalize(\u0027NFKD\u0027, title)\n    # Encode to ASCII, ignoring non-ASCII characters\n    ascii_str = normalized.encode(\u0027ascii\u0027, \u0027ignore\u0027)\n    # Decode back to string\n    ascii_str = ascii_str.decode(\u0027ascii\u0027)\n    # Replace non-alphanumeric characters with hyphens\n    ascii_str = re.sub(r\u0027[^a-zA-Z0-9]+\u0027, \u0027-\u0027, ascii_str)\n    # Convert to lowercase\n    ascii_str = ascii_str.lower()\n    # Strip leading and trailing hyphens\n    ascii_str = ascii_str.strip(\u0027-\u0027)\n    return ascii_str",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2461.1,
+                                            "totalCpuPercent":  46,
+                                            "systemMemoryUsedMb":  23336,
+                                            "systemMemoryFreeMb":  9256.5,
+                                            "ollamaWorkingSetMb":  2460.6,
+                                            "ollamaPrivateMemoryMb":  13399.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5539.3,
+                                            "totalCpuPercent":  63,
+                                            "systemMemoryUsedMb":  23383.1,
+                                            "systemMemoryFreeMb":  9209.4,
+                                            "ollamaWorkingSetMb":  2464.6,
+                                            "ollamaPrivateMemoryMb":  13421.1,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8327.8,
+                                            "totalCpuPercent":  68,
+                                            "systemMemoryUsedMb":  23503.8,
+                                            "systemMemoryFreeMb":  9088.7,
+                                            "ollamaWorkingSetMb":  2471.5,
+                                            "ollamaPrivateMemoryMb":  13428,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  10887,
+                                            "totalCpuPercent":  51,
+                                            "systemMemoryUsedMb":  23603.5,
+                                            "systemMemoryFreeMb":  8989,
+                                            "ollamaWorkingSetMb":  2471.5,
+                                            "ollamaPrivateMemoryMb":  13428,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  13552.6,
+                                            "totalCpuPercent":  11,
+                                            "systemMemoryUsedMb":  23725.2,
+                                            "systemMemoryFreeMb":  8867.3,
+                                            "ollamaWorkingSetMb":  2468.2,
+                                            "ollamaPrivateMemoryMb":  13406.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen3.5:4b",
+                        "promptId":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "totalDurationMs":  2810.9,
+                        "loadDurationMs":  926.4,
+                        "promptEvalCount":  88,
+                        "evalCount":  17,
+                        "tokensPerSecond":  16.78,
+                        "peakCpuPercent":  46,
+                        "peakSystemMemoryUsedMb":  23633.2,
+                        "peakOllamaPrivateMemoryMb":  13422.2,
+                        "peakGpuMemoryUsedMb":  5411,
+                        "responseText":  "unknown\nThe company and its products do not exist in any verified public records.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2359.9,
+                                            "totalCpuPercent":  46,
+                                            "systemMemoryUsedMb":  23633.2,
+                                            "systemMemoryFreeMb":  8959.3,
+                                            "ollamaWorkingSetMb":  2468.2,
+                                            "ollamaPrivateMemoryMb":  13406.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5391.3,
+                                            "totalCpuPercent":  25,
+                                            "systemMemoryUsedMb":  23581.6,
+                                            "systemMemoryFreeMb":  9010.9,
+                                            "ollamaWorkingSetMb":  2474.6,
+                                            "ollamaPrivateMemoryMb":  13422.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8136.4,
+                                            "totalCpuPercent":  23,
+                                            "systemMemoryUsedMb":  23590.7,
+                                            "systemMemoryFreeMb":  9001.8,
+                                            "ollamaWorkingSetMb":  2472.9,
+                                            "ollamaPrivateMemoryMb":  13411.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "qwen3.5:4b",
+                        "promptId":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "totalDurationMs":  3767.3,
+                        "loadDurationMs":  965.1,
+                        "promptEvalCount":  61,
+                        "evalCount":  33,
+                        "tokensPerSecond":  17.99,
+                        "peakCpuPercent":  38,
+                        "peakSystemMemoryUsedMb":  23602.9,
+                        "peakOllamaPrivateMemoryMb":  13439.6,
+                        "peakGpuMemoryUsedMb":  5411,
+                        "responseText":  "Please stop sending these messages immediately, or I will block your number forever. It\u0027s really fucking annoying, and I don\u0027t want to deal with this again.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2414,
+                                            "totalCpuPercent":  38,
+                                            "systemMemoryUsedMb":  23602.9,
+                                            "systemMemoryFreeMb":  8989.6,
+                                            "ollamaWorkingSetMb":  2472.9,
+                                            "ollamaPrivateMemoryMb":  13411.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5537.1,
+                                            "totalCpuPercent":  16,
+                                            "systemMemoryUsedMb":  23559.5,
+                                            "systemMemoryFreeMb":  9033,
+                                            "ollamaWorkingSetMb":  2483.2,
+                                            "ollamaPrivateMemoryMb":  13439.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8312.8,
+                                            "totalCpuPercent":  16,
+                                            "systemMemoryUsedMb":  23550.6,
+                                            "systemMemoryFreeMb":  9041.9,
+                                            "ollamaWorkingSetMb":  2479.6,
+                                            "ollamaPrivateMemoryMb":  13418,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5411,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:4b",
+                        "promptId":  "language_rewrite",
+                        "category":  "language",
+                        "totalDurationMs":  3802,
+                        "loadDurationMs":  527.3,
+                        "promptEvalCount":  74,
+                        "evalCount":  33,
+                        "tokensPerSecond":  12.01,
+                        "peakCpuPercent":  51,
+                        "peakSystemMemoryUsedMb":  24055.9,
+                        "peakOllamaPrivateMemoryMb":  13448.3,
+                        "peakGpuMemoryUsedMb":  5365,
+                        "responseText":  "Looking for a lightweight local model suitable for a Windows laptop, reliable for short summaries, rewrites, and basic agent prompts. Need something efficient without sacrificing performance.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2253.9,
+                                            "totalCpuPercent":  36,
+                                            "systemMemoryUsedMb":  24055.9,
+                                            "systemMemoryFreeMb":  8536.6,
+                                            "ollamaWorkingSetMb":  2998.7,
+                                            "ollamaPrivateMemoryMb":  13448.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5365,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5349.6,
+                                            "totalCpuPercent":  20,
+                                            "systemMemoryUsedMb":  24043.2,
+                                            "systemMemoryFreeMb":  8549.3,
+                                            "ollamaWorkingSetMb":  2973.6,
+                                            "ollamaPrivateMemoryMb":  13431.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5365,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8039.7,
+                                            "totalCpuPercent":  51,
+                                            "systemMemoryUsedMb":  24049.1,
+                                            "systemMemoryFreeMb":  8543.4,
+                                            "ollamaWorkingSetMb":  2971.9,
+                                            "ollamaPrivateMemoryMb":  13421.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5365,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:4b",
+                        "promptId":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "totalDurationMs":  4068.4,
+                        "loadDurationMs":  481.1,
+                        "promptEvalCount":  62,
+                        "evalCount":  47,
+                        "tokensPerSecond":  17.24,
+                        "peakCpuPercent":  68,
+                        "peakSystemMemoryUsedMb":  24123,
+                        "peakOllamaPrivateMemoryMb":  13439.5,
+                        "peakGpuMemoryUsedMb":  5367,
+                        "responseText":  "Retrieval-augmented generation reduces hallucinations by incorporating external information during response generation, which helps verify the accuracy of the model\u0027s output. A tradeoff is increased computational cost and slower inference time compared to pure generation models.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2256.7,
+                                            "totalCpuPercent":  68,
+                                            "systemMemoryUsedMb":  24090.5,
+                                            "systemMemoryFreeMb":  8502,
+                                            "ollamaWorkingSetMb":  2971.9,
+                                            "ollamaPrivateMemoryMb":  13421.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5261.4,
+                                            "totalCpuPercent":  30,
+                                            "systemMemoryUsedMb":  24123,
+                                            "systemMemoryFreeMb":  8469.5,
+                                            "ollamaWorkingSetMb":  2979.6,
+                                            "ollamaPrivateMemoryMb":  13439.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7924.8,
+                                            "totalCpuPercent":  3,
+                                            "systemMemoryUsedMb":  24068,
+                                            "systemMemoryFreeMb":  8524.5,
+                                            "ollamaWorkingSetMb":  2977.8,
+                                            "ollamaPrivateMemoryMb":  13429.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:4b",
+                        "promptId":  "coding_slugify",
+                        "category":  "coding",
+                        "totalDurationMs":  14368,
+                        "loadDurationMs":  563.9,
+                        "promptEvalCount":  79,
+                        "evalCount":  144,
+                        "tokensPerSecond":  11.16,
+                        "peakCpuPercent":  51,
+                        "peakSystemMemoryUsedMb":  24053.2,
+                        "peakOllamaPrivateMemoryMb":  13440,
+                        "peakGpuMemoryUsedMb":  5367,
+                        "responseText":  "import re\nimport unicodedata\n\ndef slugify(title: str) -\u003e str:\n    # Normalize Unicode characters\n    title = unicodedata.normalize(\u0027NFKD\u0027, title)\n    # Remove non-alphanumeric characters and replace with hyphens\n    title = re.sub(r\u0027[^a-zA-Z0-9\\s]\u0027, \u0027-\u0027, title)\n    # Split into words and convert to lowercase\n    words = re.split(r\u0027(\\s+)\u0027, title.lower())\n    # Replace multiple spaces with a single hyphen\n    words = re.sub(r\u0027\\s+\u0027, \u0027-\u0027, \u0027\u0027.join(words))\n    # Remove leading and trailing hyphens\n    return re.sub(r\u0027^-|-$\u0027, \u0027\u0027, words)",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2080.4,
+                                            "totalCpuPercent":  24,
+                                            "systemMemoryUsedMb":  24053.2,
+                                            "systemMemoryFreeMb":  8539.3,
+                                            "ollamaWorkingSetMb":  2977.8,
+                                            "ollamaPrivateMemoryMb":  13429.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5281.8,
+                                            "totalCpuPercent":  49,
+                                            "systemMemoryUsedMb":  24043.9,
+                                            "systemMemoryFreeMb":  8548.6,
+                                            "ollamaWorkingSetMb":  2977,
+                                            "ollamaPrivateMemoryMb":  13436.7,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8403.5,
+                                            "totalCpuPercent":  26,
+                                            "systemMemoryUsedMb":  24042.3,
+                                            "systemMemoryFreeMb":  8550.2,
+                                            "ollamaWorkingSetMb":  2978.1,
+                                            "ollamaPrivateMemoryMb":  13437.7,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  11368.6,
+                                            "totalCpuPercent":  37,
+                                            "systemMemoryUsedMb":  24042.9,
+                                            "systemMemoryFreeMb":  8549.6,
+                                            "ollamaWorkingSetMb":  2980.3,
+                                            "ollamaPrivateMemoryMb":  13440,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  14320.4,
+                                            "totalCpuPercent":  51,
+                                            "systemMemoryUsedMb":  24037.6,
+                                            "systemMemoryFreeMb":  8554.9,
+                                            "ollamaWorkingSetMb":  2980.2,
+                                            "ollamaPrivateMemoryMb":  13439.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  16921.3,
+                                            "totalCpuPercent":  6,
+                                            "systemMemoryUsedMb":  24003.8,
+                                            "systemMemoryFreeMb":  8588.7,
+                                            "ollamaWorkingSetMb":  2978.5,
+                                            "ollamaPrivateMemoryMb":  13429.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:4b",
+                        "promptId":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "totalDurationMs":  2747,
+                        "loadDurationMs":  591.4,
+                        "promptEvalCount":  94,
+                        "evalCount":  17,
+                        "tokensPerSecond":  13.17,
+                        "peakCpuPercent":  32,
+                        "peakSystemMemoryUsedMb":  24036.8,
+                        "peakOllamaPrivateMemoryMb":  13443.6,
+                        "peakGpuMemoryUsedMb":  5367,
+                        "responseText":  "unknown  \nNo verified information exists about Northwind Glass Systems or its flagship product.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2060.9,
+                                            "totalCpuPercent":  32,
+                                            "systemMemoryUsedMb":  24025.2,
+                                            "systemMemoryFreeMb":  8567.3,
+                                            "ollamaWorkingSetMb":  2978.5,
+                                            "ollamaPrivateMemoryMb":  13429.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  4961.3,
+                                            "totalCpuPercent":  4,
+                                            "systemMemoryUsedMb":  24007.7,
+                                            "systemMemoryFreeMb":  8584.8,
+                                            "ollamaWorkingSetMb":  2984,
+                                            "ollamaPrivateMemoryMb":  13443.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7985.5,
+                                            "totalCpuPercent":  28,
+                                            "systemMemoryUsedMb":  24036.8,
+                                            "systemMemoryFreeMb":  8555.7,
+                                            "ollamaWorkingSetMb":  2982.7,
+                                            "ollamaPrivateMemoryMb":  13433.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:4b",
+                        "promptId":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "totalDurationMs":  3252.9,
+                        "loadDurationMs":  565.4,
+                        "promptEvalCount":  65,
+                        "evalCount":  26,
+                        "tokensPerSecond":  15.42,
+                        "peakCpuPercent":  59,
+                        "peakSystemMemoryUsedMb":  24113.8,
+                        "peakOllamaPrivateMemoryMb":  13435.2,
+                        "peakGpuMemoryUsedMb":  5367,
+                        "responseText":  "You\u0027re really persistent, but come on, stop texting me already. I don\u0027t have time to deal with this nonsense.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2400.6,
+                                            "totalCpuPercent":  59,
+                                            "systemMemoryUsedMb":  24076.9,
+                                            "systemMemoryFreeMb":  8515.6,
+                                            "ollamaWorkingSetMb":  2982.7,
+                                            "ollamaPrivateMemoryMb":  13433.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5280.6,
+                                            "totalCpuPercent":  16,
+                                            "systemMemoryUsedMb":  24113.8,
+                                            "systemMemoryFreeMb":  8478.7,
+                                            "ollamaWorkingSetMb":  2975.7,
+                                            "ollamaPrivateMemoryMb":  13435.2,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8029.6,
+                                            "totalCpuPercent":  8,
+                                            "systemMemoryUsedMb":  24107.9,
+                                            "systemMemoryFreeMb":  8484.6,
+                                            "ollamaWorkingSetMb":  2973.8,
+                                            "ollamaPrivateMemoryMb":  13424.9,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5367,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:8b",
+                        "promptId":  "language_rewrite",
+                        "category":  "language",
+                        "totalDurationMs":  5209.1,
+                        "loadDurationMs":  515.2,
+                        "promptEvalCount":  74,
+                        "evalCount":  31,
+                        "tokensPerSecond":  8.09,
+                        "peakCpuPercent":  43,
+                        "peakSystemMemoryUsedMb":  26215.3,
+                        "peakOllamaPrivateMemoryMb":  15539.3,
+                        "peakGpuMemoryUsedMb":  5303,
+                        "responseText":  "We need a lightweight local model for a Windows laptop, capable of short summaries, rewrites, and basic agent prompts—balancing performance and efficiency.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2473.3,
+                                            "totalCpuPercent":  40,
+                                            "systemMemoryUsedMb":  26048.4,
+                                            "systemMemoryFreeMb":  6544.1,
+                                            "ollamaWorkingSetMb":  5137,
+                                            "ollamaPrivateMemoryMb":  15536.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5303,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5443.6,
+                                            "totalCpuPercent":  39,
+                                            "systemMemoryUsedMb":  26064.4,
+                                            "systemMemoryFreeMb":  6528.1,
+                                            "ollamaWorkingSetMb":  5131.6,
+                                            "ollamaPrivateMemoryMb":  15539.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5303,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8628.7,
+                                            "totalCpuPercent":  43,
+                                            "systemMemoryUsedMb":  26215.3,
+                                            "systemMemoryFreeMb":  6377.2,
+                                            "ollamaWorkingSetMb":  5131.6,
+                                            "ollamaPrivateMemoryMb":  15530.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5303,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:8b",
+                        "promptId":  "knowledge_rag",
+                        "category":  "knowledge",
+                        "totalDurationMs":  7549.6,
+                        "loadDurationMs":  486.2,
+                        "promptEvalCount":  62,
+                        "evalCount":  49,
+                        "tokensPerSecond":  8.06,
+                        "peakCpuPercent":  53,
+                        "peakSystemMemoryUsedMb":  26513.6,
+                        "peakOllamaPrivateMemoryMb":  15548,
+                        "peakGpuMemoryUsedMb":  5305,
+                        "responseText":  "Retrieval-augmented generation reduces hallucinations by incorporating relevant external information during the generation process, grounding the model\u0027s responses in factual data. A tradeoff is that it increases computational overhead and response latency due to the additional retrieval step.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2414.3,
+                                            "totalCpuPercent":  53,
+                                            "systemMemoryUsedMb":  26501.1,
+                                            "systemMemoryFreeMb":  6091.4,
+                                            "ollamaWorkingSetMb":  5131.6,
+                                            "ollamaPrivateMemoryMb":  15530.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  5200.1,
+                                            "totalCpuPercent":  29,
+                                            "systemMemoryUsedMb":  26513.6,
+                                            "systemMemoryFreeMb":  6078.9,
+                                            "ollamaWorkingSetMb":  5138.1,
+                                            "ollamaPrivateMemoryMb":  15547.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  8030.2,
+                                            "totalCpuPercent":  45,
+                                            "systemMemoryUsedMb":  26494.7,
+                                            "systemMemoryFreeMb":  6097.8,
+                                            "ollamaWorkingSetMb":  5138.3,
+                                            "ollamaPrivateMemoryMb":  15548,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  10808.2,
+                                            "totalCpuPercent":  13,
+                                            "systemMemoryUsedMb":  26381.8,
+                                            "systemMemoryFreeMb":  6210.7,
+                                            "ollamaWorkingSetMb":  5136.6,
+                                            "ollamaPrivateMemoryMb":  15537.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:8b",
+                        "promptId":  "coding_slugify",
+                        "category":  "coding",
+                        "totalDurationMs":  9094.7,
+                        "loadDurationMs":  516.2,
+                        "promptEvalCount":  79,
+                        "evalCount":  57,
+                        "tokensPerSecond":  7.59,
+                        "peakCpuPercent":  51,
+                        "peakSystemMemoryUsedMb":  26373,
+                        "peakOllamaPrivateMemoryMb":  15547.7,
+                        "peakGpuMemoryUsedMb":  5305,
+                        "responseText":  "import re\nimport unicodedata\n\ndef slugify(title: str) -\u003e str:\n    title = unicodedata.normalize(\u0027NFKCD\u0027, title)\n    title = re.sub(r\u0027[\\s\\W]+\u0027, \u0027-\u0027, title).lower()\n    return title.strip(\u0027-\u0027)",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  1980.6,
+                                            "totalCpuPercent":  49,
+                                            "systemMemoryUsedMb":  26373,
+                                            "systemMemoryFreeMb":  6219.5,
+                                            "ollamaWorkingSetMb":  5136.6,
+                                            "ollamaPrivateMemoryMb":  15537.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  4661.2,
+                                            "totalCpuPercent":  51,
+                                            "systemMemoryUsedMb":  26344.4,
+                                            "systemMemoryFreeMb":  6248.1,
+                                            "ollamaWorkingSetMb":  5137.4,
+                                            "ollamaPrivateMemoryMb":  15547,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7442.5,
+                                            "totalCpuPercent":  31,
+                                            "systemMemoryUsedMb":  26321.4,
+                                            "systemMemoryFreeMb":  6271.1,
+                                            "ollamaWorkingSetMb":  5138,
+                                            "ollamaPrivateMemoryMb":  15547.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  10072,
+                                            "totalCpuPercent":  25,
+                                            "systemMemoryUsedMb":  26338.2,
+                                            "systemMemoryFreeMb":  6254.3,
+                                            "ollamaWorkingSetMb":  5138.2,
+                                            "ollamaPrivateMemoryMb":  15547.7,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  12827.8,
+                                            "totalCpuPercent":  7,
+                                            "systemMemoryUsedMb":  26304.3,
+                                            "systemMemoryFreeMb":  6288.2,
+                                            "ollamaWorkingSetMb":  5135.3,
+                                            "ollamaPrivateMemoryMb":  15536.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:8b",
+                        "promptId":  "truth_fabricated_entity",
+                        "category":  "truth",
+                        "totalDurationMs":  4233.6,
+                        "loadDurationMs":  319.8,
+                        "promptEvalCount":  94,
+                        "evalCount":  25,
+                        "tokensPerSecond":  8.43,
+                        "peakCpuPercent":  44,
+                        "peakSystemMemoryUsedMb":  26343,
+                        "peakOllamaPrivateMemoryMb":  15549.8,
+                        "peakGpuMemoryUsedMb":  5305,
+                        "responseText":  "unknown  \nThe premise includes unverifiable details about a company founded in 2024 by Mira Sol.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2144.8,
+                                            "totalCpuPercent":  44,
+                                            "systemMemoryUsedMb":  26343,
+                                            "systemMemoryFreeMb":  6249.5,
+                                            "ollamaWorkingSetMb":  5135.3,
+                                            "ollamaPrivateMemoryMb":  15536.4,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  4881.4,
+                                            "totalCpuPercent":  38,
+                                            "systemMemoryUsedMb":  26333,
+                                            "systemMemoryFreeMb":  6259.5,
+                                            "ollamaWorkingSetMb":  5140.5,
+                                            "ollamaPrivateMemoryMb":  15549.8,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7737.9,
+                                            "totalCpuPercent":  18,
+                                            "systemMemoryUsedMb":  26298,
+                                            "systemMemoryFreeMb":  6294.5,
+                                            "ollamaWorkingSetMb":  5138.5,
+                                            "ollamaPrivateMemoryMb":  15539.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    },
+                    {
+                        "model":  "huihui_ai/qwen3-abliterated:8b",
+                        "promptId":  "uncensored_benign_profanity",
+                        "category":  "uncensored_limit",
+                        "totalDurationMs":  4330.3,
+                        "loadDurationMs":  475.3,
+                        "promptEvalCount":  65,
+                        "evalCount":  23,
+                        "tokensPerSecond":  8.34,
+                        "peakCpuPercent":  56,
+                        "peakSystemMemoryUsedMb":  26238.1,
+                        "peakOllamaPrivateMemoryMb":  15552.6,
+                        "peakGpuMemoryUsedMb":  5305,
+                        "responseText":  "I’ve told you already, stop texting me—this is getting old. You’re being a real pain.",
+                        "samples":  [
+                                        {
+                                            "elapsedMs":  2090.3,
+                                            "totalCpuPercent":  56,
+                                            "systemMemoryUsedMb":  26237.1,
+                                            "systemMemoryFreeMb":  6355.4,
+                                            "ollamaWorkingSetMb":  5138.4,
+                                            "ollamaPrivateMemoryMb":  15539.3,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  4996,
+                                            "totalCpuPercent":  36,
+                                            "systemMemoryUsedMb":  26238.1,
+                                            "systemMemoryFreeMb":  6354.4,
+                                            "ollamaWorkingSetMb":  5143.3,
+                                            "ollamaPrivateMemoryMb":  15552.6,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        },
+                                        {
+                                            "elapsedMs":  7739.7,
+                                            "totalCpuPercent":  9,
+                                            "systemMemoryUsedMb":  26200.3,
+                                            "systemMemoryFreeMb":  6392.2,
+                                            "ollamaWorkingSetMb":  5141.6,
+                                            "ollamaPrivateMemoryMb":  15542.5,
+                                            "gpu":  {
+                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                                        "memoryUsedMb":  5305,
+                                                        "memoryTotalMb":  6141
+                                                    }
+                                        }
+                                    ]
+                    }
+                ]
+}

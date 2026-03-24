@@ -26,16 +26,23 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - Default lightweight lane: `gemma3:4b-it-qat`
 - Best regular fallback to keep testing: `qwen2.5:7b`
 - Uncensored variants tested so far are not recommended on this machine
+- `qwen3.5:4b` remains the strongest upgrade candidate only if the runtime can force `think:false` cleanly
 
 ## Usage
 
 1. Pull the candidate models you want to test with Ollama.
 2. Run `run_ollama_benchmark.ps1`.
-3. Review the JSON output and compare latency, throughput, and answer quality together.
+3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
+4. Review the JSON output and compare latency, throughput, answer quality, truthfulness, and refusal style together.
 
 Example:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_ollama_benchmark.ps1 `
   -OutputPath .\benchmarks\openclaw-local-llm\results.json
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_ollama_response_suite.ps1 `
+  -OutputPath .\benchmarks\openclaw-local-llm\results\response-suite.json
 ```
