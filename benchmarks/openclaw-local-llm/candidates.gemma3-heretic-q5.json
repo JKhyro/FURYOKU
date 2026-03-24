@@ -1,0 +1,8 @@
+[
+  {
+    "model": "gemma3-heretic:4b-q5km",
+    "priority": 1,
+    "context_tokens": 131072,
+    "why": "Imported GGUF Q5_K_M candidate from Andycurrent/Gemma-3-4B-VL-it-Gemini-Pro-Heretic-Uncensored-Thinking_GGUF for direct comparison against the Q4_K_M import and the existing local benchmark set."
+  }
+]

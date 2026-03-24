@@ -1,0 +1,165 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-03-24T18:27:07.2729704Z",
+    "runsPerPrompt":  1,
+    "candidates":  [
+                       {
+                           "model":  "gemma3-heretic:4b-q5km",
+                           "priority":  1,
+                           "context_tokens":  131072,
+                           "why":  "Imported GGUF Q5_K_M candidate from Andycurrent/Gemma-3-4B-VL-it-Gemini-Pro-Heretic-Uncensored-Thinking_GGUF for direct comparison against the Q4_K_M import and the existing local benchmark set."
+                       }
+                   ],
+    "results":  [
+                    {
+                        "model":  "gemma3-heretic:4b-q5km",
+                        "promptId":  "rewrite_short",
+                        "task":  "rewrite",
+                        "totalDurationMs":  2674.4,
+                        "loadDurationMs":  469.4,
+                        "promptEvalCount":  71,
+                        "evalCount":  106,
+                        "tokensPerSecond":  53.92,
+                        "responseText":  "**Option 1 (Focus on Constraints):**\n\n\"We\u0027re aiming for a lightweight local model for Windows. It needs to reliably handle short summaries, rewrites, and basic agent prompts. Don\u0027t over-engineer it; focus on speed and reliability.\"\n\n**Option 2 (Focus on Requirements):**\n\n\"The local model must be Windows-friendly and handle summaries, rewrites, and agent prompts well. Prioritize speed and reliability over complex features. It needs to be light, but powerful.\"",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1040.6,
+                                              "privateMemoryMb":  10170.8
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1034.5,
+                                             "privateMemoryMb":  10164.6
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  4006,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  4006,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q5km",
+                        "promptId":  "summarize_status",
+                        "task":  "summary",
+                        "totalDurationMs":  1686.3,
+                        "loadDurationMs":  464,
+                        "promptEvalCount":  92,
+                        "evalCount":  57,
+                        "tokensPerSecond":  54.19,
+                        "responseText":  "*   **Ollama Installed:** Ollama is up and running.\n*   **Hardware Specs:** 32 GB RAM, RTX 4050 (4 GB VRAM).\n*   **Performance Focus:** Prioritize latency and context length for local models.",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1034.5,
+                                              "privateMemoryMb":  10164.6
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1043,
+                                             "privateMemoryMb":  10175
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  4006,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  4008,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q5km",
+                        "promptId":  "route_decision",
+                        "task":  "classification",
+                        "totalDurationMs":  609,
+                        "loadDurationMs":  493.2,
+                        "promptEvalCount":  72,
+                        "evalCount":  3,
+                        "tokensPerSecond":  76.22,
+                        "responseText":  "no\n",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1043,
+                                              "privateMemoryMb":  10175
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1042.8,
+                                             "privateMemoryMb":  10174.8
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  4008,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  4008,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q5km",
+                        "promptId":  "instruction_following",
+                        "task":  "instruction",
+                        "totalDurationMs":  1153.2,
+                        "loadDurationMs":  536.7,
+                        "promptEvalCount":  53,
+                        "evalCount":  27,
+                        "tokensPerSecond":  54.95,
+                        "responseText":  "The current context window is limited, so prioritize concise responses. I recommend focusing on direct answers rather than elaborate explanations to maximize clarity.",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1042.8,
+                                              "privateMemoryMb":  10174.8
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1042.9,
+                                             "privateMemoryMb":  10175.1
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  4008,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  4008,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q5km",
+                        "promptId":  "tool_style_json",
+                        "task":  "structured_output",
+                        "totalDurationMs":  4009.4,
+                        "loadDurationMs":  412.8,
+                        "promptEvalCount":  49,
+                        "evalCount":  174,
+                        "tokensPerSecond":  53.64,
+                        "responseText":  "```json\n{\n  \"model_class\": \"Compact Local Model\",\n  \"priority_reason\": \"Efficiency and Latency\",\n  \"risk\": \"Low\",\n  \"description\": \"A compact local model, such as a quantized version of a smaller LLM (e.g., a 7B parameter model), is ideal for OpenClaw\u0027s basic tasks because it minimizes data transfer overhead. Since OpenClaw is designed for edge computing and low-latency inference, sending large, complex models over the network introduces significant delays. A compact model fits entirely within the device\u0027s RAM, reducing network traffic and improving response times for tasks like summarization, basic Q\u0026A, and simple code generation. The reduced model size also translates to lower bandwidth requirements, making it suitable for devices with limited connectivity.\"\n}\n```",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1042.9,
+                                              "privateMemoryMb":  10175.1
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1034.1,
+                                             "privateMemoryMb":  10166.3
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  4008,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  4008,
+                                         "memoryTotalMb":  6141
+                                     }
+                    }
+                ]
+}
