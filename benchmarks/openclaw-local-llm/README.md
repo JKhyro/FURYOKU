@@ -1,4 +1,4 @@
-# OpenClaw Local LLM Benchmark
+﻿# OpenClaw Local LLM Benchmark
 
 This lane evaluates small local models for basic OpenClaw work such as concise replies, rewrites, summaries, and simple routing/classification prompts.
 
@@ -12,12 +12,20 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - answer quality on basic assistant tasks
 - OpenClaw/Ollama integration fit
 
-## Current Candidate Order
+## Current Ranking After Live Benchmark
 
-1. `qwen3.5:4b`
-2. `phi4-mini`
-3. `gemma3:4b-it-q4_K_M`
-4. `qwen2.5:7b`
+1. `gemma3:4b-it-qat`
+2. `qwen2.5:7b`
+3. `phi4-mini`
+4. `qwen3.5:4b`
+5. `huihui_ai/qwen3-abliterated:4b`
+6. `huihui_ai/qwen3-abliterated:8b`
+
+## Current Decision
+
+- Default lightweight lane: `gemma3:4b-it-qat`
+- Best regular fallback to keep testing: `qwen2.5:7b`
+- Uncensored variants tested so far are not recommended on this machine
 
 ## Usage
 
