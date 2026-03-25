@@ -1,0 +1,37 @@
+[
+  {
+    "id": "rewrite_short",
+    "task": "rewrite",
+    "max_tokens": 220,
+    "system": "You are a concise operator assistant. Keep the tone direct and practical.",
+    "user": "Rewrite this update for a teammate in under 70 words: We need to keep the local model light enough for a Windows laptop, but it still has to handle short summaries, rewrites, and basic agent prompts reliably."
+  },
+  {
+    "id": "summarize_status",
+    "task": "summary",
+    "max_tokens": 220,
+    "system": "You are a concise operator assistant. Summaries should be compact and actionable.",
+    "user": "Summarize this status note into three short bullets: Ollama is installed. The machine has 32 GB RAM and an RTX 4050 Laptop GPU with roughly 4 GB VRAM. A local model will support basic OpenClaw tasks, so latency and context length matter more than uncensored output."
+  },
+  {
+    "id": "route_decision",
+    "task": "classification",
+    "max_tokens": 120,
+    "system": "You are a routing assistant. Answer with only one of: yes, no, defer.",
+    "user": "Should a 13B local model be the default first benchmark target on a 32 GB RAM laptop with only 4 GB VRAM if the goal is lightweight OpenClaw support for basic tasks?"
+  },
+  {
+    "id": "instruction_following",
+    "task": "instruction",
+    "max_tokens": 180,
+    "system": "You are a strict assistant. Follow every constraint exactly.",
+    "user": "Give exactly two sentences. The first sentence must contain the phrase 'context window'. The second sentence must contain a concrete recommendation and must not mention safety."
+  },
+  {
+    "id": "tool_style_json",
+    "task": "structured_output",
+    "max_tokens": 180,
+    "system": "Return valid JSON only.",
+    "user": "Return a JSON object with keys model_class, priority_reason, and risk. Describe why a compact local model is useful for OpenClaw basic tasks."
+  }
+]

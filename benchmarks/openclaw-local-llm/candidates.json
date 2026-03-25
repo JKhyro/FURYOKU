@@ -1,0 +1,38 @@
+﻿[
+  {
+    "model": "gemma3:4b-it-qat",
+    "priority": 1,
+    "context_tokens": 131072,
+    "why": "Best real-life result on this machine. Fastest useful latency profile, lowest CPU pressure, and the cleanest current OpenClaw integration path."
+  },
+  {
+    "model": "qwen2.5:7b",
+    "priority": 2,
+    "context_tokens": 128000,
+    "why": "Best conventional fallback after Gemma. Slower than Gemma but far more stable than the Qwen3.5 and uncensored Qwen3 variants under the current Ollama path."
+  },
+  {
+    "model": "phi4-mini",
+    "priority": 3,
+    "context_tokens": 128000,
+    "why": "Acceptable latency and footprint, but answer fidelity was weaker and more hallucinatory on the benchmark prompts."
+  },
+  {
+    "model": "qwen3.5:4b",
+    "priority": 4,
+    "context_tokens": 262144,
+    "why": "Theoretical upside is high, but the current Ollama run path on this machine produced pathological token counts and unusably high latency for lightweight OpenClaw tasks."
+  },
+  {
+    "model": "huihui_ai/qwen3-abliterated:4b",
+    "priority": 5,
+    "context_tokens": 40000,
+    "why": "Benchmarked as an uncensored option, but too slow and too unreliable to justify using as the lightweight lane."
+  },
+  {
+    "model": "huihui_ai/qwen3-abliterated:8b",
+    "priority": 6,
+    "context_tokens": 40000,
+    "why": "Slowest practical uncensored option tested and not competitive for this machine profile."
+  }
+]

@@ -1,0 +1,165 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-03-25T02:00:42.2250577Z",
+    "runsPerPrompt":  1,
+    "candidates":  [
+                       {
+                           "model":  "qwen35-hauhaucs:9b-q4km",
+                           "priority":  1,
+                           "context_tokens":  262144,
+                           "why":  "Imported GGUF Q4_K_M candidate from HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive for direct comparison against the existing local benchmark set."
+                       }
+                   ],
+    "results":  [
+                    {
+                        "model":  "qwen35-hauhaucs:9b-q4km",
+                        "promptId":  "rewrite_short",
+                        "task":  "rewrite",
+                        "totalDurationMs":  35441.4,
+                        "loadDurationMs":  176,
+                        "promptEvalCount":  46,
+                        "evalCount":  220,
+                        "tokensPerSecond":  6.35,
+                        "responseText":  " The current model is too heavy. We should try a smaller model like Llama-3.1-8B or Mistral-7B, and if that\u0027s not enough, go for Llama-3.1-8B-Instruct.\n\n\u003cthink\u003e\nThinking Process:\n\n1.  **Analyze the Request:**\n    *   **Task:** Rewrite an update for a teammate.\n    *   **Source Text:** \"We need to keep the local model light enough for a Windows laptop, but it still has to handle short summaries, rewrites, and basic agent prompts reliably. The current model is too heavy. We should try a smaller model like Llama-3.1-8B or Mistral-7B, and if that\u0027s not enough, go for Llama-3.1-8B-Instruct.\"\n    *   **Constraint:** Under 70 words.\n    *   **Audience:** A teammate (implies a professional but collaborative tone).\n\n2.  **Identify Key Information:**\n    *   Goal",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  3375.3,
+                                              "privateMemoryMb":  14138.1
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  3418.1,
+                                             "privateMemoryMb":  14184.4
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  5528,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  5528,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "qwen35-hauhaucs:9b-q4km",
+                        "promptId":  "summarize_status",
+                        "task":  "summary",
+                        "totalDurationMs":  38126.4,
+                        "loadDurationMs":  226.9,
+                        "promptEvalCount":  66,
+                        "evalCount":  111,
+                        "tokensPerSecond":  6.45,
+                        "responseText":  "\n\nHere are three short bullets summarizing the status note:\n\n*   **Environment Ready:** Ollama is successfully installed on the machine.\n*   **Hardware Specs:** The system features 32 GB of RAM and an RTX 4050 Laptop GPU with ~4 GB of VRAM.\n*   **Operational Focus:** A local model is sufficient for basic OpenClaw tasks, prioritizing low latency and context length over uncensored output.\u003c|endoftext|\u003e\u003c|im_start|\u003e\n\u003c|im_start|\u003e\n\u003c|im_start|\u003e\n\u003c|im_start|\u003e\n\u003c|im_start|\u003e\n\u003c|im_start|\u003e\n\u003c|im_start|\u003e\n",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  3417.4,
+                                              "privateMemoryMb":  14183.7
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  3428.6,
+                                             "privateMemoryMb":  14188.6
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  5528,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  5528,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "qwen35-hauhaucs:9b-q4km",
+                        "promptId":  "route_decision",
+                        "task":  "classification",
+                        "totalDurationMs":  50972.7,
+                        "loadDurationMs":  153.8,
+                        "promptEvalCount":  42,
+                        "evalCount":  120,
+                        "tokensPerSecond":  6.46,
+                        "responseText":  "\n\n1. **Memory requirements for a 13B model** \n * A 13B parameter model in FP16 (half‑precision) needs roughly 26 GB of VRAM. \n * In mixed‑precision (FP8/FP4) or with quantization (e.g., 4‑bit), the VRAM requirement drops to about 10–12 GB. \n * Even with aggressive quantization, the model still needs more than the 4 GB available on the laptop’s GPU.\n\n2. **Available VRAM vs. model size**",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  3428.6,
+                                              "privateMemoryMb":  14188.4
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  3408.3,
+                                             "privateMemoryMb":  14164.8
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  5528,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  5528,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "qwen35-hauhaucs:9b-q4km",
+                        "promptId":  "instruction_following",
+                        "task":  "instruction",
+                        "totalDurationMs":  31793.2,
+                        "loadDurationMs":  159,
+                        "promptEvalCount":  30,
+                        "evalCount":  180,
+                        "tokensPerSecond":  5.83,
+                        "responseText":  "\n\n\u003cthink\u003e\nThinking Process:\n\n1.  **Analyze the Request:**\n    *   Constraint 1: Exactly two sentences.\n    *   Constraint 2: The first sentence must contain the phrase \u0027context window\u0027.\n    *   Constraint 3: The second sentence must contain a concrete recommendation.\n    *   Constraint 4: The second sentence must not mention safety.\n\n2.  **Drafting Sentence 1:**\n    *   Must include \u0027context window\u0027.\n    *   Idea: Explain what a context window is or how it affects performance.\n    *   Draft 1: The context window is a crucial part of how large language models process information.\n    *   Draft 2: You need to be aware of the context window limits when designing your prompts.\n    *   Selection: \"The context window defines the maximum amount of",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  3404.7,
+                                              "privateMemoryMb":  14157
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  3448.9,
+                                             "privateMemoryMb":  14208.4
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  5528,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  5528,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "qwen35-hauhaucs:9b-q4km",
+                        "promptId":  "tool_style_json",
+                        "task":  "structured_output",
+                        "totalDurationMs":  218648.9,
+                        "loadDurationMs":  196.5,
+                        "promptEvalCount":  30,
+                        "evalCount":  180,
+                        "tokensPerSecond":  6.21,
+                        "responseText":  "\n\n```json\n{\n  \"model_class\": \"compact_local\",\n  \"priority_reason\": \"For basic tasks like OpenClaw, a compact local model is useful because it reduces latency and bandwidth requirements, allowing for faster, on-device inference without the need for a large cloud connection.\",\n  \"risk\": \"The primary risk is that a compact model may lack the fine-grained detail and complex reasoning capabilities of a larger model, potentially leading to less accurate or nuanced responses for tasks that require deep understanding.\"\n}\n```\u003c|endoftext|\u003e\u003c|im_start|\u003ejson\n{\n  \"model_class\": \"compact_local\",\n  \"priority_reason\": \"For basic tasks like OpenClaw, a compact local model is useful because it reduces latency and bandwidth requirements, allowing for faster, on-device inference without the need for a large cloud connection.\",\n  \"risk\": \"The primary risk is that",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  3449.8,
+                                              "privateMemoryMb":  14209
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  3411.7,
+                                             "privateMemoryMb":  14121.3
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  5528,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  5528,
+                                         "memoryTotalMb":  6141
+                                     }
+                    }
+                ]
+}

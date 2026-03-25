@@ -1,0 +1,165 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-03-24T16:21:10.3849801Z",
+    "runsPerPrompt":  1,
+    "candidates":  [
+                       {
+                           "model":  "gemma3-heretic:4b-q4km",
+                           "priority":  1,
+                           "context_tokens":  131072,
+                           "why":  "Imported GGUF candidate from Andycurrent/Gemma-3-4B-VL-it-Gemini-Pro-Heretic-Uncensored-Thinking_GGUF for direct comparison against the existing local benchmark set."
+                       }
+                   ],
+    "results":  [
+                    {
+                        "model":  "gemma3-heretic:4b-q4km",
+                        "promptId":  "rewrite_short",
+                        "task":  "rewrite",
+                        "totalDurationMs":  1088.9,
+                        "loadDurationMs":  431.5,
+                        "promptEvalCount":  71,
+                        "evalCount":  34,
+                        "tokensPerSecond":  60.23,
+                        "responseText":  "Keep the local model lean for Windows laptops. It needs to reliably handle short summaries, rewrites, and basic agent prompts. Don\u0027t over-engineer it.",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1025.6,
+                                              "privateMemoryMb":  9824.9
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1027.2,
+                                             "privateMemoryMb":  9826.6
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  3687,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  3687,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q4km",
+                        "promptId":  "summarize_status",
+                        "task":  "summary",
+                        "totalDurationMs":  1622.9,
+                        "loadDurationMs":  501.5,
+                        "promptEvalCount":  92,
+                        "evalCount":  57,
+                        "tokensPerSecond":  59.33,
+                        "responseText":  "*   **Ollama Installed:** Ollama is now set up.\n*   **Hardware:** 32 GB RAM, RTX 4050 (4 GB VRAM).\n*   **Model Focus:** Prioritize latency \u0026 context length for OpenClaw.",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1027.2,
+                                              "privateMemoryMb":  9826.6
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1036.2,
+                                             "privateMemoryMb":  9835.6
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  3687,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  3687,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q4km",
+                        "promptId":  "route_decision",
+                        "task":  "classification",
+                        "totalDurationMs":  537.6,
+                        "loadDurationMs":  404.4,
+                        "promptEvalCount":  72,
+                        "evalCount":  3,
+                        "tokensPerSecond":  78.54,
+                        "responseText":  "yes\n",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1036.2,
+                                              "privateMemoryMb":  9835.6
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1035.1,
+                                             "privateMemoryMb":  9834.5
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  3687,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  3687,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q4km",
+                        "promptId":  "instruction_following",
+                        "task":  "instruction",
+                        "totalDurationMs":  1133.5,
+                        "loadDurationMs":  428.6,
+                        "promptEvalCount":  53,
+                        "evalCount":  36,
+                        "tokensPerSecond":  60.75,
+                        "responseText":  "The current context window is 4096 tokens, which is sufficient for most tasks. I recommend focusing on concise, descriptive language to maximize the impact of your prompt.",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1026.1,
+                                              "privateMemoryMb":  9825.5
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1035.4,
+                                             "privateMemoryMb":  9835
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  3687,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  3687,
+                                         "memoryTotalMb":  6141
+                                     }
+                    },
+                    {
+                        "model":  "gemma3-heretic:4b-q4km",
+                        "promptId":  "tool_style_json",
+                        "task":  "structured_output",
+                        "totalDurationMs":  3035.2,
+                        "loadDurationMs":  489.5,
+                        "promptEvalCount":  49,
+                        "evalCount":  135,
+                        "tokensPerSecond":  58.87,
+                        "responseText":  "```json\n{\n  \"model_class\": \"Compact Local Model (e.g., TinyLlama, Phi-2)\",\n  \"priority_reason\": \"Efficiency and Latency Reduction for Core Tasks\",\n  \"risk\": \"Low. The model\u0027s size is inversely proportional to its compute requirements. It is well-suited for the computationally lighter tasks that comprise OpenClaw\u0027s basic functionality, such as text summarization, keyword extraction, and basic question answering. The risk of performance bottlenecks is minimal, and the model\u0027s small footprint ensures it fits comfortably within the OpenClaw device\u0027s memory constraints.\"\n}\n```",
+                        "run":  1,
+                        "processBefore":  {
+                                              "workingSetMb":  1035.4,
+                                              "privateMemoryMb":  9835
+                                          },
+                        "processAfter":  {
+                                             "workingSetMb":  1022.9,
+                                             "privateMemoryMb":  9822.5
+                                         },
+                        "gpuBefore":  {
+                                          "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                          "memoryUsedMb":  3687,
+                                          "memoryTotalMb":  6141
+                                      },
+                        "gpuAfter":  {
+                                         "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
+                                         "memoryUsedMb":  3687,
+                                         "memoryTotalMb":  6141
+                                     }
+                    }
+                ]
+}
