@@ -1,0 +1,53 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-03-25T02:10:57.6812989Z",
+    "sampleIntervalMs":  500,
+    "maxRequestSeconds":  120,
+    "thinkFalse":  false,
+    "candidates":  [
+                       {
+                           "model":  "qwen35-hauhaucs:9b-q4km",
+                           "priority":  1,
+                           "context_tokens":  262144,
+                           "why":  "Imported GGUF Q4_K_M candidate from HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive for direct comparison against the existing local benchmark set."
+                       }
+                   ],
+    "prompts":  [
+                    {
+                        "id":  "advanced_reasoning_model_pick",
+                        "category":  "advanced_reasoning",
+                        "max_tokens":  220,
+                        "system":  "You are a strict systems evaluator. Follow the requested format exactly.",
+                        "user":  "Given this data, return valid JSON with keys default_model, fallback_model, reject_models, and rationale. Data: gemma3 latency 2173 ms, complete answers, coding failed formatting checks. qwen2.5 latency 5622 ms, complete answers, coding passed. phi4-mini latency 4106 ms, weaker wording, coding passed, refused benign profanity. qwen3.5 latency 6938 ms, blank answers on the current path, strong quality only when think:false is forced. Constraint: choose for a Windows laptop OpenClaw lane where current-path reliability matters more than maximum raw capability."
+                    },
+                    {
+                        "id":  "advanced_coding_merge_intervals",
+                        "category":  "advanced_coding",
+                        "max_tokens":  220,
+                        "system":  "Return only code. No markdown fences. No explanation.",
+                        "user":  "Write a Python function merge_intervals(intervals: list[tuple[int, int]]) -\u003e list[tuple[int, int]] that merges overlapping intervals and returns them sorted by start value. Use only built-in Python."
+                    },
+                    {
+                        "id":  "advanced_truth_release_note",
+                        "category":  "advanced_truth",
+                        "max_tokens":  90,
+                        "system":  "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
+                        "user":  "Question: Did the January 2026 FuryMesh Control SDK 2.3.7 release add websocket failover and ARM64 profiling support? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
+                    },
+                    {
+                        "id":  "advanced_incident_plan",
+                        "category":  "advanced_operations",
+                        "max_tokens":  140,
+                        "system":  "You are an operations lead. Follow formatting exactly.",
+                        "user":  "Give exactly four numbered steps to mitigate local models that spend the token budget on hidden reasoning before producing a final answer. Each step must be 10 words or fewer."
+                    }
+                ],
+    "results":  [
+                    {
+                        "model":  "qwen35-hauhaucs:9b-q4km",
+                        "promptId":  "__warmup__",
+                        "category":  "warmup",
+                        "error":  "Request timed out after 120 seconds."
+                    }
+                ]
+}

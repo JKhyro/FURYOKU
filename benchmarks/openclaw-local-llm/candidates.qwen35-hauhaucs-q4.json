@@ -1,0 +1,8 @@
+[
+  {
+    "model": "qwen35-hauhaucs:9b-q4km",
+    "priority": 1,
+    "context_tokens": 262144,
+    "why": "Imported GGUF Q4_K_M candidate from HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive for direct comparison against the existing local benchmark set."
+  }
+]
