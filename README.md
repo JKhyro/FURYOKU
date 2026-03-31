@@ -19,4 +19,3 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local OpenClaw model benchmark: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)
 
 - Latest benchmark result: [2026-03-24 summary](benchmarks/openclaw-local-llm/results/2026-03-24-summary.md)
-
