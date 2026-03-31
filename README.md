@@ -10,12 +10,19 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 
 ## Current Anchors
 
-- Charter issue: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
-- Deferred execution tracker: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
+- Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
+- First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
+- Current bounded follow-on: [#11](https://github.com/JKhyro/FURYOKU/issues/11)
 
-## Active Evaluation Lane
+## Current Baseline
+
+- Local primary lane: `gemma3:4b-it-qat`
+- Regular benchmark-backed fallback candidate: `qwen2.5:7b`
+- Local-safe experimental slot: `gemma3-heretic:4b-q4km`
+- Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
+
+## Benchmark Evidence Lane
 
 - Local OpenClaw model benchmark: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)
-
 - Latest benchmark result: [2026-03-24 summary](benchmarks/openclaw-local-llm/results/2026-03-24-summary.md)
