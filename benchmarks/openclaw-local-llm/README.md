@@ -12,7 +12,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - answer quality on basic assistant tasks
 - OpenClaw/Ollama integration fit
 
-## Current Ranking After Live Benchmark
+## Historical 2026-03-24 Ranking
 
 1. `gemma3:4b-it-qat`
 2. `qwen2.5:7b`
@@ -21,15 +21,14 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 5. `huihui_ai/qwen3-abliterated:4b`
 6. `huihui_ai/qwen3-abliterated:8b`
 
-## Current Decision
+## Current Runtime Truth
 
-- Default lightweight lane: `gemma3:4b-it-qat`
-- Best regular fallback to keep testing: `qwen2.5:7b`
-- Uncensored variants tested so far are not recommended on this machine
-- `qwen3.5:4b` remains the strongest upgrade candidate only if the runtime can force `think:false` cleanly
-- Imported experimental candidate tested on 2026-03-25: `gemma3-heretic:4b-q4km` is faster and lighter than the default Gemma path, but it was not promoted because instruction discipline and high-level reasoning were weaker
-- Imported experimental candidate tested on 2026-03-25: `gemma3-heretic:4b-q5km` modestly refined the Q4 import, but it also was not promoted because the reasoning-discipline gains were too small to justify replacing the current default
-- Imported experimental candidate tested on 2026-03-25: `qwen35-hauhaucs:9b-q4km` is aggressively uncensored, but it is too slow, too heavy, and too undisciplined on the current path to recommend for this machine
+- Local primary lane: `gemma3-heretic:4b-q4km`
+- Local fallback lane: none configured
+- The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
+- `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
+- `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
+- `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
 
 ## Usage
 
