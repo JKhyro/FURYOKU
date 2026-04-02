@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current bounded follow-on: [#19](https://github.com/JKhyro/FURYOKU/issues/19)
+- Current bounded follow-on: [#22](https://github.com/JKhyro/FURYOKU/issues/22)
 
 ## Current Baseline
 
@@ -22,7 +22,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local-safe experimental slot: `gemma3-heretic:4b-q4km`
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: merged audit output now identifies the next execute-now seam as replacing bootstrap-only `native/` with a real native-C / thin-shell scaffold
+- Current follow-on focus: replace bootstrap-only `apps/windows` with the first real Windows thin-shell scaffold over the merged native C runtime boundary
 
 ## Benchmark Evidence Lane
 
