@@ -1,5 +1,9 @@
 # Qwen3.5 9B HauhauCS Aggressive Q4_K_M
 
+Historical note:
+- This file records the 2026-03-25 evaluation of `qwen35-hauhaucs:9b-q4km`.
+- It is historical benchmark evidence, not the current deployed FURYOKU runtime baseline.
+
 ## Identity
 
 - Ollama model: `qwen35-hauhaucs:9b-q4km`
@@ -10,9 +14,9 @@
 
 ## Practical Verdict
 
-This import is not a good fit for the current lightweight OpenClaw lane on this workstation.
+This import was not a good fit for the lightweight OpenClaw lane being benchmarked on this workstation on 2026-03-25.
 
-It is aggressively uncensored, but it is substantially slower and heavier than the current default and fallback lanes, and it repeatedly leaks reasoning traces, markdown fences, and chat-template debris into outputs that were supposed to follow tight formatting constraints.
+It is aggressively uncensored, but it was substantially slower and heavier than the benchmark-time default and fallback candidates, and it repeatedly leaked reasoning traces, markdown fences, and chat-template debris into outputs that were supposed to follow tight formatting constraints.
 
 Approximate current-path score on this machine: `4.3/10`
 
@@ -55,4 +59,4 @@ Simple benchmark path:
 - Worse practical fit than `qwen2.5:7b`
 - Worse practical fit than the imported Gemma Heretic variants
 
-Keep this model out of the default and fallback paths for this workstation.
+Historical conclusion: keep this model out of the benchmark-time default and fallback paths for this workstation.

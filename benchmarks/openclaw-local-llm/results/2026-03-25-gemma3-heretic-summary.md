@@ -1,5 +1,9 @@
 # Gemma 3 Heretic Import Summary (2026-03-25)
 
+Historical note:
+- This file records the 2026-03-25 evaluation of `gemma3-heretic:4b-q4km`.
+- It preserves the benchmark-time placement language from that date and is not the current deployed baseline decision surface.
+
 ## Imported Candidate
 
 - Source: https://huggingface.co/Andycurrent/Gemma-3-4B-VL-it-Gemini-Pro-Heretic-Uncensored-Thinking_GGUF
@@ -85,6 +89,6 @@ Net result:
 
 Practical placement:
 
-- not strong enough to replace `gemma3:4b-it-qat` as the default
+- on 2026-03-25 it was judged not strong enough to replace `gemma3:4b-it-qat` in the benchmark-time default slot
 - plausible experimental candidate if you want a lighter, less-censored Gemma-family path
-- likely slots between the current default and the abliterated Qwen3 variants, with tradeoffs against `qwen2.5:7b` depending on whether you value speed/tone or stricter reasoning discipline
+- at that time it appeared to slot between the benchmark-time default and the abliterated Qwen3 variants, with tradeoffs against `qwen2.5:7b` depending on whether you value speed/tone or stricter reasoning discipline
