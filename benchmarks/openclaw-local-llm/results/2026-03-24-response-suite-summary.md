@@ -1,5 +1,9 @@
 # Response Suite Summary (2026-03-24)
 
+Historical note:
+- This file records a 2026-03-24 response-suite result set.
+- It does not define the current deployed FURYOKU runtime baseline.
+
 ## Scope
 
 Same-prompt comparison across the active lightweight candidate set on the current workstation:
@@ -60,9 +64,9 @@ Results:
 - Fail by output mismatch: `gemma3:4b-it-qat`, `huihui_ai/qwen3-abliterated:4b`
 - Fail by runtime error: `huihui_ai/qwen3-abliterated:8b`
 
-## Decision
+## Historical Decision (2026-03-24)
 
-- Keep `gemma3:4b-it-qat` as the default lightweight OpenClaw model on the current path.
-- Keep `qwen2.5:7b` as the direct-path fallback.
+- In this 2026-03-24 run, `gemma3:4b-it-qat` ranked first in the lightweight OpenClaw path.
+- In this 2026-03-24 run, `qwen2.5:7b` ranked as the direct-path fallback candidate.
 - Treat `qwen3.5:4b` as the strongest upgrade candidate only if the runtime can reliably force `think:false` or otherwise suppress hidden reasoning.
-- Do not use the tested uncensored abliterated models as the default lightweight lane on this machine.
+- Do not treat the tested uncensored abliterated models as the preferred lightweight lane on this machine based on this run.

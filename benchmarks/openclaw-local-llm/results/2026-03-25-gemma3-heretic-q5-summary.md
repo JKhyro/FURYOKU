@@ -1,5 +1,9 @@
 # Gemma 3 Heretic Q5_K_M Summary (2026-03-25)
 
+Historical note:
+- This file records the 2026-03-25 evaluation of `gemma3-heretic:4b-q5km`.
+- It preserves the benchmark-time placement language from that date and is not the current deployed baseline decision surface.
+
 ## Imported Candidate
 
 - Source: https://huggingface.co/Andycurrent/Gemma-3-4B-VL-it-Gemini-Pro-Heretic-Uncensored-Thinking_GGUF
@@ -91,13 +95,13 @@ Behavior:
 Net result:
 
 - `Q5_K_M` is a modest refinement over `Q4_K_M`, not a meaningful tier jump
-- it is still lighter and faster than the default `gemma3:4b-it-qat`
-- it is still less overblocking than the default Gemma path
-- it still does not have the instruction discipline or evaluation quality needed to replace the default lane
+- it was still lighter and faster than the benchmark-time default `gemma3:4b-it-qat`
+- it was still less overblocking than the benchmark-time default Gemma path
+- it still did not have the instruction discipline or evaluation quality needed to replace the benchmark-time default lane
 
 Practical placement:
 
-- keep `gemma3:4b-it-qat` as the default
-- keep `qwen2.5:7b` as the conservative fallback
+- at that point, keep `gemma3:4b-it-qat` as the benchmark-time default
+- at that point, keep `qwen2.5:7b` as the benchmark-time conservative fallback
 - keep `gemma3-heretic:4b-q5km` only as an experimental lighter / looser Gemma-family option
 - prefer `Q5_K_M` over `Q4_K_M` only if you personally value the slightly better direct behavior enough to justify the small RAM / GPU increase
