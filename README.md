@@ -22,7 +22,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local-safe experimental slot: `gemma3-heretic:4b-q4km`
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: keep FURYOKU-linked runtime lanes aligned to the Native C-first architecture and identify the next bounded executable adoption seam
+- Current follow-on focus: merged audit output now identifies the next execute-now seam as replacing bootstrap-only `native/` with a real native-C / thin-shell scaffold
 
 ## Benchmark Evidence Lane
 
