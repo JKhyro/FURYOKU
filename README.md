@@ -17,9 +17,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 
 ## Current Baseline
 
-- Local primary lane: `gemma3:4b-it-qat`
-- Regular local fallback: `qwen2.5:7b`
-- Local-safe experimental slot: `gemma3-heretic:4b-q4km`
+- Local primary lane: `gemma3-heretic:4b-q4km`
+- Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
 - Current follow-on focus: replace bootstrap-only `apps/linux` with the first real Linux thin-shell scaffold over the merged native C runtime boundary
