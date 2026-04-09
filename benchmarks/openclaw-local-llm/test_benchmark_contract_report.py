@@ -27,6 +27,9 @@ class BenchmarkContractReportTests(unittest.TestCase):
             title="Regression Check",
             decision=None,
             decision_reason=None,
+            machine_profile_label="",
+            profile_system_memory_mb=0,
+            profile_gpu_memory_mb=0,
         )
 
     def load_payload(self, name: str) -> dict:
@@ -115,6 +118,28 @@ class BenchmarkContractReportTests(unittest.TestCase):
 
         self.assertIn("treat it as at risk", decision)
         self.assertIn("least-bad current option", reason)
+
+    def test_profile_overrides_can_flip_baseline_to_at_risk(self):
+        payload = self.load_payload("2026-04-09-gemma3-heretic-compare-response-suite.json")
+        override_args = argparse.Namespace(
+            baseline_model=[],
+            candidate_model=[],
+            title="Override Check",
+            decision=None,
+            decision_reason=None,
+            machine_profile_label="28 GB RAM / 3.5 GB VRAM local profile",
+            profile_system_memory_mb=28672,
+            profile_gpu_memory_mb=3584,
+        )
+
+        evaluated = self.report.evaluate_results(payload, "response-suite.json", override_args)
+        q4_resource = evaluated["resourceFitVerdict"]["models"]["gemma3-heretic:4b-q4km"]
+        q4_compare = evaluated["compareDecision"]["models"]["gemma3-heretic:4b-q4km"]
+
+        self.assertEqual(q4_resource["machineProfile"]["label"], "28 GB RAM / 3.5 GB VRAM local profile")
+        self.assertEqual(q4_resource["machineProfile"]["gpuMemoryMb"], 3584)
+        self.assertEqual(q4_resource["status"], "blocked")
+        self.assertEqual(q4_compare["status"], "retain-baseline-at-risk")
 
 
 if __name__ == "__main__":

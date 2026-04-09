@@ -92,6 +92,26 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def format_profile_gib(memory_mb: int) -> str:
+    value = round(float(memory_mb) / 1024.0, 1)
+    if value.is_integer():
+        return str(int(value))
+    return f"{value:.1f}"
+
+
+def resolve_machine_profile(args) -> dict:
+    system_memory_mb = int(getattr(args, "profile_system_memory_mb", 0) or DEFAULT_MACHINE_PROFILE["systemMemoryMb"])
+    gpu_memory_mb = int(getattr(args, "profile_gpu_memory_mb", 0) or DEFAULT_MACHINE_PROFILE["gpuMemoryMb"])
+    label = str(getattr(args, "machine_profile_label", "") or "").strip()
+    if not label:
+        label = f"{format_profile_gib(system_memory_mb)} GB RAM / {format_profile_gib(gpu_memory_mb)} GB VRAM local profile"
+    return {
+        "label": label,
+        "systemMemoryMb": system_memory_mb,
+        "gpuMemoryMb": gpu_memory_mb,
+    }
+
+
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
@@ -903,7 +923,7 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
 def evaluate_results(payload: dict, source_name: str, args) -> dict:
     results = payload.get("results", [])
     candidate_registry = build_candidate_registry(payload, args)
-    machine_profile = DEFAULT_MACHINE_PROFILE
+    machine_profile = resolve_machine_profile(args)
     if payload.get("candidates"):
         enriched_candidates = []
         for candidate in payload.get("candidates", []) or []:
@@ -1415,6 +1435,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--decision-reason", help="Optional supporting paragraph for the verdict.")
     parser.add_argument("--baseline-model", action="append", default=[], help="Optional baseline model override. Repeat for multiple baselines.")
     parser.add_argument("--candidate-model", action="append", default=[], help="Optional candidate model override. Repeat for multiple candidates.")
+    parser.add_argument("--machine-profile-label", default="", help="Optional machine-profile label override for resource-fit reporting.")
+    parser.add_argument("--profile-system-memory-mb", type=int, default=0, help="Optional system-memory target override for resource-fit reporting.")
+    parser.add_argument("--profile-gpu-memory-mb", type=int, default=0, help="Optional GPU-memory target override for resource-fit reporting.")
     return parser.parse_args()
 
 

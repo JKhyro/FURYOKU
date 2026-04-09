@@ -6,6 +6,9 @@ param(
     [string]$OutputPath = "",
     [int]$SampleIntervalMs = 500,
     [int]$MaxRequestSeconds = 120,
+    [string]$MachineProfileLabel = "",
+    [int]$ProfileSystemMemoryMb = 0,
+    [int]$ProfileGpuMemoryMb = 0,
     [switch]$ThinkFalse,
     [switch]$SkipWarmup
 )
@@ -347,7 +350,23 @@ if (Test-Path $contractReport) {
         throw "python is required to attach benchmark contract checks."
     }
 
-    & $pythonCommand.Source $contractReport --input $OutputPath --overwrite
+    $contractArgs = @(
+        $contractReport,
+        "--input",
+        $OutputPath,
+        "--overwrite"
+    )
+    if (-not [string]::IsNullOrWhiteSpace($MachineProfileLabel)) {
+        $contractArgs += @("--machine-profile-label", $MachineProfileLabel)
+    }
+    if ($ProfileSystemMemoryMb -gt 0) {
+        $contractArgs += @("--profile-system-memory-mb", $ProfileSystemMemoryMb)
+    }
+    if ($ProfileGpuMemoryMb -gt 0) {
+        $contractArgs += @("--profile-gpu-memory-mb", $ProfileGpuMemoryMb)
+    }
+
+    & $pythonCommand.Source @contractArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Benchmark contract evaluation failed for $OutputPath."
     }
