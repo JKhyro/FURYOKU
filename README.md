@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current bounded follow-on: [#60](https://github.com/JKhyro/FURYOKU/issues/60)
+- Current bounded follow-on: [#63](https://github.com/JKhyro/FURYOKU/issues/63)
 
 ## Current Baseline
 
@@ -21,7 +21,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: republish the benchmark truth surfaces so the canonical compare evidence carries the new preset-aware machine-profile identity from the tooling now on `main`
+- Current follow-on focus: sanitize canonical benchmark preset metadata so published compare evidence keeps preset identity without leaking a workstation-specific absolute `presetPath`
 
 ## Benchmark Evidence Lane
 
@@ -29,4 +29,4 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Current comparison-candidate evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
 - The current benchmark evidence now carries mechanical hard-check scoring, machine-readable `promotionVerdict` and `resourceFitVerdict` outputs, and role-aware `compareDecision` statuses that can distinguish contract blockers from machine-fit blockers
-- The benchmark report and both local benchmark entrypoints now accept machine-profile overrides, and the active follow-on is to add reusable preset selection on top of those direct flags
+- The benchmark report and both local benchmark entrypoints now accept machine-profile overrides and reusable preset selection, and the active follow-on is to sanitize canonical preset metadata so the checked-in evidence keeps stable repo-relative preset references

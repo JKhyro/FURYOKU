@@ -9,6 +9,10 @@ from pathlib import Path
 from statistics import mean
 
 
+HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parents[1]
+
+
 SAFE_BUILTINS = {
     "__import__": __import__,
     "abs": abs,
@@ -103,6 +107,22 @@ def build_profile_label(system_memory_mb: int, gpu_memory_mb: int) -> str:
     return f"{format_profile_gib(system_memory_mb)} GB RAM / {format_profile_gib(gpu_memory_mb)} GB VRAM local profile"
 
 
+def sanitize_preset_path(preset_path: Path | None) -> str | None:
+    if not preset_path:
+        return None
+    path = Path(preset_path)
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        if not path.is_absolute():
+            return path.as_posix()
+        return path.name
+
+
 def default_machine_profile() -> dict:
     return {
         "label": DEFAULT_MACHINE_PROFILE["label"],
@@ -131,7 +151,7 @@ def normalize_machine_profile(name: str | None, raw: dict, preset_path: Path | N
         "gpuMemoryMb": gpu_memory_mb,
         "presetName": preset_name,
         "presetSource": "preset-file",
-        "presetPath": str(preset_path) if preset_path else None,
+        "presetPath": sanitize_preset_path(preset_path),
     }
 
 
@@ -180,7 +200,7 @@ def resolve_machine_profile(args) -> dict:
 
     profile = default_machine_profile()
     if preset_name or preset_path_value:
-        preset_path = Path(preset_path_value) if preset_path_value else Path(__file__).with_name("machine_profiles.json")
+        preset_path = Path(preset_path_value) if preset_path_value else HERE / "machine_profiles.json"
         manifest = load_machine_profile_manifest(preset_path)
         selected_name = preset_name or manifest.get("defaultProfile")
         if not selected_name:

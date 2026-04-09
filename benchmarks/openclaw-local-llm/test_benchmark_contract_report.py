@@ -171,9 +171,24 @@ class BenchmarkContractReportTests(unittest.TestCase):
 
         self.assertEqual(top_resource_profile["presetName"], "tight-28gb-3.5gb")
         self.assertEqual(top_compare_profile["presetName"], "tight-28gb-3.5gb")
+        self.assertEqual(top_resource_profile["presetPath"], "benchmarks/openclaw-local-llm/machine_profiles.json")
         self.assertEqual(q4_resource["machineProfile"]["presetSource"], "preset-file")
+        self.assertEqual(q4_resource["machineProfile"]["presetPath"], "benchmarks/openclaw-local-llm/machine_profiles.json")
         self.assertEqual(q4_compare["machineProfile"]["presetName"], "tight-28gb-3.5gb")
         self.assertEqual(q4_compare["status"], "retain-baseline-at-risk")
+
+    def test_absolute_preset_paths_outside_repo_collapse_to_file_name(self):
+        profile = self.report.normalize_machine_profile(
+            "external-profile",
+            {
+                "label": "External preset",
+                "systemMemoryMb": 32768,
+                "gpuMemoryMb": 4096,
+            },
+            Path(r"C:\temp\custom_profiles.json"),
+        )
+
+        self.assertEqual(profile["presetPath"], "custom_profiles.json")
 
     def test_summary_mentions_resolved_preset_identity(self):
         payload = self.load_payload("2026-04-09-gemma3-heretic-compare-response-suite.json")
