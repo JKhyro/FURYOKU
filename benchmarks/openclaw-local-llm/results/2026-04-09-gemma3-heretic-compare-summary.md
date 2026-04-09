@@ -4,7 +4,7 @@ Current note:
 - This report exposes prompt-contract pass/fail signals derived directly from the benchmark prompts.
 - It is generated from the benchmark JSON outputs rather than manual scoring alone.
 - Promotion gates now separate hard blockers from non-blocking degradations.
-- Compare decisions now also encode resource-fit blockers and degradations for the 32 GB RAM / 4 GB VRAM local machine profile.
+- Compare decisions now also encode resource-fit blockers and degradations for the current 32 GB RAM / 4 GB VRAM local profile. Preset identity: `default-32gb-4gb` (preset-file).
 
 ## Current Verdict
 
