@@ -27,6 +27,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
+- Current deployed-baseline manifest: [2026-04-09 Gemma Heretic current-baseline manifest](results/2026-04-09-gemma3-heretic-current-baseline.json)
 - Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Current direct comparison evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Those April 9 summaries now include mechanical hard-check scoring for route decisions, JSON/code output contracts, fabricated-entity skepticism, and sexual-boundary classifier shape
@@ -44,7 +45,8 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 2. Run `run_ollama_benchmark.ps1`.
 3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
 4. Review the JSON output, including the attached `contractEvaluation`, `contractChecks`, `contractSummary`, `promotionVerdict`, `resourceFitVerdict`, and `compareDecision` fields.
-5. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
+5. When you publish a compare lane, also emit `--current-baseline-output` so downstream runtime glue and automation can consume one compact baseline-selection manifest.
+6. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
 
 Preset file:
 

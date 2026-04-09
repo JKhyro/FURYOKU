@@ -213,6 +213,40 @@ class BenchmarkContractReportTests(unittest.TestCase):
 
         self.assertIn("Preset identity: `tight-28gb-3.5gb` (preset-file).", summary)
 
+    def test_current_baseline_manifest_rolls_up_active_compare_truth(self):
+        summaries = []
+        manifest_args = argparse.Namespace(
+            **vars(self.args),
+            summary_output=str(RESULTS_DIR / "2026-04-09-gemma3-heretic-compare-summary.md"),
+        )
+        for name in [
+            "2026-04-09-gemma3-heretic-compare-benchmark.json",
+            "2026-04-09-gemma3-heretic-compare-response-suite.json",
+            "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
+            "2026-04-09-gemma3-heretic-compare-advanced-suite.json",
+        ]:
+            payload = self.load_payload(name)
+            evaluated = self.report.evaluate_results(payload, name, self.args)
+            summaries.extend(self.report.summarize_input(RESULTS_DIR / name, evaluated))
+
+        manifest = self.report.build_current_baseline_manifest(summaries, manifest_args)
+
+        self.assertEqual(manifest["schemaVersion"], 1)
+        self.assertEqual(manifest["selectedBaselineModel"], "gemma3-heretic:4b-q4km")
+        self.assertEqual(manifest["currentBaseline"]["compareDecision"], "retain-baseline")
+        self.assertEqual(manifest["currentBaseline"]["promotionVerdict"], "blocked")
+        self.assertEqual(manifest["machineProfile"]["presetName"], "default-32gb-4gb")
+        self.assertEqual(manifest["currentBaseline"]["machineProfile"]["presetName"], "default-32gb-4gb")
+        self.assertIn(
+            "2026-04-09-gemma3-heretic-compare-summary.md",
+            manifest["summaryOutput"],
+        )
+        self.assertIn(
+            "2026-04-09-gemma3-heretic-compare-response-suite.json",
+            manifest["evidenceFiles"],
+        )
+        self.assertIn("gemma3-heretic:4b-q5km", manifest["candidateModels"])
+
 
 if __name__ == "__main__":
     unittest.main()
