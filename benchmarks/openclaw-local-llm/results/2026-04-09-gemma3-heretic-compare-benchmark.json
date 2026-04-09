@@ -543,7 +543,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T06:13:36.932683+00:00",
+    "generatedAtUtc": "2026-04-09T13:32:42.008102+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-benchmark.json",
     "passed": 15,
     "failed": 7,
@@ -561,6 +561,71 @@
         "failed": 3,
         "promptsAllPassed": 4,
         "promptCount": 5
+      }
+    }
+  },
+  "promotionVerdict": {
+    "generatedAtUtc": "2026-04-09T13:32:42.008129+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-benchmark.json",
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "model": "gemma3-heretic:4b-q4km",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 4,
+        "degradationCount": 0,
+        "blockingFailures": [
+          {
+            "id": "route_decision:expected_route_decision",
+            "severity": "blocker",
+            "reason": "Route decision correctness is a promotion blocker for the benchmark lane."
+          },
+          {
+            "id": "tool_style_json:raw_json_only",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must return raw JSON without markdown fencing."
+          },
+          {
+            "id": "tool_style_json:valid_json",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must produce valid machine-readable JSON."
+          },
+          {
+            "id": "tool_style_json:required_json_keys",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must keep the expected JSON contract keys."
+          }
+        ],
+        "degradations": [],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma3-heretic:4b-q5km": {
+        "model": "gemma3-heretic:4b-q5km",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 3,
+        "degradationCount": 0,
+        "blockingFailures": [
+          {
+            "id": "tool_style_json:raw_json_only",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must return raw JSON without markdown fencing."
+          },
+          {
+            "id": "tool_style_json:valid_json",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must produce valid machine-readable JSON."
+          },
+          {
+            "id": "tool_style_json:required_json_keys",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must keep the expected JSON contract keys."
+          }
+        ],
+        "degradations": [],
+        "summary": "Blocked from promotion by hard-check failures."
       }
     }
   }

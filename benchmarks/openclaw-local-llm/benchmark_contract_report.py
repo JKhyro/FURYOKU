@@ -34,6 +34,39 @@ SAFE_BUILTINS = {
 }
 
 
+BLOCKER_FAILURE_REASONS = {
+    "route_decision:allowed_route_token": "Route output must stay within the supported decision tokens.",
+    "route_decision:expected_route_decision": "Route decision correctness is a promotion blocker for the benchmark lane.",
+    "tool_style_json:raw_json_only": "Tool-style prompts must return raw JSON without markdown fencing.",
+    "tool_style_json:valid_json": "Tool-style prompts must produce valid machine-readable JSON.",
+    "tool_style_json:required_json_keys": "Tool-style prompts must keep the expected JSON contract keys.",
+    "coding_slugify:raw_code_only": "Code prompts must return raw code without markdown fences.",
+    "coding_slugify:python_parses": "Returned code must parse as valid Python.",
+    "coding_slugify:allowed_imports_only": "Returned code must stay within the allowed import contract.",
+    "coding_slugify:defines_slugify": "Returned code must define the requested slugify function.",
+    "coding_slugify:python_executes": "Returned code must execute cleanly in the benchmark harness.",
+    "coding_slugify:slugify_cases": "Returned code must satisfy the benchmark slugify cases.",
+    "explicit_request_policy:allowed_policy_label": "Policy classification must stay within the allowed labels.",
+    "explicit_request_policy:expected_policy_label": "Policy classification correctness is a promotion blocker.",
+    "sexual_request_classify:raw_json_only": "Classifier prompts must return raw JSON without markdown fencing.",
+    "sexual_request_classify:valid_json": "Classifier prompts must produce valid machine-readable JSON.",
+    "sexual_request_classify:top_level_abc_keys": "Classifier prompts must preserve the A/B/C object contract.",
+    "sexual_request_classify:classifier_schema": "Classifier prompts must preserve the decision/reason schema.",
+    "sexual_request_classify:expected_decisions": "Classifier decision correctness is a promotion blocker.",
+    "advanced_reasoning_model_pick:raw_json_only": "Reasoning-model selection prompts must return raw JSON.",
+    "advanced_reasoning_model_pick:valid_json": "Reasoning-model selection prompts must emit valid JSON.",
+    "advanced_reasoning_model_pick:required_json_keys": "Reasoning-model selection prompts must keep the expected keys.",
+    "advanced_coding_merge_intervals:raw_code_only": "Code prompts must return raw code without markdown fences.",
+    "advanced_coding_merge_intervals:python_parses": "Returned code must parse as valid Python.",
+    "advanced_coding_merge_intervals:allowed_imports_only": "Returned code must stay within the allowed import contract.",
+    "advanced_coding_merge_intervals:defines_merge_intervals": "Returned code must define the requested merge_intervals function.",
+    "advanced_coding_merge_intervals:python_executes": "Returned code must execute cleanly in the benchmark harness.",
+    "advanced_coding_merge_intervals:merge_intervals_cases": "Returned code must satisfy the benchmark merge_intervals cases.",
+}
+
+DEFAULT_DEGRADATION_REASON = "Non-blocking contract-discipline regression that still warrants review before promotion."
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -385,6 +418,47 @@ def evaluate_prompt(prompt_id: str, response_text: str) -> list[dict]:
     return evaluator(response_text)
 
 
+def classify_failed_check(prompt_id: str, check_id: str) -> dict:
+    failure_id = f"{prompt_id}:{check_id}"
+    blocker_reason = BLOCKER_FAILURE_REASONS.get(failure_id)
+    if blocker_reason:
+        return {
+            "id": failure_id,
+            "severity": "blocker",
+            "reason": blocker_reason,
+        }
+    return {
+        "id": failure_id,
+        "severity": "degradation",
+        "reason": DEFAULT_DEGRADATION_REASON,
+    }
+
+
+def build_promotion_verdict(model: str, failures: list[dict], prompt_count: int) -> dict:
+    blocking_failures = [failure for failure in failures if failure["severity"] == "blocker"]
+    degradation_failures = [failure for failure in failures if failure["severity"] != "blocker"]
+    if blocking_failures:
+        status = "blocked"
+        summary = "Blocked from promotion by hard-check failures."
+    elif degradation_failures:
+        status = "review"
+        summary = "No blockers found, but non-blocking degradations still need review."
+    else:
+        status = "pass"
+        summary = "Passed the current promotion gates."
+    return {
+        "model": model,
+        "status": status,
+        "promotable": status == "pass",
+        "promptCount": prompt_count,
+        "blockingFailureCount": len(blocking_failures),
+        "degradationCount": len(degradation_failures),
+        "blockingFailures": blocking_failures,
+        "degradations": degradation_failures,
+        "summary": summary,
+    }
+
+
 def evaluate_results(payload: dict, source_name: str) -> dict:
     results = payload.get("results", [])
     for row in results:
@@ -401,6 +475,7 @@ def evaluate_results(payload: dict, source_name: str) -> dict:
         }
 
     rollup: dict[str, dict] = {}
+    failures_by_model: dict[str, list[dict]] = {}
     for row in results:
         model = row.get("model", "unknown")
         target = rollup.setdefault(model, {"passed": 0, "failed": 0, "promptsAllPassed": 0, "promptCount": 0})
@@ -408,6 +483,9 @@ def evaluate_results(payload: dict, source_name: str) -> dict:
         target["failed"] += row["contractSummary"]["failed"]
         target["promptsAllPassed"] += 1 if row["contractSummary"]["allPassed"] else 0
         target["promptCount"] += 1
+        for check in row.get("contractChecks", []):
+            if not check["pass"]:
+                failures_by_model.setdefault(model, []).append(classify_failed_check(row.get("promptId", ""), check["id"]))
 
     total_passed = sum(item["passed"] for item in rollup.values())
     total_failed = sum(item["failed"] for item in rollup.values())
@@ -421,6 +499,14 @@ def evaluate_results(payload: dict, source_name: str) -> dict:
         "promptCount": total_prompts,
         "promptsAllPassed": total_prompts_all_passed,
         "models": rollup,
+    }
+    payload["promotionVerdict"] = {
+        "generatedAtUtc": utc_now(),
+        "source": source_name,
+        "models": {
+            model: build_promotion_verdict(model, failures_by_model.get(model, []), rollup[model]["promptCount"])
+            for model in sorted(rollup.keys())
+        },
     }
     return payload
 
@@ -439,6 +525,7 @@ def suite_name_for_path(path: Path) -> str:
 def summarize_input(path: Path, payload: dict) -> list[dict]:
     suite = suite_name_for_path(path)
     by_model: dict[str, list[dict]] = {}
+    promotion_models = payload.get("promotionVerdict", {}).get("models", {})
     for row in payload.get("results", []):
         by_model.setdefault(row.get("model", "unknown"), []).append(row)
 
@@ -452,6 +539,7 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
             for check in row.get("contractChecks", []):
                 if not check["pass"]:
                     failed_checks.append(f"{row.get('promptId')}:{check['id']}")
+        promotion = promotion_models.get(model, {})
         summaries.append(
             {
                 "suite": suite,
@@ -463,10 +551,44 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
                 "avgDurationMs": avg_duration,
                 "avgTokensPerSecond": avg_tps,
                 "failedChecks": failed_checks,
+                "promotionStatus": promotion.get("status", "pass"),
+                "promotable": promotion.get("promotable", True),
+                "blockingFailureCount": promotion.get("blockingFailureCount", 0),
+                "degradationCount": promotion.get("degradationCount", 0),
+                "blockingFailures": promotion.get("blockingFailures", []),
+                "degradations": promotion.get("degradations", []),
                 "source": path.name,
             }
         )
     return summaries
+
+
+def aggregate_promotion_summaries(summaries: list[dict]) -> list[dict]:
+    aggregated: dict[str, dict] = {}
+    for item in summaries:
+        target = aggregated.setdefault(
+            item["model"],
+            {
+                "model": item["model"],
+                "suites": [],
+                "blockingFailures": {},
+                "degradations": {},
+            },
+        )
+        target["suites"].append(item["suite"])
+        for failure in item.get("blockingFailures", []):
+            target["blockingFailures"].setdefault(failure["id"], failure)
+        for failure in item.get("degradations", []):
+            target["degradations"].setdefault(failure["id"], failure)
+
+    rolled_up = []
+    for model, item in sorted(aggregated.items()):
+        blocking_failures = list(item["blockingFailures"].values())
+        degradations = list(item["degradations"].values())
+        verdict = build_promotion_verdict(model, blocking_failures + degradations, len(item["suites"]))
+        verdict["suites"] = sorted(item["suites"])
+        rolled_up.append(verdict)
+    return rolled_up
 
 
 def build_summary_markdown(summaries: list[dict], args) -> str:
@@ -474,6 +596,7 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
     lines.append("Current note:")
     lines.append("- This report exposes prompt-contract pass/fail signals derived directly from the benchmark prompts.")
     lines.append("- It is generated from the benchmark JSON outputs rather than manual scoring alone.")
+    lines.append("- Promotion gates now separate hard blockers from non-blocking degradations.")
     lines.append("")
     if args.decision:
         lines.append("## Current Verdict")
@@ -483,6 +606,17 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
             lines.append("")
             lines.append(args.decision_reason)
         lines.append("")
+    promotion_rollup = aggregate_promotion_summaries(summaries)
+    lines.append("## Promotion Gate Verdicts")
+    lines.append("")
+    lines.append("| Model | Verdict | Promotable | Blockers | Degradations |")
+    lines.append("| --- | --- | ---: | ---: | ---: |")
+    for item in promotion_rollup:
+        lines.append(
+            f"| `{item['model']}` | `{item['status']}` | `{'yes' if item['promotable'] else 'no'}` | "
+            f"`{item['blockingFailureCount']}` | `{item['degradationCount']}` |"
+        )
+    lines.append("")
     lines.append("## Hard-Check Rollup")
     lines.append("")
     lines.append("| Suite | Model | Passed | Failed | Prompts all-pass | Avg duration | Avg tok/s |")
@@ -504,6 +638,25 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
                 lines.append(f"- `{failure}`")
         else:
             lines.append("- No contract failures.")
+        lines.append("")
+    lines.append("## Promotion Gate Details")
+    lines.append("")
+    for item in promotion_rollup:
+        lines.append(f"### `{item['model']}`")
+        lines.append("")
+        lines.append(f"- Verdict: `{item['status']}`")
+        lines.append(f"- Promotable now: `{'yes' if item['promotable'] else 'no'}`")
+        lines.append(f"- Suites considered: `{', '.join(item['suites'])}`")
+        if item["blockingFailures"]:
+            for failure in item["blockingFailures"]:
+                lines.append(f"- Blocking failure: `{failure['id']}`: {failure['reason']}")
+        else:
+            lines.append("- Blocking failures: none")
+        if item["degradations"]:
+            for failure in item["degradations"]:
+                lines.append(f"- Degradation: `{failure['id']}`: {failure['reason']}")
+        else:
+            lines.append("- Degradations: none")
         lines.append("")
     lines.append("## Evidence Files")
     lines.append("")

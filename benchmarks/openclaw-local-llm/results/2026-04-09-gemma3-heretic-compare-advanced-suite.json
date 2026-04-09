@@ -647,7 +647,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T06:13:37.022568+00:00",
+    "generatedAtUtc": "2026-04-09T13:32:42.020910+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-advanced-suite.json",
     "passed": 18,
     "failed": 10,
@@ -665,6 +665,88 @@
         "failed": 5,
         "promptsAllPassed": 1,
         "promptCount": 4
+      }
+    }
+  },
+  "promotionVerdict": {
+    "generatedAtUtc": "2026-04-09T13:32:42.020932+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-advanced-suite.json",
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "model": "gemma3-heretic:4b-q4km",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 4,
+        "blockingFailureCount": 2,
+        "degradationCount": 3,
+        "blockingFailures": [
+          {
+            "id": "advanced_reasoning_model_pick:raw_json_only",
+            "severity": "blocker",
+            "reason": "Reasoning-model selection prompts must return raw JSON."
+          },
+          {
+            "id": "advanced_coding_merge_intervals:raw_code_only",
+            "severity": "blocker",
+            "reason": "Code prompts must return raw code without markdown fences."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "advanced_truth_release_note:two_line_response",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "advanced_truth_release_note:allowed_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "advanced_truth_release_note:skeptical_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma3-heretic:4b-q5km": {
+        "model": "gemma3-heretic:4b-q5km",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 4,
+        "blockingFailureCount": 2,
+        "degradationCount": 3,
+        "blockingFailures": [
+          {
+            "id": "advanced_reasoning_model_pick:raw_json_only",
+            "severity": "blocker",
+            "reason": "Reasoning-model selection prompts must return raw JSON."
+          },
+          {
+            "id": "advanced_coding_merge_intervals:raw_code_only",
+            "severity": "blocker",
+            "reason": "Code prompts must return raw code without markdown fences."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "advanced_truth_release_note:two_line_response",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "advanced_truth_release_note:allowed_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "advanced_truth_release_note:skeptical_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
       }
     }
   }
