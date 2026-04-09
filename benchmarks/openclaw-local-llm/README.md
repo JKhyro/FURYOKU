@@ -29,6 +29,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
 - Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Current direct comparison evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
+- Those April 9 summaries now include mechanical hard-check scoring for route decisions, JSON/code output contracts, fabricated-entity skepticism, and sexual-boundary classifier shape
 - `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
 - `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
 - `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
@@ -38,7 +39,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 1. Pull the candidate models you want to test with Ollama.
 2. Run `run_ollama_benchmark.ps1`.
 3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
-4. Review the JSON output and compare latency, throughput, answer quality, truthfulness, and refusal style together.
+4. Review the JSON output, including the attached `contractEvaluation`, `contractChecks`, and `contractSummary` fields.
 5. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
 
 Example:

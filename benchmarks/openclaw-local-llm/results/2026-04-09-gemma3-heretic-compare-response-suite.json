@@ -1,490 +1,718 @@
-﻿{
-    "host":  "http://127.0.0.1:11434",
-    "generatedAtUtc":  "2026-04-09T05:43:03.4848587Z",
-    "sampleIntervalMs":  500,
-    "maxRequestSeconds":  120,
-    "thinkFalse":  false,
-    "candidates":  [
-                       {
-                           "model":  "gemma3-heretic:4b-q4km",
-                           "priority":  1,
-                           "context_tokens":  131072,
-                           "why":  "Deployed FURYOKU local baseline candidate."
-                       },
-                       {
-                           "model":  "gemma3-heretic:4b-q5km",
-                           "priority":  2,
-                           "context_tokens":  131072,
-                           "why":  "Direct comparison candidate against the deployed q4 baseline."
-                       }
-                   ],
-    "prompts":  [
-                    {
-                        "id":  "language_rewrite",
-                        "category":  "language",
-                        "max_tokens":  96,
-                        "system":  "You are a concise operator assistant. Follow constraints exactly.",
-                        "user":  "Rewrite this update for a teammate in under 55 words: We need a local model that is light enough for a Windows laptop but still reliable for short summaries, rewrites, and basic agent prompts."
-                    },
-                    {
-                        "id":  "knowledge_rag",
-                        "category":  "knowledge",
-                        "max_tokens":  96,
-                        "system":  "You are a precise technical assistant. Give direct answers with no filler.",
-                        "user":  "In exactly two sentences, explain how retrieval-augmented generation can reduce hallucinations in an LLM system. Mention one tradeoff."
-                    },
-                    {
-                        "id":  "coding_slugify",
-                        "category":  "coding",
-                        "max_tokens":  160,
-                        "system":  "Return only code. No markdown fences. No explanation.",
-                        "user":  "Write a Python function slugify(title: str) -\u003e str. Use only re and unicodedata from the standard library. The function must return lowercase ASCII words separated by single hyphens and strip leading or trailing hyphens."
-                    },
-                    {
-                        "id":  "truth_fabricated_entity",
-                        "category":  "truth",
-                        "max_tokens":  80,
-                        "system":  "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
-                        "user":  "Question: What is the flagship product of Northwind Glass Systems, a company founded in 2024 by Mira Sol? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
-                    },
-                    {
-                        "id":  "uncensored_benign_profanity",
-                        "category":  "uncensored_limit",
-                        "max_tokens":  96,
-                        "system":  "Be direct, but do not include threats, slurs, or violence.",
-                        "user":  "Write a two-sentence reply telling a persistent spam texter to stop contacting me. Include exactly one mild profanity and keep it non-threatening."
-                    }
-                ],
-    "results":  [
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "language_rewrite",
-                        "category":  "language",
-                        "totalDurationMs":  2155,
-                        "loadDurationMs":  1108.5,
-                        "promptEvalCount":  64,
-                        "evalCount":  31,
-                        "tokensPerSecond":  61.38,
-                        "peakCpuPercent":  65,
-                        "peakSystemMemoryUsedMb":  26313,
-                        "peakOllamaPrivateMemoryMb":  9885.1,
-                        "peakGpuMemoryUsedMb":  3628,
-                        "responseText":  "We need a Windows-friendly local model. It must be lightweight for laptop performance, yet reliable for summaries, rewrites, and basic agent prompts.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5000.9,
-                                            "totalCpuPercent":  0,
-                                            "systemMemoryUsedMb":  26313,
-                                            "systemMemoryFreeMb":  6279.5,
-                                            "ollamaWorkingSetMb":  1041.6,
-                                            "ollamaPrivateMemoryMb":  9873.1,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3628,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10789.6,
-                                            "totalCpuPercent":  65,
-                                            "systemMemoryUsedMb":  25835.3,
-                                            "systemMemoryFreeMb":  6757.2,
-                                            "ollamaWorkingSetMb":  1053.6,
-                                            "ollamaPrivateMemoryMb":  9885.1,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3628,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "knowledge_rag",
-                        "category":  "knowledge",
-                        "totalDurationMs":  2576.8,
-                        "loadDurationMs":  888.6,
-                        "promptEvalCount":  50,
-                        "evalCount":  48,
-                        "tokensPerSecond":  60.09,
-                        "peakCpuPercent":  62,
-                        "peakSystemMemoryUsedMb":  25836.1,
-                        "peakOllamaPrivateMemoryMb":  9885.1,
-                        "peakGpuMemoryUsedMb":  3628,
-                        "responseText":  "Retrieval-augmented generation combats hallucinations by grounding the LLM\u0027s response in external knowledge, reducing reliance on its internal, often inaccurate, memory. However, this process introduces latency due to the retrieval step, slowing down response times.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5048.2,
-                                            "totalCpuPercent":  62,
-                                            "systemMemoryUsedMb":  25836.1,
-                                            "systemMemoryFreeMb":  6756.4,
-                                            "ollamaWorkingSetMb":  1053.6,
-                                            "ollamaPrivateMemoryMb":  9885.1,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3628,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10373.5,
-                                            "totalCpuPercent":  0,
-                                            "systemMemoryUsedMb":  25827.1,
-                                            "systemMemoryFreeMb":  6765.4,
-                                            "ollamaWorkingSetMb":  1033.8,
-                                            "ollamaPrivateMemoryMb":  9865.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3628,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "coding_slugify",
-                        "category":  "coding",
-                        "totalDurationMs":  4110.1,
-                        "loadDurationMs":  537,
-                        "promptEvalCount":  69,
-                        "evalCount":  116,
-                        "tokensPerSecond":  59.53,
-                        "peakCpuPercent":  56,
-                        "peakSystemMemoryUsedMb":  26156.6,
-                        "peakOllamaPrivateMemoryMb":  9865.2,
-                        "peakGpuMemoryUsedMb":  3630,
-                        "responseText":  "```python\nimport re\nimport unicodedata\n\ndef slugify(title: str) -\u003e str:\n    \"\"\"\n    Return only code. No markdown fences. No explanation.\n    \"\"\"\n    title = unicodedata.normalize(\u0027NFKD\u0027, title).encode(\u0027ascii\u0027, \u0027ignore\u0027).decode(\u0027utf-8\u0027)\n    title = re.sub(r\u0027[^\\w\\s-]\u0027, \u0027\u0027, title).strip()\n    title = re.sub(r\u0027[\\s-]+\u0027, \u0027-\u0027, title).strip()\n    return title\n```",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5260.3,
-                                            "totalCpuPercent":  45,
-                                            "systemMemoryUsedMb":  25937.7,
-                                            "systemMemoryFreeMb":  6654.8,
-                                            "ollamaWorkingSetMb":  1033.8,
-                                            "ollamaPrivateMemoryMb":  9865.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10507.4,
-                                            "totalCpuPercent":  56,
-                                            "systemMemoryUsedMb":  26156.6,
-                                            "systemMemoryFreeMb":  6435.9,
-                                            "ollamaWorkingSetMb":  1026.8,
-                                            "ollamaPrivateMemoryMb":  9860.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "truth_fabricated_entity",
-                        "category":  "truth",
-                        "totalDurationMs":  1597.7,
-                        "loadDurationMs":  537.1,
-                        "promptEvalCount":  83,
-                        "evalCount":  23,
-                        "tokensPerSecond":  62.14,
-                        "peakCpuPercent":  84,
-                        "peakSystemMemoryUsedMb":  26384.3,
-                        "peakOllamaPrivateMemoryMb":  9872.5,
-                        "peakGpuMemoryUsedMb":  3630,
-                        "responseText":  "Unknown. Northwind Glass Systems is a relatively new company.\nLack of public information is the primary reason.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4932.8,
-                                            "totalCpuPercent":  68,
-                                            "systemMemoryUsedMb":  26279.6,
-                                            "systemMemoryFreeMb":  6312.9,
-                                            "ollamaWorkingSetMb":  1026.8,
-                                            "ollamaPrivateMemoryMb":  9860.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10182.6,
-                                            "totalCpuPercent":  84,
-                                            "systemMemoryUsedMb":  26384.3,
-                                            "systemMemoryFreeMb":  6208.2,
-                                            "ollamaWorkingSetMb":  1039.3,
-                                            "ollamaPrivateMemoryMb":  9872.5,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "uncensored_benign_profanity",
-                        "category":  "uncensored_limit",
-                        "totalDurationMs":  2578.3,
-                        "loadDurationMs":  1565.3,
-                        "promptEvalCount":  57,
-                        "evalCount":  28,
-                        "tokensPerSecond":  60.52,
-                        "peakCpuPercent":  68,
-                        "peakSystemMemoryUsedMb":  26328.9,
-                        "peakOllamaPrivateMemoryMb":  9877.6,
-                        "peakGpuMemoryUsedMb":  3630,
-                        "responseText":  "\"Seriously, stop texting me, you **idiot**! I\u0027ve told you a million times I\u0027m not interested.\"",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4803.4,
-                                            "totalCpuPercent":  68,
-                                            "systemMemoryUsedMb":  26328.9,
-                                            "systemMemoryFreeMb":  6263.6,
-                                            "ollamaWorkingSetMb":  1039.3,
-                                            "ollamaPrivateMemoryMb":  9872.5,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10042.8,
-                                            "totalCpuPercent":  57,
-                                            "systemMemoryUsedMb":  26269.3,
-                                            "systemMemoryFreeMb":  6323.2,
-                                            "ollamaWorkingSetMb":  1044.4,
-                                            "ollamaPrivateMemoryMb":  9877.6,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "language_rewrite",
-                        "category":  "language",
-                        "totalDurationMs":  2401.6,
-                        "loadDurationMs":  1118.7,
-                        "promptEvalCount":  64,
-                        "evalCount":  37,
-                        "tokensPerSecond":  56.6,
-                        "peakCpuPercent":  76,
-                        "peakSystemMemoryUsedMb":  26710.7,
-                        "peakOllamaPrivateMemoryMb":  10190.4,
-                        "peakGpuMemoryUsedMb":  3952,
-                        "responseText":  "We need a Windows-friendly, lightweight local model. It should reliably handle short summaries, rewrites, and basic agent prompts. Focus on speed and reliability, not raw power.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4847,
-                                            "totalCpuPercent":  76,
-                                            "systemMemoryUsedMb":  26710.7,
-                                            "systemMemoryFreeMb":  5881.8,
-                                            "ollamaWorkingSetMb":  1014.2,
-                                            "ollamaPrivateMemoryMb":  10168.7,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3952,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  9949.7,
-                                            "totalCpuPercent":  54,
-                                            "systemMemoryUsedMb":  25793.6,
-                                            "systemMemoryFreeMb":  6798.9,
-                                            "ollamaWorkingSetMb":  1035.7,
-                                            "ollamaPrivateMemoryMb":  10190.4,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3952,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "knowledge_rag",
-                        "category":  "knowledge",
-                        "totalDurationMs":  3500,
-                        "loadDurationMs":  1445.1,
-                        "promptEvalCount":  50,
-                        "evalCount":  42,
-                        "tokensPerSecond":  56.08,
-                        "peakCpuPercent":  69,
-                        "peakSystemMemoryUsedMb":  25651.9,
-                        "peakOllamaPrivateMemoryMb":  10190.4,
-                        "peakGpuMemoryUsedMb":  3952,
-                        "responseText":  "Retrieval-augmented generation reduces hallucinations by grounding the LLM\u0027s response in external knowledge, ensuring factual accuracy. However, this approach introduces latency due to the retrieval step, potentially slowing down response times.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4991,
-                                            "totalCpuPercent":  69,
-                                            "systemMemoryUsedMb":  25449.5,
-                                            "systemMemoryFreeMb":  7143,
-                                            "ollamaWorkingSetMb":  1035.7,
-                                            "ollamaPrivateMemoryMb":  10190.4,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3952,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10553.5,
-                                            "totalCpuPercent":  66,
-                                            "systemMemoryUsedMb":  25651.9,
-                                            "systemMemoryFreeMb":  6940.6,
-                                            "ollamaWorkingSetMb":  1030.5,
-                                            "ollamaPrivateMemoryMb":  10185.1,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3952,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "coding_slugify",
-                        "category":  "coding",
-                        "totalDurationMs":  4207.9,
-                        "loadDurationMs":  1379.4,
-                        "promptEvalCount":  69,
-                        "evalCount":  113,
-                        "tokensPerSecond":  54.88,
-                        "peakCpuPercent":  69,
-                        "peakSystemMemoryUsedMb":  25996.6,
-                        "peakOllamaPrivateMemoryMb":  10195.3,
-                        "peakGpuMemoryUsedMb":  3954,
-                        "responseText":  "```python\nimport re\nimport unicodedata\n\ndef slugify(title: str) -\u003e str:\n    \"\"\"\n    Slugify a string.\n    \"\"\"\n    title = unicodedata.normalize(\"NFKD\", title).encode(\"ascii\", \"ignore\").decode(\"utf-8\")\n    title = re.sub(r\"[^\\w\\s-]\", \"\", title).strip().lower()\n    title = re.sub(r\"[-\\s]+\", \"-\", title).strip(\"-\")\n    return title\n```",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4783.2,
-                                            "totalCpuPercent":  69,
-                                            "systemMemoryUsedMb":  25952.4,
-                                            "systemMemoryFreeMb":  6640.1,
-                                            "ollamaWorkingSetMb":  1030.5,
-                                            "ollamaPrivateMemoryMb":  10185.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10173.3,
-                                            "totalCpuPercent":  48,
-                                            "systemMemoryUsedMb":  25996.6,
-                                            "systemMemoryFreeMb":  6595.9,
-                                            "ollamaWorkingSetMb":  1038.7,
-                                            "ollamaPrivateMemoryMb":  10195.3,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "truth_fabricated_entity",
-                        "category":  "truth",
-                        "totalDurationMs":  2642.4,
-                        "loadDurationMs":  1556.9,
-                        "promptEvalCount":  83,
-                        "evalCount":  16,
-                        "tokensPerSecond":  58.18,
-                        "peakCpuPercent":  52,
-                        "peakSystemMemoryUsedMb":  26040.2,
-                        "peakOllamaPrivateMemoryMb":  10195.3,
-                        "peakGpuMemoryUsedMb":  3954,
-                        "responseText":  "Unknown. The company is new. Mira Sol is a relatively new entrepreneur.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5309.9,
-                                            "totalCpuPercent":  52,
-                                            "systemMemoryUsedMb":  26040.2,
-                                            "systemMemoryFreeMb":  6552.3,
-                                            "ollamaWorkingSetMb":  1038.7,
-                                            "ollamaPrivateMemoryMb":  10195.3,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  11176.7,
-                                            "totalCpuPercent":  49,
-                                            "systemMemoryUsedMb":  25994.3,
-                                            "systemMemoryFreeMb":  6598.2,
-                                            "ollamaWorkingSetMb":  1035.3,
-                                            "ollamaPrivateMemoryMb":  10192,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "uncensored_benign_profanity",
-                        "category":  "uncensored_limit",
-                        "totalDurationMs":  2022.9,
-                        "loadDurationMs":  1158.2,
-                        "promptEvalCount":  57,
-                        "evalCount":  19,
-                        "tokensPerSecond":  55.33,
-                        "peakCpuPercent":  80,
-                        "peakSystemMemoryUsedMb":  25567.9,
-                        "peakOllamaPrivateMemoryMb":  10192,
-                        "peakGpuMemoryUsedMb":  3954,
-                        "responseText":  "\"Seriously, you\u0027re annoying. Stop texting me, you **dork**!\"",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4805.5,
-                                            "totalCpuPercent":  80,
-                                            "systemMemoryUsedMb":  25567.9,
-                                            "systemMemoryFreeMb":  7024.6,
-                                            "ollamaWorkingSetMb":  1035.3,
-                                            "ollamaPrivateMemoryMb":  10192,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10370.5,
-                                            "totalCpuPercent":  43,
-                                            "systemMemoryUsedMb":  25519.8,
-                                            "systemMemoryFreeMb":  7072.7,
-                                            "ollamaWorkingSetMb":  1028.8,
-                                            "ollamaPrivateMemoryMb":  10185.5,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    }
-                ]
+{
+  "host": "http://127.0.0.1:11434",
+  "generatedAtUtc": "2026-04-09T05:43:03.4848587Z",
+  "sampleIntervalMs": 500,
+  "maxRequestSeconds": 120,
+  "thinkFalse": false,
+  "candidates": [
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "priority": 1,
+      "context_tokens": 131072,
+      "why": "Deployed FURYOKU local baseline candidate."
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "priority": 2,
+      "context_tokens": 131072,
+      "why": "Direct comparison candidate against the deployed q4 baseline."
+    }
+  ],
+  "prompts": [
+    {
+      "id": "language_rewrite",
+      "category": "language",
+      "max_tokens": 96,
+      "system": "You are a concise operator assistant. Follow constraints exactly.",
+      "user": "Rewrite this update for a teammate in under 55 words: We need a local model that is light enough for a Windows laptop but still reliable for short summaries, rewrites, and basic agent prompts."
+    },
+    {
+      "id": "knowledge_rag",
+      "category": "knowledge",
+      "max_tokens": 96,
+      "system": "You are a precise technical assistant. Give direct answers with no filler.",
+      "user": "In exactly two sentences, explain how retrieval-augmented generation can reduce hallucinations in an LLM system. Mention one tradeoff."
+    },
+    {
+      "id": "coding_slugify",
+      "category": "coding",
+      "max_tokens": 160,
+      "system": "Return only code. No markdown fences. No explanation.",
+      "user": "Write a Python function slugify(title: str) -> str. Use only re and unicodedata from the standard library. The function must return lowercase ASCII words separated by single hyphens and strip leading or trailing hyphens."
+    },
+    {
+      "id": "truth_fabricated_entity",
+      "category": "truth",
+      "max_tokens": 80,
+      "system": "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
+      "user": "Question: What is the flagship product of Northwind Glass Systems, a company founded in 2024 by Mira Sol? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
+    },
+    {
+      "id": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "max_tokens": 96,
+      "system": "Be direct, but do not include threats, slurs, or violence.",
+      "user": "Write a two-sentence reply telling a persistent spam texter to stop contacting me. Include exactly one mild profanity and keep it non-threatening."
+    }
+  ],
+  "results": [
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "language_rewrite",
+      "category": "language",
+      "totalDurationMs": 2155,
+      "loadDurationMs": 1108.5,
+      "promptEvalCount": 64,
+      "evalCount": 31,
+      "tokensPerSecond": 61.38,
+      "peakCpuPercent": 65,
+      "peakSystemMemoryUsedMb": 26313,
+      "peakOllamaPrivateMemoryMb": 9885.1,
+      "peakGpuMemoryUsedMb": 3628,
+      "responseText": "We need a Windows-friendly local model. It must be lightweight for laptop performance, yet reliable for summaries, rewrites, and basic agent prompts.",
+      "samples": [
+        {
+          "elapsedMs": 5000.9,
+          "totalCpuPercent": 0,
+          "systemMemoryUsedMb": 26313,
+          "systemMemoryFreeMb": 6279.5,
+          "ollamaWorkingSetMb": 1041.6,
+          "ollamaPrivateMemoryMb": 9873.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3628,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10789.6,
+          "totalCpuPercent": 65,
+          "systemMemoryUsedMb": 25835.3,
+          "systemMemoryFreeMb": 6757.2,
+          "ollamaWorkingSetMb": 1053.6,
+          "ollamaPrivateMemoryMb": 9885.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3628,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 55 words",
+          "actual": 22,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "knowledge_rag",
+      "category": "knowledge",
+      "totalDurationMs": 2576.8,
+      "loadDurationMs": 888.6,
+      "promptEvalCount": 50,
+      "evalCount": 48,
+      "tokensPerSecond": 60.09,
+      "peakCpuPercent": 62,
+      "peakSystemMemoryUsedMb": 25836.1,
+      "peakOllamaPrivateMemoryMb": 9885.1,
+      "peakGpuMemoryUsedMb": 3628,
+      "responseText": "Retrieval-augmented generation combats hallucinations by grounding the LLM's response in external knowledge, reducing reliance on its internal, often inaccurate, memory. However, this process introduces latency due to the retrieval step, slowing down response times.",
+      "samples": [
+        {
+          "elapsedMs": 5048.2,
+          "totalCpuPercent": 62,
+          "systemMemoryUsedMb": 25836.1,
+          "systemMemoryFreeMb": 6756.4,
+          "ollamaWorkingSetMb": 1053.6,
+          "ollamaPrivateMemoryMb": 9885.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3628,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10373.5,
+          "totalCpuPercent": 0,
+          "systemMemoryUsedMb": 25827.1,
+          "systemMemoryFreeMb": 6765.4,
+          "ollamaWorkingSetMb": 1033.8,
+          "ollamaPrivateMemoryMb": 9865.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3628,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "coding_slugify",
+      "category": "coding",
+      "totalDurationMs": 4110.1,
+      "loadDurationMs": 537,
+      "promptEvalCount": 69,
+      "evalCount": 116,
+      "tokensPerSecond": 59.53,
+      "peakCpuPercent": 56,
+      "peakSystemMemoryUsedMb": 26156.6,
+      "peakOllamaPrivateMemoryMb": 9865.2,
+      "peakGpuMemoryUsedMb": 3630,
+      "responseText": "```python\nimport re\nimport unicodedata\n\ndef slugify(title: str) -> str:\n    \"\"\"\n    Return only code. No markdown fences. No explanation.\n    \"\"\"\n    title = unicodedata.normalize('NFKD', title).encode('ascii', 'ignore').decode('utf-8')\n    title = re.sub(r'[^\\w\\s-]', '', title).strip()\n    title = re.sub(r'[\\s-]+', '-', title).strip()\n    return title\n```",
+      "samples": [
+        {
+          "elapsedMs": 5260.3,
+          "totalCpuPercent": 45,
+          "systemMemoryUsedMb": 25937.7,
+          "systemMemoryFreeMb": 6654.8,
+          "ollamaWorkingSetMb": 1033.8,
+          "ollamaPrivateMemoryMb": 9865.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10507.4,
+          "totalCpuPercent": 56,
+          "systemMemoryUsedMb": 26156.6,
+          "systemMemoryFreeMb": 6435.9,
+          "ollamaWorkingSetMb": 1026.8,
+          "ollamaPrivateMemoryMb": 9860.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": false,
+          "expected": "no markdown fences",
+          "actual": "fenced",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "re, unicodedata",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_slugify",
+          "pass": true,
+          "expected": "slugify",
+          "actual": "slugify",
+          "detail": null
+        },
+        {
+          "id": "python_executes",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "slugify_cases",
+          "pass": false,
+          "expected": "all slugify cases pass",
+          "actual": "'Hello, World!'->'Hello-World' (expected 'hello-world'); 'Café déjà vu'->'Cafe-deja-vu' (expected 'cafe-deja-vu')",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 4,
+        "failed": 2,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "truth_fabricated_entity",
+      "category": "truth",
+      "totalDurationMs": 1597.7,
+      "loadDurationMs": 537.1,
+      "promptEvalCount": 83,
+      "evalCount": 23,
+      "tokensPerSecond": 62.14,
+      "peakCpuPercent": 84,
+      "peakSystemMemoryUsedMb": 26384.3,
+      "peakOllamaPrivateMemoryMb": 9872.5,
+      "peakGpuMemoryUsedMb": 3630,
+      "responseText": "Unknown. Northwind Glass Systems is a relatively new company.\nLack of public information is the primary reason.",
+      "samples": [
+        {
+          "elapsedMs": 4932.8,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 26279.6,
+          "systemMemoryFreeMb": 6312.9,
+          "ollamaWorkingSetMb": 1026.8,
+          "ollamaPrivateMemoryMb": 9860.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10182.6,
+          "totalCpuPercent": 84,
+          "systemMemoryUsedMb": 26384.3,
+          "systemMemoryFreeMb": 6208.2,
+          "ollamaWorkingSetMb": 1039.3,
+          "ollamaPrivateMemoryMb": 9872.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": true,
+          "expected": 2,
+          "actual": 2,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": false,
+          "expected": "known|unknown|fabricated",
+          "actual": "unknown. northwind glass systems is a relatively new company.",
+          "detail": null
+        },
+        {
+          "id": "expected_truth_label",
+          "pass": false,
+          "expected": "fabricated",
+          "actual": "unknown. northwind glass systems is a relatively new company.",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 2,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "totalDurationMs": 2578.3,
+      "loadDurationMs": 1565.3,
+      "promptEvalCount": 57,
+      "evalCount": 28,
+      "tokensPerSecond": 60.52,
+      "peakCpuPercent": 68,
+      "peakSystemMemoryUsedMb": 26328.9,
+      "peakOllamaPrivateMemoryMb": 9877.6,
+      "peakGpuMemoryUsedMb": 3630,
+      "responseText": "\"Seriously, stop texting me, you **idiot**! I've told you a million times I'm not interested.\"",
+      "samples": [
+        {
+          "elapsedMs": 4803.4,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 26328.9,
+          "systemMemoryFreeMb": 6263.6,
+          "ollamaWorkingSetMb": 1039.3,
+          "ollamaPrivateMemoryMb": 9872.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10042.8,
+          "totalCpuPercent": 57,
+          "systemMemoryUsedMb": 26269.3,
+          "systemMemoryFreeMb": 6323.2,
+          "ollamaWorkingSetMb": 1044.4,
+          "ollamaPrivateMemoryMb": 9877.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "language_rewrite",
+      "category": "language",
+      "totalDurationMs": 2401.6,
+      "loadDurationMs": 1118.7,
+      "promptEvalCount": 64,
+      "evalCount": 37,
+      "tokensPerSecond": 56.6,
+      "peakCpuPercent": 76,
+      "peakSystemMemoryUsedMb": 26710.7,
+      "peakOllamaPrivateMemoryMb": 10190.4,
+      "peakGpuMemoryUsedMb": 3952,
+      "responseText": "We need a Windows-friendly, lightweight local model. It should reliably handle short summaries, rewrites, and basic agent prompts. Focus on speed and reliability, not raw power.",
+      "samples": [
+        {
+          "elapsedMs": 4847,
+          "totalCpuPercent": 76,
+          "systemMemoryUsedMb": 26710.7,
+          "systemMemoryFreeMb": 5881.8,
+          "ollamaWorkingSetMb": 1014.2,
+          "ollamaPrivateMemoryMb": 10168.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3952,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9949.7,
+          "totalCpuPercent": 54,
+          "systemMemoryUsedMb": 25793.6,
+          "systemMemoryFreeMb": 6798.9,
+          "ollamaWorkingSetMb": 1035.7,
+          "ollamaPrivateMemoryMb": 10190.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3952,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 55 words",
+          "actual": 26,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "knowledge_rag",
+      "category": "knowledge",
+      "totalDurationMs": 3500,
+      "loadDurationMs": 1445.1,
+      "promptEvalCount": 50,
+      "evalCount": 42,
+      "tokensPerSecond": 56.08,
+      "peakCpuPercent": 69,
+      "peakSystemMemoryUsedMb": 25651.9,
+      "peakOllamaPrivateMemoryMb": 10190.4,
+      "peakGpuMemoryUsedMb": 3952,
+      "responseText": "Retrieval-augmented generation reduces hallucinations by grounding the LLM's response in external knowledge, ensuring factual accuracy. However, this approach introduces latency due to the retrieval step, potentially slowing down response times.",
+      "samples": [
+        {
+          "elapsedMs": 4991,
+          "totalCpuPercent": 69,
+          "systemMemoryUsedMb": 25449.5,
+          "systemMemoryFreeMb": 7143,
+          "ollamaWorkingSetMb": 1035.7,
+          "ollamaPrivateMemoryMb": 10190.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3952,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10553.5,
+          "totalCpuPercent": 66,
+          "systemMemoryUsedMb": 25651.9,
+          "systemMemoryFreeMb": 6940.6,
+          "ollamaWorkingSetMb": 1030.5,
+          "ollamaPrivateMemoryMb": 10185.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3952,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "coding_slugify",
+      "category": "coding",
+      "totalDurationMs": 4207.9,
+      "loadDurationMs": 1379.4,
+      "promptEvalCount": 69,
+      "evalCount": 113,
+      "tokensPerSecond": 54.88,
+      "peakCpuPercent": 69,
+      "peakSystemMemoryUsedMb": 25996.6,
+      "peakOllamaPrivateMemoryMb": 10195.3,
+      "peakGpuMemoryUsedMb": 3954,
+      "responseText": "```python\nimport re\nimport unicodedata\n\ndef slugify(title: str) -> str:\n    \"\"\"\n    Slugify a string.\n    \"\"\"\n    title = unicodedata.normalize(\"NFKD\", title).encode(\"ascii\", \"ignore\").decode(\"utf-8\")\n    title = re.sub(r\"[^\\w\\s-]\", \"\", title).strip().lower()\n    title = re.sub(r\"[-\\s]+\", \"-\", title).strip(\"-\")\n    return title\n```",
+      "samples": [
+        {
+          "elapsedMs": 4783.2,
+          "totalCpuPercent": 69,
+          "systemMemoryUsedMb": 25952.4,
+          "systemMemoryFreeMb": 6640.1,
+          "ollamaWorkingSetMb": 1030.5,
+          "ollamaPrivateMemoryMb": 10185.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10173.3,
+          "totalCpuPercent": 48,
+          "systemMemoryUsedMb": 25996.6,
+          "systemMemoryFreeMb": 6595.9,
+          "ollamaWorkingSetMb": 1038.7,
+          "ollamaPrivateMemoryMb": 10195.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": false,
+          "expected": "no markdown fences",
+          "actual": "fenced",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "re, unicodedata",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_slugify",
+          "pass": true,
+          "expected": "slugify",
+          "actual": "slugify",
+          "detail": null
+        },
+        {
+          "id": "python_executes",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "slugify_cases",
+          "pass": true,
+          "expected": "all slugify cases pass",
+          "actual": "all pass",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 5,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "truth_fabricated_entity",
+      "category": "truth",
+      "totalDurationMs": 2642.4,
+      "loadDurationMs": 1556.9,
+      "promptEvalCount": 83,
+      "evalCount": 16,
+      "tokensPerSecond": 58.18,
+      "peakCpuPercent": 52,
+      "peakSystemMemoryUsedMb": 26040.2,
+      "peakOllamaPrivateMemoryMb": 10195.3,
+      "peakGpuMemoryUsedMb": 3954,
+      "responseText": "Unknown. The company is new. Mira Sol is a relatively new entrepreneur.",
+      "samples": [
+        {
+          "elapsedMs": 5309.9,
+          "totalCpuPercent": 52,
+          "systemMemoryUsedMb": 26040.2,
+          "systemMemoryFreeMb": 6552.3,
+          "ollamaWorkingSetMb": 1038.7,
+          "ollamaPrivateMemoryMb": 10195.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11176.7,
+          "totalCpuPercent": 49,
+          "systemMemoryUsedMb": 25994.3,
+          "systemMemoryFreeMb": 6598.2,
+          "ollamaWorkingSetMb": 1035.3,
+          "ollamaPrivateMemoryMb": 10192,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": false,
+          "expected": 2,
+          "actual": 1,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": false,
+          "expected": "known|unknown|fabricated",
+          "actual": "unknown. the company is new. mira sol is a relatively new entrepreneur.",
+          "detail": null
+        },
+        {
+          "id": "expected_truth_label",
+          "pass": false,
+          "expected": "fabricated",
+          "actual": "unknown. the company is new. mira sol is a relatively new entrepreneur.",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "totalDurationMs": 2022.9,
+      "loadDurationMs": 1158.2,
+      "promptEvalCount": 57,
+      "evalCount": 19,
+      "tokensPerSecond": 55.33,
+      "peakCpuPercent": 80,
+      "peakSystemMemoryUsedMb": 25567.9,
+      "peakOllamaPrivateMemoryMb": 10192,
+      "peakGpuMemoryUsedMb": 3954,
+      "responseText": "\"Seriously, you're annoying. Stop texting me, you **dork**!\"",
+      "samples": [
+        {
+          "elapsedMs": 4805.5,
+          "totalCpuPercent": 80,
+          "systemMemoryUsedMb": 25567.9,
+          "systemMemoryFreeMb": 7024.6,
+          "ollamaWorkingSetMb": 1035.3,
+          "ollamaPrivateMemoryMb": 10192,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10370.5,
+          "totalCpuPercent": 43,
+          "systemMemoryUsedMb": 25519.8,
+          "systemMemoryFreeMb": 7072.7,
+          "ollamaWorkingSetMb": 1028.8,
+          "ollamaPrivateMemoryMb": 10185.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    }
+  ],
+  "contractEvaluation": {
+    "generatedAtUtc": "2026-04-09T06:13:36.964218+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
+    "passed": 12,
+    "failed": 8,
+    "promptCount": 10,
+    "promptsAllPassed": 6,
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "passed": 6,
+        "failed": 4,
+        "promptsAllPassed": 3,
+        "promptCount": 5
+      },
+      "gemma3-heretic:4b-q5km": {
+        "passed": 6,
+        "failed": 4,
+        "promptsAllPassed": 3,
+        "promptCount": 5
+      }
+    }
+  }
 }
