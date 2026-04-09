@@ -694,7 +694,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T06:13:36.964218+00:00",
+    "generatedAtUtc": "2026-04-09T13:32:42.013698+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "passed": 12,
     "failed": 8,
@@ -712,6 +712,78 @@
         "failed": 4,
         "promptsAllPassed": 3,
         "promptCount": 5
+      }
+    }
+  },
+  "promotionVerdict": {
+    "generatedAtUtc": "2026-04-09T13:32:42.013718+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "model": "gemma3-heretic:4b-q4km",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 2,
+        "degradationCount": 2,
+        "blockingFailures": [
+          {
+            "id": "coding_slugify:raw_code_only",
+            "severity": "blocker",
+            "reason": "Code prompts must return raw code without markdown fences."
+          },
+          {
+            "id": "coding_slugify:slugify_cases",
+            "severity": "blocker",
+            "reason": "Returned code must satisfy the benchmark slugify cases."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "truth_fabricated_entity:allowed_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:expected_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma3-heretic:4b-q5km": {
+        "model": "gemma3-heretic:4b-q5km",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 1,
+        "degradationCount": 3,
+        "blockingFailures": [
+          {
+            "id": "coding_slugify:raw_code_only",
+            "severity": "blocker",
+            "reason": "Code prompts must return raw code without markdown fences."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "truth_fabricated_entity:two_line_response",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:allowed_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:expected_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
       }
     }
   }
