@@ -23,7 +23,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 
 ## Current Runtime Truth
 
-- Current bounded follow-on: [#42](https://github.com/JKhyro/FURYOKU/issues/42)
+- Current bounded follow-on: [#45](https://github.com/JKhyro/FURYOKU/issues/45)
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
