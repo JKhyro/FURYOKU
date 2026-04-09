@@ -1,0 +1,15 @@
+{
+  "defaultProfile": "default-32gb-4gb",
+  "profiles": {
+    "default-32gb-4gb": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096
+    },
+    "tight-28gb-3.5gb": {
+      "label": "28 GB RAM / 3.5 GB VRAM local profile",
+      "systemMemoryMb": 28672,
+      "gpuMemoryMb": 3584
+    }
+  }
+}

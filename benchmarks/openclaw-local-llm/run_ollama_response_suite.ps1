@@ -6,6 +6,8 @@ param(
     [string]$OutputPath = "",
     [int]$SampleIntervalMs = 500,
     [int]$MaxRequestSeconds = 120,
+    [string]$MachineProfilePath = "",
+    [string]$MachineProfileName = "",
     [string]$MachineProfileLabel = "",
     [int]$ProfileSystemMemoryMb = 0,
     [int]$ProfileGpuMemoryMb = 0,
@@ -358,6 +360,12 @@ if (Test-Path $contractReport) {
     )
     if (-not [string]::IsNullOrWhiteSpace($MachineProfileLabel)) {
         $contractArgs += @("--machine-profile-label", $MachineProfileLabel)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($MachineProfilePath)) {
+        $contractArgs += @("--machine-profile-path", $MachineProfilePath)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($MachineProfileName)) {
+        $contractArgs += @("--machine-profile-name", $MachineProfileName)
     }
     if ($ProfileSystemMemoryMb -gt 0) {
         $contractArgs += @("--profile-system-memory-mb", $ProfileSystemMemoryMb)
