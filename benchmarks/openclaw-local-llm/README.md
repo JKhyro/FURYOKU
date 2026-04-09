@@ -23,12 +23,12 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 
 ## Current Runtime Truth
 
-- Current bounded follow-on: [#37](https://github.com/JKhyro/FURYOKU/issues/37)
+- Current bounded follow-on: [#39](https://github.com/JKhyro/FURYOKU/issues/39)
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
-- Current deployed-baseline evidence: [2026-03-25 Gemma Heretic summary](results/2026-03-25-gemma3-heretic-summary.md)
-- Current direct comparison evidence: [2026-03-25 Gemma Heretic Q5 summary](results/2026-03-25-gemma3-heretic-q5-summary.md)
+- Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
+- Current direct comparison evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
 - `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
 - `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
 - `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
