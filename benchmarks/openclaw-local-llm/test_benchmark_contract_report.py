@@ -69,6 +69,53 @@ class BenchmarkContractReportTests(unittest.TestCase):
         )
         self.assertIn("| `gemma3-heretic:4b-q5km` | `candidate` | `candidate-blocked-contract-and-machine-fit` |", summary)
 
+    def test_baseline_compare_status_flips_to_at_risk_when_resource_fit_is_not_fit(self):
+        verdict = self.report.build_compare_verdict(
+            "gemma3-heretic:4b-q4km",
+            "baseline",
+            {"status": "blocked", "promotable": False},
+            ["gemma3-heretic:4b-q4km"],
+            {
+                "status": "blocked",
+                "promotable": False,
+                "summary": "Baseline exceeds the preferred local machine-fit envelope.",
+                "metrics": {"peakGpuMemoryUsedMb": 3980},
+                "blockingFailures": [
+                    {
+                        "id": "resource_fit:gpu_headroom",
+                        "severity": "blocker",
+                        "reason": "GPU headroom falls too close to the VRAM ceiling.",
+                    }
+                ],
+                "degradations": [],
+            },
+        )
+
+        self.assertEqual(verdict["status"], "retain-baseline-at-risk")
+        self.assertTrue(verdict["baselineAtRisk"])
+        self.assertEqual(verdict["baselineRiskStatus"], "blocked")
+        self.assertIn("least-bad current option", verdict["summary"])
+        self.assertIn("resource_fit:gpu_headroom", {reason["id"] for reason in verdict["baselineRiskReasons"]})
+
+    def test_auto_verdict_marks_retained_baseline_as_at_risk(self):
+        decision, reason = self.report.build_auto_verdict(
+            [
+                {
+                    "model": "gemma3-heretic:4b-q4km",
+                    "role": "baseline",
+                    "status": "retain-baseline-at-risk",
+                },
+                {
+                    "model": "gemma3-heretic:4b-q5km",
+                    "role": "candidate",
+                    "status": "candidate-blocked-contract-and-machine-fit",
+                },
+            ]
+        )
+
+        self.assertIn("treat it as at risk", decision)
+        self.assertIn("least-bad current option", reason)
+
 
 if __name__ == "__main__":
     unittest.main()
