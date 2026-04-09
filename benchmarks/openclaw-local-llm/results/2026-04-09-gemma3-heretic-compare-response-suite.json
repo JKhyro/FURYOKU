@@ -726,7 +726,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T15:47:42.321077+00:00",
+    "generatedAtUtc": "2026-04-09T16:48:29.872084+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "passed": 12,
     "failed": 8,
@@ -748,7 +748,7 @@
     }
   },
   "promotionVerdict": {
-    "generatedAtUtc": "2026-04-09T15:47:42.321090+00:00",
+    "generatedAtUtc": "2026-04-09T16:48:29.872097+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -820,8 +820,16 @@
     }
   },
   "compareDecision": {
-    "generatedAtUtc": "2026-04-09T15:47:42.321102+00:00",
+    "generatedAtUtc": "2026-04-09T16:48:29.872106+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "C:\\Users\\Allan\\OneDrive\\Documents\\FURYOKU\\benchmarks\\openclaw-local-llm\\machine_profiles.json"
+    },
     "baselineModels": [
       "gemma3-heretic:4b-q4km"
     ],
@@ -835,7 +843,32 @@
         "status": "retain-baseline",
         "summary": "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.",
         "comparedAgainst": [],
-        "resourceStatus": "fit"
+        "resourceStatus": "fit",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "C:\\Users\\Allan\\OneDrive\\Documents\\FURYOKU\\benchmarks\\openclaw-local-llm\\machine_profiles.json"
+        },
+        "resourcePromotable": true,
+        "resourceBlockingFailureCount": 0,
+        "resourceDegradationCount": 0,
+        "resourceBlockingFailures": [],
+        "resourceDegradations": [],
+        "resourceMetrics": {
+          "avgDurationMs": 2603.58,
+          "avgTokensPerSecond": 60.73,
+          "peakGpuMemoryUsedMb": 3630.0,
+          "peakOllamaPrivateMemoryMb": 9885.1,
+          "peakSystemMemoryUsedMb": 26384.3,
+          "peakPrivateMemoryMb": null
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "fit",
+        "baselineRiskSummary": "Resource-fit checks are within the current 32 GB RAM / 4 GB VRAM local profile.",
+        "baselineRiskReasons": []
       },
       "gemma3-heretic:4b-q5km": {
         "model": "gemma3-heretic:4b-q5km",
@@ -845,17 +878,77 @@
         "comparedAgainst": [
           "gemma3-heretic:4b-q4km"
         ],
-        "resourceStatus": "blocked"
+        "resourceStatus": "blocked",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "C:\\Users\\Allan\\OneDrive\\Documents\\FURYOKU\\benchmarks\\openclaw-local-llm\\machine_profiles.json"
+        },
+        "resourcePromotable": false,
+        "resourceBlockingFailureCount": 2,
+        "resourceDegradationCount": 1,
+        "resourceBlockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 3954.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": 142.0
+          },
+          {
+            "id": "resource_fit:ollama_private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            "metric": "ollama_private_memory_regression",
+            "actual": 10195.3,
+            "expected": "< +256",
+            "baseline": 9885.1,
+            "delta": 310.2
+          }
+        ],
+        "resourceDegradations": [
+          {
+            "id": "resource_fit:tokens_per_second_regression",
+            "severity": "degradation",
+            "reason": "Candidate throughput drops below the preferred baseline tolerance.",
+            "metric": "tokens_per_second_regression",
+            "actual": 56.21,
+            "expected": "> 0.95x baseline",
+            "baseline": 60.73,
+            "delta": -0.074
+          }
+        ],
+        "resourceMetrics": {
+          "avgDurationMs": 2954.96,
+          "avgTokensPerSecond": 56.21,
+          "peakGpuMemoryUsedMb": 3954.0,
+          "peakOllamaPrivateMemoryMb": 10195.3,
+          "peakSystemMemoryUsedMb": 26710.7,
+          "peakPrivateMemoryMb": null
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "none",
+        "baselineRiskSummary": "",
+        "baselineRiskReasons": []
       }
     }
   },
   "resourceFitVerdict": {
-    "generatedAtUtc": "2026-04-09T15:47:42.321096+00:00",
+    "generatedAtUtc": "2026-04-09T16:48:29.872101+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "machineProfile": {
       "label": "32 GB RAM / 4 GB VRAM local profile",
       "systemMemoryMb": 32768,
-      "gpuMemoryMb": 4096
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "C:\\Users\\Allan\\OneDrive\\Documents\\FURYOKU\\benchmarks\\openclaw-local-llm\\machine_profiles.json"
     },
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -863,11 +956,14 @@
         "role": "baseline",
         "status": "fit",
         "promotable": true,
-        "summary": "Resource-fit checks are within the current local machine profile.",
+        "summary": "Resource-fit checks are within the current 32 GB RAM / 4 GB VRAM local profile.",
         "machineProfile": {
           "label": "32 GB RAM / 4 GB VRAM local profile",
           "systemMemoryMb": 32768,
-          "gpuMemoryMb": 4096
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "C:\\Users\\Allan\\OneDrive\\Documents\\FURYOKU\\benchmarks\\openclaw-local-llm\\machine_profiles.json"
         },
         "metrics": {
           "avgDurationMs": 2603.58,
@@ -887,11 +983,14 @@
         "role": "candidate",
         "status": "blocked",
         "promotable": false,
-        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM machine profile.",
+        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM local profile.",
         "machineProfile": {
           "label": "32 GB RAM / 4 GB VRAM local profile",
           "systemMemoryMb": 32768,
-          "gpuMemoryMb": 4096
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "C:\\Users\\Allan\\OneDrive\\Documents\\FURYOKU\\benchmarks\\openclaw-local-llm\\machine_profiles.json"
         },
         "metrics": {
           "avgDurationMs": 2954.96,
