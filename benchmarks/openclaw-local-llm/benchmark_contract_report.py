@@ -107,10 +107,10 @@ def build_profile_label(system_memory_mb: int, gpu_memory_mb: int) -> str:
     return f"{format_profile_gib(system_memory_mb)} GB RAM / {format_profile_gib(gpu_memory_mb)} GB VRAM local profile"
 
 
-def sanitize_preset_path(preset_path: Path | None) -> str | None:
-    if not preset_path:
+def sanitize_repo_path(path_value: Path | None) -> str | None:
+    if not path_value:
         return None
-    path = Path(preset_path)
+    path = Path(path_value)
     try:
         resolved = path.resolve()
     except OSError:
@@ -121,6 +121,10 @@ def sanitize_preset_path(preset_path: Path | None) -> str | None:
         if not path.is_absolute():
             return path.as_posix()
         return path.name
+
+
+def sanitize_preset_path(preset_path: Path | None) -> str | None:
+    return sanitize_repo_path(preset_path)
 
 
 def default_machine_profile() -> dict:
@@ -1368,6 +1372,87 @@ def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[di
     return rolled_up
 
 
+def build_current_baseline_manifest(summaries: list[dict], args) -> dict:
+    machine_profile = summaries[0].get("machineProfile", {}) if summaries else {}
+    promotion_rollup = aggregate_promotion_summaries(summaries)
+    resource_rollup = aggregate_resource_fit_summaries(summaries)
+    compare_rollup = aggregate_compare_summaries(summaries, promotion_rollup, resource_rollup)
+    decision_text = args.decision
+    decision_reason = args.decision_reason
+    if not decision_text:
+        auto_verdict = build_auto_verdict(compare_rollup)
+        if auto_verdict:
+            decision_text, decision_reason = auto_verdict
+
+    suites_by_model: dict[str, list[str]] = {}
+    for item in summaries:
+        suites_by_model.setdefault(item["model"], [])
+        if item["suite"] not in suites_by_model[item["model"]]:
+            suites_by_model[item["model"]].append(item["suite"])
+
+    evidence_files: list[str] = []
+    seen_sources: set[str] = set()
+    for item in summaries:
+        source = item["source"]
+        if source in seen_sources:
+            continue
+        seen_sources.add(source)
+        evidence_files.append(source)
+
+    models = {}
+    baseline_models = []
+    candidate_models = []
+    for item in compare_rollup:
+        model_entry = {
+            "model": item["model"],
+            "role": item["role"],
+            "compareDecision": item["status"],
+            "compareSummary": item["summary"],
+            "comparedAgainst": item.get("comparedAgainst", []),
+            "promotionVerdict": item.get("promotionStatus", "unknown"),
+            "resourceFitVerdict": item.get("resourceStatus", "fit"),
+            "promotable": item.get("promotable", False),
+            "machineProfile": item.get("machineProfile") or machine_profile,
+            "metrics": item.get("resourceMetrics", {}),
+            "suites": sorted(suites_by_model.get(item["model"], [])),
+            "blockingFailureCount": item.get("blockingFailureCount", 0),
+            "degradationCount": item.get("degradationCount", 0),
+            "resourceBlockingFailureCount": item.get("resourceBlockingFailureCount", 0),
+            "resourceDegradationCount": item.get("resourceDegradationCount", 0),
+            "blockingFailureIds": [failure["id"] for failure in item.get("blockingFailures", [])],
+            "resourceBlockingFailureIds": [
+                (f"{failure.get('suite')}:{failure['id']}" if failure.get("suite") else failure["id"])
+                for failure in item.get("resourceBlockingFailures", [])
+            ],
+        }
+        models[item["model"]] = model_entry
+        if item["role"] == "baseline":
+            baseline_models.append(model_entry)
+        elif item["role"] == "candidate":
+            candidate_models.append(model_entry)
+
+    selected_baseline = baseline_models[0] if len(baseline_models) == 1 else None
+    summary_output_value = str(getattr(args, "summary_output", "") or "").strip()
+    manifest = {
+        "schemaVersion": 1,
+        "generatedAtUtc": utc_now(),
+        "title": args.title,
+        "machineProfile": machine_profile,
+        "decision": {
+            "summary": decision_text or "",
+            "reason": decision_reason or "",
+        },
+        "selectedBaselineModel": selected_baseline["model"] if selected_baseline else None,
+        "currentBaseline": selected_baseline,
+        "baselineModels": [item["model"] for item in baseline_models],
+        "candidateModels": [item["model"] for item in candidate_models],
+        "models": models,
+        "evidenceFiles": evidence_files,
+        "summaryOutput": sanitize_repo_path(Path(summary_output_value)) if summary_output_value else None,
+    }
+    return manifest
+
+
 def build_auto_verdict(compare_rollup: list[dict]) -> tuple[str, str] | None:
     baseline_models = [item for item in compare_rollup if item["role"] == "baseline"]
     at_risk_baselines = [item for item in baseline_models if item["status"] == "retain-baseline-at-risk"]
@@ -1572,6 +1657,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input", action="append", required=True, help="Benchmark result JSON file. Repeat for multiple files.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite input JSON files with attached contract checks.")
     parser.add_argument("--summary-output", help="Optional Markdown summary output path.")
+    parser.add_argument("--current-baseline-output", help="Optional JSON output path for the compact current-baseline manifest.")
     parser.add_argument("--title", default="Benchmark Contract Report", help="Summary title.")
     parser.add_argument("--decision", help="Optional current verdict paragraph.")
     parser.add_argument("--decision-reason", help="Optional supporting paragraph for the verdict.")
@@ -1598,6 +1684,9 @@ def main() -> int:
     if args.summary_output:
         summary_path = Path(args.summary_output)
         summary_path.write_text(build_summary_markdown(summaries, args) + "\n", encoding="utf-8")
+    if args.current_baseline_output:
+        baseline_path = Path(args.current_baseline_output)
+        save_json(baseline_path, build_current_baseline_manifest(summaries, args))
     return 0
 
 
