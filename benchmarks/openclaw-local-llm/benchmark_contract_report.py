@@ -806,19 +806,47 @@ def build_resource_fit_verdict(
 
 
 def build_compare_verdict(model: str, role: str | None, promotion: dict, baseline_models: list[str], resource_fit: dict) -> dict:
+    resource_status = resource_fit.get("status", "fit")
+    resource_promotable = resource_fit.get("promotable", resource_status == "fit")
+    resource_blockers = resource_fit.get("blockingFailures", [])
+    resource_degradations = resource_fit.get("degradations", [])
+    baseline_at_risk = role == "baseline" and resource_status != "fit"
+
     if role == "baseline":
+        status = "retain-baseline-at-risk" if baseline_at_risk else "retain-baseline"
+        if resource_status == "blocked":
+            summary = (
+                "Current deployed baseline remains in place as the least-bad current option, "
+                "but it is outside the preferred local machine-fit envelope."
+            )
+        elif resource_status == "review":
+            summary = (
+                "Current deployed baseline remains in place, but it is showing machine-fit degradations "
+                "that warrant operational review."
+            )
+        else:
+            summary = "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates."
         return {
             "model": model,
             "role": role,
-            "status": "retain-baseline",
-            "summary": "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.",
+            "status": status,
+            "summary": summary,
             "comparedAgainst": [entry for entry in baseline_models if entry != model],
-            "resourceStatus": resource_fit.get("status", "fit"),
+            "resourceStatus": resource_status,
+            "resourcePromotable": resource_promotable,
+            "resourceBlockingFailureCount": len(resource_blockers),
+            "resourceDegradationCount": len(resource_degradations),
+            "resourceBlockingFailures": resource_blockers,
+            "resourceDegradations": resource_degradations,
+            "resourceMetrics": resource_fit.get("metrics", {}),
+            "baselineAtRisk": baseline_at_risk,
+            "baselineRiskStatus": resource_status if baseline_at_risk else "fit",
+            "baselineRiskSummary": resource_fit.get("summary", ""),
+            "baselineRiskReasons": resource_blockers + resource_degradations,
         }
 
     if role == "candidate":
         promotion_status = promotion.get("status", "pass")
-        resource_status = resource_fit.get("status", "fit")
         blocked_on_contract = promotion_status != "pass"
         blocked_on_machine_fit = resource_status != "fit"
         if blocked_on_contract and blocked_on_machine_fit:
@@ -840,6 +868,16 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
             "summary": summary,
             "comparedAgainst": list(baseline_models),
             "resourceStatus": resource_status,
+            "resourcePromotable": resource_promotable,
+            "resourceBlockingFailureCount": len(resource_blockers),
+            "resourceDegradationCount": len(resource_degradations),
+            "resourceBlockingFailures": resource_blockers,
+            "resourceDegradations": resource_degradations,
+            "resourceMetrics": resource_fit.get("metrics", {}),
+            "baselineAtRisk": False,
+            "baselineRiskStatus": "none",
+            "baselineRiskSummary": "",
+            "baselineRiskReasons": [],
         }
 
     return {
@@ -848,7 +886,17 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
         "status": "unscoped",
         "summary": "Model role was not declared for compare decisioning.",
         "comparedAgainst": list(baseline_models),
-        "resourceStatus": resource_fit.get("status", "fit"),
+        "resourceStatus": resource_status,
+        "resourcePromotable": resource_promotable,
+        "resourceBlockingFailureCount": len(resource_blockers),
+        "resourceDegradationCount": len(resource_degradations),
+        "resourceBlockingFailures": resource_blockers,
+        "resourceDegradations": resource_degradations,
+        "resourceMetrics": resource_fit.get("metrics", {}),
+        "baselineAtRisk": False,
+        "baselineRiskStatus": "none",
+        "baselineRiskSummary": "",
+        "baselineRiskReasons": [],
     }
 
 
@@ -1176,12 +1224,16 @@ def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[di
 
 def build_auto_verdict(compare_rollup: list[dict]) -> tuple[str, str] | None:
     baseline_models = [item for item in compare_rollup if item["role"] == "baseline"]
+    at_risk_baselines = [item for item in baseline_models if item["status"] == "retain-baseline-at-risk"]
     promoted_candidates = [item for item in compare_rollup if item["status"] == "promote-candidate"]
     blocked_candidates = [item for item in compare_rollup if item["status"].startswith("candidate-blocked")]
 
     if baseline_models and not promoted_candidates:
         baseline_names = ", ".join(f"`{item['model']}`" for item in baseline_models)
-        decision = f"Retain {baseline_names} as the deployed local baseline."
+        if at_risk_baselines:
+            decision = f"Retain {baseline_names} as the deployed local baseline, but treat it as at risk on the current local machine profile."
+        else:
+            decision = f"Retain {baseline_names} as the deployed local baseline."
         if blocked_candidates:
             candidate_names = ", ".join(f"`{item['model']}`" for item in blocked_candidates)
             blocked_on_contract = any("contract" in item["status"] for item in blocked_candidates)
@@ -1194,8 +1246,13 @@ def build_auto_verdict(compare_rollup: list[dict]) -> tuple[str, str] | None:
                 reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current machine-fit gates."
             else:
                 reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current compare gates."
+            if at_risk_baselines:
+                reason += " The retained baseline is still the least-bad current option, not a clean health signal."
         else:
-            reason = "No comparison candidate currently clears the compare gates."
+            if at_risk_baselines:
+                reason = "No comparison candidate currently clears the compare gates, so the at-risk baseline remains the least-bad current option."
+            else:
+                reason = "No comparison candidate currently clears the compare gates."
         return decision, reason
 
     if promoted_candidates:
