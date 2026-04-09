@@ -33,7 +33,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - The benchmark outputs now also attach a machine-readable `promotionVerdict` per model so candidate promotion can be gated mechanically
 - The benchmark outputs now also attach a machine-readable `resourceFitVerdict` so local RAM, GPU, and latency regressions can be gated mechanically against the 32 GB RAM / 4 GB VRAM target profile
 - Compare reports now also attach a machine-readable `compareDecision` so the deployed baseline and each comparison candidate can be evaluated with explicit roles and with contract-versus-machine-fit blocker reasons
-- The next benchmark follow-on is to add reusable machine-profile preset input so benchmark runs can target named local hardware profiles without repeating raw memory values on each command
+- The benchmark lane now supports direct machine-profile overrides, and the active follow-on is to add reusable preset selection so named hardware targets can be reused across runs without repeating raw memory values on each command
 - `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
 - `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
 - `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
@@ -45,6 +45,11 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
 4. Review the JSON output, including the attached `contractEvaluation`, `contractChecks`, `contractSummary`, `promotionVerdict`, `resourceFitVerdict`, and `compareDecision` fields.
 5. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
+
+Preset file:
+
+- `machine_profiles.json` contains reusable local hardware presets shared by the benchmark entrypoints and the Python contract reporter.
+- Use `-MachineProfileName <preset>` or `--machine-profile-name <preset>` to select a preset, and keep the direct `*MemoryMb` flags for one-off overrides.
 
 Example:
 

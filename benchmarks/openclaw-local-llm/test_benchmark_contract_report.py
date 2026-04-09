@@ -7,6 +7,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 MODULE_PATH = HERE / "benchmark_contract_report.py"
 RESULTS_DIR = HERE / "results"
+PROFILES_PATH = HERE / "machine_profiles.json"
 
 
 def load_module():
@@ -27,6 +28,8 @@ class BenchmarkContractReportTests(unittest.TestCase):
             title="Regression Check",
             decision=None,
             decision_reason=None,
+            machine_profile_path="",
+            machine_profile_name="",
             machine_profile_label="",
             profile_system_memory_mb=0,
             profile_gpu_memory_mb=0,
@@ -127,6 +130,8 @@ class BenchmarkContractReportTests(unittest.TestCase):
             title="Override Check",
             decision=None,
             decision_reason=None,
+            machine_profile_path="",
+            machine_profile_name="",
             machine_profile_label="28 GB RAM / 3.5 GB VRAM local profile",
             profile_system_memory_mb=28672,
             profile_gpu_memory_mb=3584,
@@ -139,7 +144,59 @@ class BenchmarkContractReportTests(unittest.TestCase):
         self.assertEqual(q4_resource["machineProfile"]["label"], "28 GB RAM / 3.5 GB VRAM local profile")
         self.assertEqual(q4_resource["machineProfile"]["gpuMemoryMb"], 3584)
         self.assertEqual(q4_resource["status"], "blocked")
+        self.assertIn("28 GB RAM / 3.5 GB VRAM local profile", q4_resource["summary"])
+        self.assertIn("3.5 GB VRAM ceiling", q4_resource["blockingFailures"][0]["reason"])
         self.assertEqual(q4_compare["status"], "retain-baseline-at-risk")
+
+    def test_profile_presets_load_from_shared_json_file(self):
+        payload = self.load_payload("2026-04-09-gemma3-heretic-compare-response-suite.json")
+        preset_args = argparse.Namespace(
+            baseline_model=[],
+            candidate_model=[],
+            title="Preset Check",
+            decision=None,
+            decision_reason=None,
+            machine_profile_path=str(PROFILES_PATH),
+            machine_profile_name="tight-28gb-3.5gb",
+            machine_profile_label="",
+            profile_system_memory_mb=0,
+            profile_gpu_memory_mb=0,
+        )
+
+        evaluated = self.report.evaluate_results(payload, "response-suite.json", preset_args)
+        top_resource_profile = evaluated["resourceFitVerdict"]["machineProfile"]
+        top_compare_profile = evaluated["compareDecision"]["machineProfile"]
+        q4_resource = evaluated["resourceFitVerdict"]["models"]["gemma3-heretic:4b-q4km"]
+        q4_compare = evaluated["compareDecision"]["models"]["gemma3-heretic:4b-q4km"]
+
+        self.assertEqual(top_resource_profile["presetName"], "tight-28gb-3.5gb")
+        self.assertEqual(top_compare_profile["presetName"], "tight-28gb-3.5gb")
+        self.assertEqual(q4_resource["machineProfile"]["presetSource"], "preset-file")
+        self.assertEqual(q4_compare["machineProfile"]["presetName"], "tight-28gb-3.5gb")
+        self.assertEqual(q4_compare["status"], "retain-baseline-at-risk")
+
+    def test_summary_mentions_resolved_preset_identity(self):
+        payload = self.load_payload("2026-04-09-gemma3-heretic-compare-response-suite.json")
+        preset_args = argparse.Namespace(
+            baseline_model=[],
+            candidate_model=[],
+            title="Preset Summary",
+            decision=None,
+            decision_reason=None,
+            machine_profile_path=str(PROFILES_PATH),
+            machine_profile_name="tight-28gb-3.5gb",
+            machine_profile_label="",
+            profile_system_memory_mb=0,
+            profile_gpu_memory_mb=0,
+        )
+
+        evaluated = self.report.evaluate_results(payload, "response-suite.json", preset_args)
+        summary = self.report.build_summary_markdown(
+            self.report.summarize_input(RESULTS_DIR / "2026-04-09-gemma3-heretic-compare-response-suite.json", evaluated),
+            preset_args,
+        )
+
+        self.assertIn("Preset identity: `tight-28gb-3.5gb` (preset-file).", summary)
 
 
 if __name__ == "__main__":

@@ -29,3 +29,4 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Current comparison-candidate evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
 - The current benchmark evidence now carries mechanical hard-check scoring, machine-readable `promotionVerdict` and `resourceFitVerdict` outputs, and role-aware `compareDecision` statuses that can distinguish contract blockers from machine-fit blockers
+- The benchmark report and both local benchmark entrypoints now accept machine-profile overrides, and the active follow-on is to add reusable preset selection on top of those direct flags

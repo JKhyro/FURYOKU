@@ -99,17 +99,115 @@ def format_profile_gib(memory_mb: int) -> str:
     return f"{value:.1f}"
 
 
-def resolve_machine_profile(args) -> dict:
-    system_memory_mb = int(getattr(args, "profile_system_memory_mb", 0) or DEFAULT_MACHINE_PROFILE["systemMemoryMb"])
-    gpu_memory_mb = int(getattr(args, "profile_gpu_memory_mb", 0) or DEFAULT_MACHINE_PROFILE["gpuMemoryMb"])
-    label = str(getattr(args, "machine_profile_label", "") or "").strip()
-    if not label:
-        label = f"{format_profile_gib(system_memory_mb)} GB RAM / {format_profile_gib(gpu_memory_mb)} GB VRAM local profile"
+def build_profile_label(system_memory_mb: int, gpu_memory_mb: int) -> str:
+    return f"{format_profile_gib(system_memory_mb)} GB RAM / {format_profile_gib(gpu_memory_mb)} GB VRAM local profile"
+
+
+def default_machine_profile() -> dict:
+    return {
+        "label": DEFAULT_MACHINE_PROFILE["label"],
+        "systemMemoryMb": DEFAULT_MACHINE_PROFILE["systemMemoryMb"],
+        "gpuMemoryMb": DEFAULT_MACHINE_PROFILE["gpuMemoryMb"],
+        "presetName": "default-32gb-4gb",
+        "presetSource": "built-in-default",
+        "presetPath": None,
+    }
+
+
+def normalize_machine_profile(name: str | None, raw: dict, preset_path: Path | None) -> dict:
+    if not isinstance(raw, dict):
+        raise ValueError("machine profile entries must be JSON objects")
+    system_memory_mb = raw.get("systemMemoryMb", raw.get("system_memory_mb"))
+    gpu_memory_mb = raw.get("gpuMemoryMb", raw.get("gpu_memory_mb"))
+    if system_memory_mb in (None, "") or gpu_memory_mb in (None, ""):
+        raise ValueError("machine profile entries must include systemMemoryMb and gpuMemoryMb")
+    system_memory_mb = int(system_memory_mb)
+    gpu_memory_mb = int(gpu_memory_mb)
+    label = str(raw.get("label", "") or "").strip() or build_profile_label(system_memory_mb, gpu_memory_mb)
+    preset_name = str(name or raw.get("name", "") or "").strip() or None
     return {
         "label": label,
         "systemMemoryMb": system_memory_mb,
         "gpuMemoryMb": gpu_memory_mb,
+        "presetName": preset_name,
+        "presetSource": "preset-file",
+        "presetPath": str(preset_path) if preset_path else None,
     }
+
+
+def load_machine_profile_manifest(path: Path) -> dict:
+    payload = load_json(path)
+    profiles_payload = payload.get("profiles") if isinstance(payload, dict) and "profiles" in payload else payload
+    default_profile = payload.get("defaultProfile") if isinstance(payload, dict) else None
+    profiles: dict[str, dict] = {}
+
+    if isinstance(profiles_payload, dict):
+        for name, raw in profiles_payload.items():
+            if not isinstance(raw, dict):
+                continue
+            profiles[str(name)] = normalize_machine_profile(str(name), raw, path)
+    elif isinstance(profiles_payload, list):
+        for raw in profiles_payload:
+            profile_name = str(raw.get("name", "") if isinstance(raw, dict) else "").strip()
+            if not profile_name:
+                raise ValueError("list-form machine profile entries must include a non-empty name")
+            profiles[profile_name] = normalize_machine_profile(profile_name, raw, path)
+            if not default_profile and isinstance(raw, dict) and raw.get("default") is True:
+                default_profile = profile_name
+    else:
+        raise ValueError("machine profile preset file must contain a profiles object or list")
+
+    if not profiles:
+        raise ValueError("machine profile preset file did not define any usable profiles")
+    if default_profile and default_profile not in profiles:
+        raise ValueError(f"default machine profile '{default_profile}' was not found in {path}")
+    if not default_profile and len(profiles) == 1:
+        default_profile = next(iter(profiles))
+
+    return {
+        "path": str(path),
+        "defaultProfile": default_profile,
+        "profiles": profiles,
+    }
+
+
+def resolve_machine_profile(args) -> dict:
+    preset_name = str(getattr(args, "machine_profile_name", "") or "").strip()
+    preset_path_value = str(getattr(args, "machine_profile_path", "") or "").strip()
+    label_override = str(getattr(args, "machine_profile_label", "") or "").strip()
+    system_override = int(getattr(args, "profile_system_memory_mb", 0) or 0)
+    gpu_override = int(getattr(args, "profile_gpu_memory_mb", 0) or 0)
+
+    profile = default_machine_profile()
+    if preset_name or preset_path_value:
+        preset_path = Path(preset_path_value) if preset_path_value else Path(__file__).with_name("machine_profiles.json")
+        manifest = load_machine_profile_manifest(preset_path)
+        selected_name = preset_name or manifest.get("defaultProfile")
+        if not selected_name:
+            raise ValueError(
+                f"machine profile preset file '{preset_path}' requires --machine-profile-name because no default profile is declared"
+            )
+        if selected_name not in manifest["profiles"]:
+            raise KeyError(f"machine profile '{selected_name}' was not found in {preset_path}")
+        profile = dict(manifest["profiles"][selected_name])
+
+    if system_override > 0:
+        profile["systemMemoryMb"] = system_override
+    if gpu_override > 0:
+        profile["gpuMemoryMb"] = gpu_override
+
+    if label_override:
+        profile["label"] = label_override
+    elif system_override > 0 or gpu_override > 0 or not str(profile.get("label", "")).strip():
+        profile["label"] = build_profile_label(profile["systemMemoryMb"], profile["gpuMemoryMb"])
+
+    overrides_applied = bool(label_override or system_override > 0 or gpu_override > 0)
+    if overrides_applied and profile.get("presetSource") == "preset-file":
+        profile["presetSource"] = "preset-file+direct-overrides"
+    elif overrides_applied:
+        profile["presetSource"] = "direct-overrides"
+        profile["presetName"] = "direct-overrides"
+    return profile
 
 
 def load_json(path: Path) -> dict:
@@ -717,6 +815,8 @@ def build_resource_fit_verdict(
 ) -> dict:
     issues: list[dict] = []
     thresholds = RESOURCE_FIT_THRESHOLDS
+    profile_label = str(machine_profile.get("label", DEFAULT_MACHINE_PROFILE["label"]))
+    gpu_label = f"{format_profile_gib(machine_profile.get('gpuMemoryMb', DEFAULT_MACHINE_PROFILE['gpuMemoryMb']))} GB VRAM"
     gpu_total = machine_profile.get("gpuMemoryMb")
     gpu_peak = metrics.get("peakGpuMemoryUsedMb")
     if gpu_peak is not None and gpu_total is not None:
@@ -726,7 +826,7 @@ def build_resource_fit_verdict(
                 make_resource_issue(
                     "resource_fit:gpu_headroom",
                     "blocker",
-                    "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+                    f"GPU headroom falls too close to the {gpu_label} ceiling for a stable local promotion.",
                     metric="peakGpuMemoryUsedMb",
                     actual=gpu_peak,
                     expected=f"<= {gpu_total - thresholds['gpuHeadroomBlockerMb']}",
@@ -738,7 +838,7 @@ def build_resource_fit_verdict(
                 make_resource_issue(
                     "resource_fit:gpu_headroom",
                     "degradation",
-                    "GPU headroom is narrow enough to merit review before promotion on the local 4 GB VRAM profile.",
+                    f"GPU headroom is narrow enough to merit review before promotion on the current {profile_label}.",
                     metric="peakGpuMemoryUsedMb",
                     actual=gpu_peak,
                     expected=f"<= {gpu_total - thresholds['gpuHeadroomDegradationMb']}",
@@ -803,13 +903,13 @@ def build_resource_fit_verdict(
     degradations = [issue for issue in issues if issue["severity"] != "blocker"]
     if blockers:
         status = "blocked"
-        summary = "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM machine profile."
+        summary = f"Resource-fit blockers prevent promotion on the current {profile_label}."
     elif degradations:
         status = "review"
-        summary = "Resource-fit degradations need review before promotion on the local machine profile."
+        summary = f"Resource-fit degradations need review before promotion on the current {profile_label}."
     else:
         status = "fit"
-        summary = "Resource-fit checks are within the current local machine profile."
+        summary = f"Resource-fit checks are within the current {profile_label}."
     return {
         "model": model,
         "role": role or "unscoped",
@@ -830,6 +930,7 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
     resource_promotable = resource_fit.get("promotable", resource_status == "fit")
     resource_blockers = resource_fit.get("blockingFailures", [])
     resource_degradations = resource_fit.get("degradations", [])
+    machine_profile = resource_fit.get("machineProfile", {})
     baseline_at_risk = role == "baseline" and resource_status != "fit"
 
     if role == "baseline":
@@ -853,6 +954,7 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
             "summary": summary,
             "comparedAgainst": [entry for entry in baseline_models if entry != model],
             "resourceStatus": resource_status,
+            "machineProfile": machine_profile,
             "resourcePromotable": resource_promotable,
             "resourceBlockingFailureCount": len(resource_blockers),
             "resourceDegradationCount": len(resource_degradations),
@@ -888,6 +990,7 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
             "summary": summary,
             "comparedAgainst": list(baseline_models),
             "resourceStatus": resource_status,
+            "machineProfile": machine_profile,
             "resourcePromotable": resource_promotable,
             "resourceBlockingFailureCount": len(resource_blockers),
             "resourceDegradationCount": len(resource_degradations),
@@ -907,6 +1010,7 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
         "summary": "Model role was not declared for compare decisioning.",
         "comparedAgainst": list(baseline_models),
         "resourceStatus": resource_status,
+        "machineProfile": machine_profile,
         "resourcePromotable": resource_promotable,
         "resourceBlockingFailureCount": len(resource_blockers),
         "resourceDegradationCount": len(resource_degradations),
@@ -1016,6 +1120,7 @@ def evaluate_results(payload: dict, source_name: str, args) -> dict:
     payload["compareDecision"] = {
         "generatedAtUtc": utc_now(),
         "source": source_name,
+        "machineProfile": machine_profile,
         "baselineModels": baseline_models,
         "candidateModels": [model for model, info in candidate_registry.items() if info.get("role") == "candidate"],
         "models": {
@@ -1089,6 +1194,7 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
                 "resourceBlockingFailures": resource_fit.get("blockingFailures", []),
                 "resourceDegradations": resource_fit.get("degradations", []),
                 "resourceMetrics": resource_fit.get("metrics", {}),
+                "machineProfile": payload.get("resourceFitVerdict", {}).get("machineProfile", {}),
                 "compareRole": compare.get("role", "unscoped"),
                 "compareStatus": compare.get("status", "unscoped"),
                 "compareSummary": compare.get("summary", ""),
@@ -1286,11 +1392,18 @@ def build_auto_verdict(compare_rollup: list[dict]) -> tuple[str, str] | None:
 
 def build_summary_markdown(summaries: list[dict], args) -> str:
     lines = [f"# {args.title}", ""]
+    machine_profile = summaries[0].get("machineProfile", {}) if summaries else {}
+    profile_label = str(machine_profile.get("label", DEFAULT_MACHINE_PROFILE["label"]))
+    preset_name = str(machine_profile.get("presetName", "") or "").strip()
+    preset_source = str(machine_profile.get("presetSource", "") or "").strip()
     lines.append("Current note:")
     lines.append("- This report exposes prompt-contract pass/fail signals derived directly from the benchmark prompts.")
     lines.append("- It is generated from the benchmark JSON outputs rather than manual scoring alone.")
     lines.append("- Promotion gates now separate hard blockers from non-blocking degradations.")
-    lines.append("- Compare decisions now also encode resource-fit blockers and degradations for the 32 GB RAM / 4 GB VRAM local machine profile.")
+    profile_note = f"- Compare decisions now also encode resource-fit blockers and degradations for the current {profile_label}."
+    if preset_name:
+        profile_note += f" Preset identity: `{preset_name}` ({preset_source or 'unknown source'})."
+    lines.append(profile_note)
     lines.append("")
     promotion_rollup = aggregate_promotion_summaries(summaries)
     resource_rollup = aggregate_resource_fit_summaries(summaries)
@@ -1373,6 +1486,15 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
         lines.append(f"- Compare summary: {item['summary']}")
         if item["comparedAgainst"]:
             lines.append(f"- Compared against: `{', '.join(item['comparedAgainst'])}`")
+        if item.get("machineProfile"):
+            lines.append(
+                f"- Machine profile: `{item['machineProfile'].get('label', 'unknown')}`"
+                + (
+                    f" (preset `{item['machineProfile'].get('presetName')}`, source `{item['machineProfile'].get('presetSource', 'unknown')}`)"
+                    if item["machineProfile"].get("presetName")
+                    else ""
+                )
+            )
         lines.append(f"- Resource-fit verdict: `{item['resourceStatus']}`")
         if item.get("resourceSummary"):
             lines.append(f"- Resource-fit summary: {item['resourceSummary']}")
@@ -1435,6 +1557,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--decision-reason", help="Optional supporting paragraph for the verdict.")
     parser.add_argument("--baseline-model", action="append", default=[], help="Optional baseline model override. Repeat for multiple baselines.")
     parser.add_argument("--candidate-model", action="append", default=[], help="Optional candidate model override. Repeat for multiple candidates.")
+    parser.add_argument("--machine-profile-path", default="", help="Optional machine-profile preset file path.")
+    parser.add_argument("--machine-profile-name", default="", help="Optional machine-profile preset name.")
     parser.add_argument("--machine-profile-label", default="", help="Optional machine-profile label override for resource-fit reporting.")
     parser.add_argument("--profile-system-memory-mb", type=int, default=0, help="Optional system-memory target override for resource-fit reporting.")
     parser.add_argument("--profile-gpu-memory-mb", type=int, default=0, help="Optional GPU-memory target override for resource-fit reporting.")
