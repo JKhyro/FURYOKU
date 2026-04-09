@@ -575,7 +575,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T15:25:20.944174+00:00",
+    "generatedAtUtc": "2026-04-09T15:47:42.314956+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-benchmark.json",
     "passed": 15,
     "failed": 7,
@@ -597,7 +597,7 @@
     }
   },
   "promotionVerdict": {
-    "generatedAtUtc": "2026-04-09T15:25:20.944193+00:00",
+    "generatedAtUtc": "2026-04-09T15:47:42.314973+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-benchmark.json",
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -662,7 +662,7 @@
     }
   },
   "compareDecision": {
-    "generatedAtUtc": "2026-04-09T15:25:20.944199+00:00",
+    "generatedAtUtc": "2026-04-09T15:47:42.314985+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-benchmark.json",
     "baselineModels": [
       "gemma3-heretic:4b-q4km"
@@ -675,16 +675,99 @@
         "model": "gemma3-heretic:4b-q4km",
         "role": "baseline",
         "status": "retain-baseline",
-        "summary": "Current deployed baseline remains in place until a candidate clears the compare gates.",
-        "comparedAgainst": []
+        "summary": "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.",
+        "comparedAgainst": [],
+        "resourceStatus": "fit"
       },
       "gemma3-heretic:4b-q5km": {
         "model": "gemma3-heretic:4b-q5km",
         "role": "candidate",
-        "status": "candidate-blocked",
-        "summary": "Candidate does not clear the current compare gates and cannot be promoted yet.",
+        "status": "candidate-blocked-contract-and-machine-fit",
+        "summary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
         "comparedAgainst": [
           "gemma3-heretic:4b-q4km"
+        ],
+        "resourceStatus": "blocked"
+      }
+    }
+  },
+  "resourceFitVerdict": {
+    "generatedAtUtc": "2026-04-09T15:47:42.314980+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-benchmark.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096
+    },
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "model": "gemma3-heretic:4b-q4km",
+        "role": "baseline",
+        "status": "fit",
+        "promotable": true,
+        "summary": "Resource-fit checks are within the current local machine profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096
+        },
+        "metrics": {
+          "avgDurationMs": 2625.78,
+          "avgTokensPerSecond": 62.24,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 9874.0
+        },
+        "blockingFailureCount": 0,
+        "degradationCount": 0,
+        "blockingFailures": [],
+        "degradations": []
+      },
+      "gemma3-heretic:4b-q5km": {
+        "model": "gemma3-heretic:4b-q5km",
+        "role": "candidate",
+        "status": "blocked",
+        "promotable": false,
+        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM machine profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096
+        },
+        "metrics": {
+          "avgDurationMs": 2379.16,
+          "avgTokensPerSecond": 58.59,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 10189.4
+        },
+        "blockingFailureCount": 1,
+        "degradationCount": 1,
+        "blockingFailures": [
+          {
+            "id": "resource_fit:private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases benchmark-process private memory enough to materially reduce local machine fit.",
+            "metric": "private_memory_regression",
+            "actual": 10189.4,
+            "expected": "< +256",
+            "baseline": 9874.0,
+            "delta": 315.4
+          }
+        ],
+        "degradations": [
+          {
+            "id": "resource_fit:tokens_per_second_regression",
+            "severity": "degradation",
+            "reason": "Candidate throughput drops below the preferred baseline tolerance.",
+            "metric": "tokens_per_second_regression",
+            "actual": 58.59,
+            "expected": "> 0.95x baseline",
+            "baseline": 62.24,
+            "delta": -0.059
+          }
         ]
       }
     }

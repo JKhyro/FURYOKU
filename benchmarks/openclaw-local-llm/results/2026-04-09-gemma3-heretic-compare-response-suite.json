@@ -726,7 +726,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T15:25:20.955124+00:00",
+    "generatedAtUtc": "2026-04-09T15:47:42.321077+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "passed": 12,
     "failed": 8,
@@ -748,7 +748,7 @@
     }
   },
   "promotionVerdict": {
-    "generatedAtUtc": "2026-04-09T15:25:20.955161+00:00",
+    "generatedAtUtc": "2026-04-09T15:47:42.321090+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -820,7 +820,7 @@
     }
   },
   "compareDecision": {
-    "generatedAtUtc": "2026-04-09T15:25:20.955179+00:00",
+    "generatedAtUtc": "2026-04-09T15:47:42.321102+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "baselineModels": [
       "gemma3-heretic:4b-q4km"
@@ -833,16 +833,109 @@
         "model": "gemma3-heretic:4b-q4km",
         "role": "baseline",
         "status": "retain-baseline",
-        "summary": "Current deployed baseline remains in place until a candidate clears the compare gates.",
-        "comparedAgainst": []
+        "summary": "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.",
+        "comparedAgainst": [],
+        "resourceStatus": "fit"
       },
       "gemma3-heretic:4b-q5km": {
         "model": "gemma3-heretic:4b-q5km",
         "role": "candidate",
-        "status": "candidate-blocked",
-        "summary": "Candidate does not clear the current compare gates and cannot be promoted yet.",
+        "status": "candidate-blocked-contract-and-machine-fit",
+        "summary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
         "comparedAgainst": [
           "gemma3-heretic:4b-q4km"
+        ],
+        "resourceStatus": "blocked"
+      }
+    }
+  },
+  "resourceFitVerdict": {
+    "generatedAtUtc": "2026-04-09T15:47:42.321096+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096
+    },
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "model": "gemma3-heretic:4b-q4km",
+        "role": "baseline",
+        "status": "fit",
+        "promotable": true,
+        "summary": "Resource-fit checks are within the current local machine profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096
+        },
+        "metrics": {
+          "avgDurationMs": 2603.58,
+          "avgTokensPerSecond": 60.73,
+          "peakGpuMemoryUsedMb": 3630.0,
+          "peakOllamaPrivateMemoryMb": 9885.1,
+          "peakSystemMemoryUsedMb": 26384.3,
+          "peakPrivateMemoryMb": null
+        },
+        "blockingFailureCount": 0,
+        "degradationCount": 0,
+        "blockingFailures": [],
+        "degradations": []
+      },
+      "gemma3-heretic:4b-q5km": {
+        "model": "gemma3-heretic:4b-q5km",
+        "role": "candidate",
+        "status": "blocked",
+        "promotable": false,
+        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM machine profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096
+        },
+        "metrics": {
+          "avgDurationMs": 2954.96,
+          "avgTokensPerSecond": 56.21,
+          "peakGpuMemoryUsedMb": 3954.0,
+          "peakOllamaPrivateMemoryMb": 10195.3,
+          "peakSystemMemoryUsedMb": 26710.7,
+          "peakPrivateMemoryMb": null
+        },
+        "blockingFailureCount": 2,
+        "degradationCount": 1,
+        "blockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 3954.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": 142.0
+          },
+          {
+            "id": "resource_fit:ollama_private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            "metric": "ollama_private_memory_regression",
+            "actual": 10195.3,
+            "expected": "< +256",
+            "baseline": 9885.1,
+            "delta": 310.2
+          }
+        ],
+        "degradations": [
+          {
+            "id": "resource_fit:tokens_per_second_regression",
+            "severity": "degradation",
+            "reason": "Candidate throughput drops below the preferred baseline tolerance.",
+            "metric": "tokens_per_second_regression",
+            "actual": 56.21,
+            "expected": "> 0.95x baseline",
+            "baseline": 60.73,
+            "delta": -0.074
+          }
         ]
       }
     }
