@@ -9,13 +9,15 @@
       "model": "gemma3-heretic:4b-q4km",
       "priority": 1,
       "context_tokens": 131072,
-      "why": "Deployed FURYOKU local baseline candidate."
+      "why": "Deployed FURYOKU local baseline candidate.",
+      "role": "baseline"
     },
     {
       "model": "gemma3-heretic:4b-q5km",
       "priority": 2,
       "context_tokens": 131072,
-      "why": "Direct comparison candidate against the deployed q4 baseline."
+      "why": "Direct comparison candidate against the deployed q4 baseline.",
+      "role": "candidate"
     }
   ],
   "prompts": [
@@ -111,7 +113,10 @@
         "passed": 2,
         "failed": 0,
         "allPassed": true
-      }
+      },
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Deployed FURYOKU local baseline candidate."
     },
     {
       "model": "gemma3-heretic:4b-q4km",
@@ -182,7 +187,10 @@
         "passed": 0,
         "failed": 3,
         "allPassed": false
-      }
+      },
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Deployed FURYOKU local baseline candidate."
     },
     {
       "model": "gemma3-heretic:4b-q4km",
@@ -239,7 +247,10 @@
         "passed": 1,
         "failed": 0,
         "allPassed": true
-      }
+      },
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Deployed FURYOKU local baseline candidate."
     },
     {
       "model": "gemma3-heretic:4b-q4km",
@@ -337,7 +348,10 @@
         "passed": 4,
         "failed": 1,
         "allPassed": false
-      }
+      },
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Deployed FURYOKU local baseline candidate."
     },
     {
       "model": "gemma3-heretic:4b-q5km",
@@ -440,7 +454,10 @@
         "passed": 2,
         "failed": 0,
         "allPassed": true
-      }
+      },
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Direct comparison candidate against the deployed q4 baseline."
     },
     {
       "model": "gemma3-heretic:4b-q5km",
@@ -511,7 +528,10 @@
         "passed": 0,
         "failed": 3,
         "allPassed": false
-      }
+      },
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Direct comparison candidate against the deployed q4 baseline."
     },
     {
       "model": "gemma3-heretic:4b-q5km",
@@ -568,7 +588,10 @@
         "passed": 1,
         "failed": 0,
         "allPassed": true
-      }
+      },
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Direct comparison candidate against the deployed q4 baseline."
     },
     {
       "model": "gemma3-heretic:4b-q5km",
@@ -653,11 +676,14 @@
         "passed": 0,
         "failed": 5,
         "allPassed": false
-      }
+      },
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Direct comparison candidate against the deployed q4 baseline."
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T13:32:42.016730+00:00",
+    "generatedAtUtc": "2026-04-09T15:25:20.958551+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
     "passed": 10,
     "failed": 12,
@@ -679,7 +705,7 @@
     }
   },
   "promotionVerdict": {
-    "generatedAtUtc": "2026-04-09T13:32:42.016750+00:00",
+    "generatedAtUtc": "2026-04-09T15:25:20.958565+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -767,6 +793,34 @@
           }
         ],
         "summary": "Blocked from promotion by hard-check failures."
+      }
+    }
+  },
+  "compareDecision": {
+    "generatedAtUtc": "2026-04-09T15:25:20.958570+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
+    "baselineModels": [
+      "gemma3-heretic:4b-q4km"
+    ],
+    "candidateModels": [
+      "gemma3-heretic:4b-q5km"
+    ],
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "model": "gemma3-heretic:4b-q4km",
+        "role": "baseline",
+        "status": "retain-baseline",
+        "summary": "Current deployed baseline remains in place until a candidate clears the compare gates.",
+        "comparedAgainst": []
+      },
+      "gemma3-heretic:4b-q5km": {
+        "model": "gemma3-heretic:4b-q5km",
+        "role": "candidate",
+        "status": "candidate-blocked",
+        "summary": "Candidate does not clear the current compare gates and cannot be promoted yet.",
+        "comparedAgainst": [
+          "gemma3-heretic:4b-q4km"
+        ]
       }
     }
   }

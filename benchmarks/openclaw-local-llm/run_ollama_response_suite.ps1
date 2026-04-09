@@ -264,6 +264,9 @@ foreach ($candidate in $candidates) {
         } catch {
             $results += [pscustomobject]@{
                 model = $model
+                candidateRole = $candidate.role
+                candidatePriority = $candidate.priority
+                candidateWhy = $candidate.why
                 promptId = "__warmup__"
                 category = "warmup"
                 error = $_.Exception.Message
@@ -279,6 +282,9 @@ foreach ($candidate in $candidates) {
         if (-not $result.ok) {
             $results += [pscustomobject]@{
                 model = $model
+                candidateRole = $candidate.role
+                candidatePriority = $candidate.priority
+                candidateWhy = $candidate.why
                 promptId = $prompt.id
                 category = $prompt.category
                 totalDurationMs = $result.elapsedMs
@@ -302,6 +308,9 @@ foreach ($candidate in $candidates) {
 
         $results += [pscustomobject]@{
             model = $model
+            candidateRole = $candidate.role
+            candidatePriority = $candidate.priority
+            candidateWhy = $candidate.why
             promptId = $prompt.id
             category = $prompt.category
             totalDurationMs = $result.elapsedMs
