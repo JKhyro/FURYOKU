@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current bounded follow-on: [#51](https://github.com/JKhyro/FURYOKU/issues/51)
+- Current bounded follow-on: [#54](https://github.com/JKhyro/FURYOKU/issues/54)
 
 ## Current Baseline
 
@@ -21,7 +21,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: add baseline-risk signaling so compare decisions can distinguish a healthy retained baseline from a retained baseline that is only the least-bad current option
+- Current follow-on focus: add machine-profile overrides so the compare and resource-fit reporting can be reproduced on local machines beyond the default 32 GB RAM / 4 GB VRAM profile
 
 ## Benchmark Evidence Lane
 
