@@ -149,6 +149,9 @@ foreach ($candidate in $candidates) {
                 $gpuAfter = Get-GpuSnapshot
 
                 $record | Add-Member -NotePropertyName run -NotePropertyValue $run
+                $record | Add-Member -NotePropertyName candidateRole -NotePropertyValue $candidate.role
+                $record | Add-Member -NotePropertyName candidatePriority -NotePropertyValue $candidate.priority
+                $record | Add-Member -NotePropertyName candidateWhy -NotePropertyValue $candidate.why
                 $record | Add-Member -NotePropertyName processBefore -NotePropertyValue $cpuBefore
                 $record | Add-Member -NotePropertyName processAfter -NotePropertyValue $cpuAfter
                 $record | Add-Member -NotePropertyName gpuBefore -NotePropertyValue $gpuBefore
@@ -157,6 +160,9 @@ foreach ($candidate in $candidates) {
             } catch {
                 $results += [pscustomobject]@{
                     model = $model
+                    candidateRole = $candidate.role
+                    candidatePriority = $candidate.priority
+                    candidateWhy = $candidate.why
                     promptId = $prompt.id
                     task = $prompt.task
                     run = $run

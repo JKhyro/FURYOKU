@@ -459,9 +459,102 @@ def build_promotion_verdict(model: str, failures: list[dict], prompt_count: int)
     }
 
 
-def evaluate_results(payload: dict, source_name: str) -> dict:
+def infer_candidate_role(candidate: dict) -> str | None:
+    explicit = str(candidate.get("role", "")).strip().lower()
+    if explicit in {"baseline", "candidate"}:
+        return explicit
+    why = str(candidate.get("why", "")).strip().lower()
+    if "comparison candidate" in why or "against the deployed" in why:
+        return "candidate"
+    if "deployed" in why and "baseline" in why:
+        return "baseline"
+    if "baseline candidate" in why and "against" not in why:
+        return "baseline"
+    if "candidate" in why or "comparison" in why:
+        return "candidate"
+    if "baseline" in why:
+        return "baseline"
+    return None
+
+
+def build_candidate_registry(payload: dict, args) -> dict[str, dict]:
+    registry: dict[str, dict] = {}
+    for candidate in payload.get("candidates", []) or []:
+        model = str(candidate.get("model", "")).strip()
+        if not model:
+            continue
+        registry[model] = {
+            "model": model,
+            "role": infer_candidate_role(candidate),
+            "priority": candidate.get("priority"),
+            "why": candidate.get("why"),
+        }
+
+    for model in getattr(args, "baseline_model", []) or []:
+        entry = registry.setdefault(model, {"model": model})
+        entry["role"] = "baseline"
+
+    for model in getattr(args, "candidate_model", []) or []:
+        entry = registry.setdefault(model, {"model": model})
+        entry["role"] = "candidate"
+    return registry
+
+
+def build_compare_verdict(model: str, role: str | None, promotion: dict, baseline_models: list[str]) -> dict:
+    if role == "baseline":
+        return {
+            "model": model,
+            "role": role,
+            "status": "retain-baseline",
+            "summary": "Current deployed baseline remains in place until a candidate clears the compare gates.",
+            "comparedAgainst": [entry for entry in baseline_models if entry != model],
+        }
+
+    if role == "candidate":
+        status = "promote-candidate" if promotion.get("promotable") else "candidate-blocked"
+        summary = (
+            "Candidate clears the current compare gates and is eligible for promotion."
+            if status == "promote-candidate"
+            else "Candidate does not clear the current compare gates and cannot be promoted yet."
+        )
+        return {
+            "model": model,
+            "role": role,
+            "status": status,
+            "summary": summary,
+            "comparedAgainst": list(baseline_models),
+        }
+
+    return {
+        "model": model,
+        "role": "unscoped",
+        "status": "unscoped",
+        "summary": "Model role was not declared for compare decisioning.",
+        "comparedAgainst": list(baseline_models),
+    }
+
+
+def evaluate_results(payload: dict, source_name: str, args) -> dict:
     results = payload.get("results", [])
+    candidate_registry = build_candidate_registry(payload, args)
+    if payload.get("candidates"):
+        enriched_candidates = []
+        for candidate in payload.get("candidates", []) or []:
+            model = str(candidate.get("model", "")).strip()
+            enriched = dict(candidate)
+            role = candidate_registry.get(model, {}).get("role")
+            if role:
+                enriched["role"] = role
+            enriched_candidates.append(enriched)
+        payload["candidates"] = enriched_candidates
     for row in results:
+        candidate_info = candidate_registry.get(row.get("model", "unknown"), {})
+        if candidate_info.get("role") and "candidateRole" not in row:
+            row["candidateRole"] = candidate_info["role"]
+        if candidate_info.get("priority") is not None and "candidatePriority" not in row:
+            row["candidatePriority"] = candidate_info["priority"]
+        if candidate_info.get("why") and "candidateWhy" not in row:
+            row["candidateWhy"] = candidate_info["why"]
         if "responseText" not in row:
             row["contractChecks"] = [make_check("request_ok", False, actual=row.get("error", "missing response"))]
         else:
@@ -491,6 +584,11 @@ def evaluate_results(payload: dict, source_name: str) -> dict:
     total_failed = sum(item["failed"] for item in rollup.values())
     total_prompts = sum(item["promptCount"] for item in rollup.values())
     total_prompts_all_passed = sum(item["promptsAllPassed"] for item in rollup.values())
+    promotion_models = {
+        model: build_promotion_verdict(model, failures_by_model.get(model, []), rollup[model]["promptCount"])
+        for model in sorted(rollup.keys())
+    }
+    baseline_models = [model for model, info in candidate_registry.items() if info.get("role") == "baseline"]
     payload["contractEvaluation"] = {
         "generatedAtUtc": utc_now(),
         "source": source_name,
@@ -503,8 +601,15 @@ def evaluate_results(payload: dict, source_name: str) -> dict:
     payload["promotionVerdict"] = {
         "generatedAtUtc": utc_now(),
         "source": source_name,
+        "models": promotion_models,
+    }
+    payload["compareDecision"] = {
+        "generatedAtUtc": utc_now(),
+        "source": source_name,
+        "baselineModels": baseline_models,
+        "candidateModels": [model for model, info in candidate_registry.items() if info.get("role") == "candidate"],
         "models": {
-            model: build_promotion_verdict(model, failures_by_model.get(model, []), rollup[model]["promptCount"])
+            model: build_compare_verdict(model, candidate_registry.get(model, {}).get("role"), promotion_models[model], baseline_models)
             for model in sorted(rollup.keys())
         },
     }
@@ -526,6 +631,7 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
     suite = suite_name_for_path(path)
     by_model: dict[str, list[dict]] = {}
     promotion_models = payload.get("promotionVerdict", {}).get("models", {})
+    compare_models = payload.get("compareDecision", {}).get("models", {})
     for row in payload.get("results", []):
         by_model.setdefault(row.get("model", "unknown"), []).append(row)
 
@@ -540,6 +646,7 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
                 if not check["pass"]:
                     failed_checks.append(f"{row.get('promptId')}:{check['id']}")
         promotion = promotion_models.get(model, {})
+        compare = compare_models.get(model, {})
         summaries.append(
             {
                 "suite": suite,
@@ -557,6 +664,10 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
                 "degradationCount": promotion.get("degradationCount", 0),
                 "blockingFailures": promotion.get("blockingFailures", []),
                 "degradations": promotion.get("degradations", []),
+                "compareRole": compare.get("role", "unscoped"),
+                "compareStatus": compare.get("status", "unscoped"),
+                "compareSummary": compare.get("summary", ""),
+                "comparedAgainst": compare.get("comparedAgainst", []),
                 "source": path.name,
             }
         )
@@ -591,6 +702,63 @@ def aggregate_promotion_summaries(summaries: list[dict]) -> list[dict]:
     return rolled_up
 
 
+def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[dict]) -> list[dict]:
+    promotion_by_model = {item["model"]: item for item in promotion_rollup}
+    compare_by_model: dict[str, dict] = {}
+    for item in summaries:
+        target = compare_by_model.setdefault(
+            item["model"],
+            {
+                "model": item["model"],
+                "role": item.get("compareRole", "unscoped"),
+                "comparedAgainst": set(),
+            },
+        )
+        if target["role"] == "unscoped" and item.get("compareRole") != "unscoped":
+            target["role"] = item.get("compareRole")
+        for model in item.get("comparedAgainst", []):
+            target["comparedAgainst"].add(model)
+
+    baseline_models = [model for model, item in compare_by_model.items() if item["role"] == "baseline"]
+    rolled_up = []
+    for model, item in sorted(compare_by_model.items()):
+        promotion = promotion_by_model.get(model, {})
+        compare = build_compare_verdict(model, item["role"], promotion, baseline_models)
+        compare["comparedAgainst"] = sorted(item["comparedAgainst"])
+        compare["promotionStatus"] = promotion.get("status", "unknown")
+        compare["promotable"] = promotion.get("promotable", False)
+        compare["blockingFailureCount"] = promotion.get("blockingFailureCount", 0)
+        compare["degradationCount"] = promotion.get("degradationCount", 0)
+        compare["blockingFailures"] = promotion.get("blockingFailures", [])
+        compare["degradations"] = promotion.get("degradations", [])
+        rolled_up.append(compare)
+    return rolled_up
+
+
+def build_auto_verdict(compare_rollup: list[dict]) -> tuple[str, str] | None:
+    baseline_models = [item for item in compare_rollup if item["role"] == "baseline"]
+    promoted_candidates = [item for item in compare_rollup if item["status"] == "promote-candidate"]
+    blocked_candidates = [item for item in compare_rollup if item["status"] == "candidate-blocked"]
+
+    if baseline_models and not promoted_candidates:
+        baseline_names = ", ".join(f"`{item['model']}`" for item in baseline_models)
+        decision = f"Retain {baseline_names} as the deployed local baseline."
+        if blocked_candidates:
+            candidate_names = ", ".join(f"`{item['model']}`" for item in blocked_candidates)
+            reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current compare gates."
+        else:
+            reason = "No comparison candidate currently clears the compare gates."
+        return decision, reason
+
+    if promoted_candidates:
+        promoted_names = ", ".join(f"`{item['model']}`" for item in promoted_candidates)
+        decision = f"Promote {promoted_names} over the current baseline."
+        reason = "These comparison candidates clear the current compare gates."
+        return decision, reason
+
+    return None
+
+
 def build_summary_markdown(summaries: list[dict], args) -> str:
     lines = [f"# {args.title}", ""]
     lines.append("Current note:")
@@ -598,15 +766,32 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
     lines.append("- It is generated from the benchmark JSON outputs rather than manual scoring alone.")
     lines.append("- Promotion gates now separate hard blockers from non-blocking degradations.")
     lines.append("")
-    if args.decision:
+    promotion_rollup = aggregate_promotion_summaries(summaries)
+    compare_rollup = aggregate_compare_summaries(summaries, promotion_rollup)
+    decision_text = args.decision
+    decision_reason = args.decision_reason
+    if not decision_text:
+        auto_verdict = build_auto_verdict(compare_rollup)
+        if auto_verdict:
+            decision_text, decision_reason = auto_verdict
+    if decision_text:
         lines.append("## Current Verdict")
         lines.append("")
-        lines.append(args.decision)
-        if args.decision_reason:
+        lines.append(decision_text)
+        if decision_reason:
             lines.append("")
-            lines.append(args.decision_reason)
+            lines.append(decision_reason)
         lines.append("")
-    promotion_rollup = aggregate_promotion_summaries(summaries)
+    lines.append("## Compare Decisions")
+    lines.append("")
+    lines.append("| Model | Role | Compare decision | Promotion verdict | Promotable |")
+    lines.append("| --- | --- | --- | --- | ---: |")
+    for item in compare_rollup:
+        lines.append(
+            f"| `{item['model']}` | `{item['role']}` | `{item['status']}` | `{item['promotionStatus']}` | "
+            f"`{'yes' if item['promotable'] else 'no'}` |"
+        )
+    lines.append("")
     lines.append("## Promotion Gate Verdicts")
     lines.append("")
     lines.append("| Model | Verdict | Promotable | Blockers | Degradations |")
@@ -641,12 +826,16 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
         lines.append("")
     lines.append("## Promotion Gate Details")
     lines.append("")
-    for item in promotion_rollup:
+    for item in compare_rollup:
         lines.append(f"### `{item['model']}`")
         lines.append("")
-        lines.append(f"- Verdict: `{item['status']}`")
+        lines.append(f"- Role: `{item['role']}`")
+        lines.append(f"- Compare decision: `{item['status']}`")
+        lines.append(f"- Compare summary: {item['summary']}")
+        if item["comparedAgainst"]:
+            lines.append(f"- Compared against: `{', '.join(item['comparedAgainst'])}`")
+        lines.append(f"- Promotion verdict: `{item['promotionStatus']}`")
         lines.append(f"- Promotable now: `{'yes' if item['promotable'] else 'no'}`")
-        lines.append(f"- Suites considered: `{', '.join(item['suites'])}`")
         if item["blockingFailures"]:
             for failure in item["blockingFailures"]:
                 lines.append(f"- Blocking failure: `{failure['id']}`: {failure['reason']}")
@@ -679,6 +868,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--title", default="Benchmark Contract Report", help="Summary title.")
     parser.add_argument("--decision", help="Optional current verdict paragraph.")
     parser.add_argument("--decision-reason", help="Optional supporting paragraph for the verdict.")
+    parser.add_argument("--baseline-model", action="append", default=[], help="Optional baseline model override. Repeat for multiple baselines.")
+    parser.add_argument("--candidate-model", action="append", default=[], help="Optional candidate model override. Repeat for multiple candidates.")
     return parser.parse_args()
 
 
@@ -687,7 +878,7 @@ def main() -> int:
     summaries: list[dict] = []
     for raw_path in args.input:
         path = Path(raw_path)
-        payload = evaluate_results(load_json(path), path.name)
+        payload = evaluate_results(load_json(path), path.name, args)
         if args.overwrite:
             save_json(path, payload)
         summaries.extend(summarize_input(path, payload))
