@@ -331,4 +331,16 @@ $summary = [pscustomobject]@{
 }
 
 $summary | ConvertTo-Json -Depth 10 | Set-Content -Path $OutputPath -Encoding utf8
+$contractReport = Join-Path $PSScriptRoot "benchmark_contract_report.py"
+if (Test-Path $contractReport) {
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pythonCommand) {
+        throw "python is required to attach benchmark contract checks."
+    }
+
+    & $pythonCommand.Source $contractReport --input $OutputPath --overwrite
+    if ($LASTEXITCODE -ne 0) {
+        throw "Benchmark contract evaluation failed for $OutputPath."
+    }
+}
 Write-Output "Wrote response-suite results to $OutputPath"

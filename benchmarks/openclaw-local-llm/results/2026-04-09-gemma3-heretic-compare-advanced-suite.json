@@ -1,397 +1,671 @@
-﻿{
-    "host":  "http://127.0.0.1:11434",
-    "generatedAtUtc":  "2026-04-09T05:47:53.2790517Z",
-    "sampleIntervalMs":  500,
-    "maxRequestSeconds":  120,
-    "thinkFalse":  false,
-    "candidates":  [
-                       {
-                           "model":  "gemma3-heretic:4b-q4km",
-                           "priority":  1,
-                           "context_tokens":  131072,
-                           "why":  "Deployed FURYOKU local baseline candidate."
-                       },
-                       {
-                           "model":  "gemma3-heretic:4b-q5km",
-                           "priority":  2,
-                           "context_tokens":  131072,
-                           "why":  "Direct comparison candidate against the deployed q4 baseline."
-                       }
-                   ],
-    "prompts":  [
-                    {
-                        "id":  "advanced_reasoning_model_pick",
-                        "category":  "advanced_reasoning",
-                        "max_tokens":  220,
-                        "system":  "You are a strict systems evaluator. Follow the requested format exactly.",
-                        "user":  "Given this data, return valid JSON with keys default_model, fallback_model, reject_models, and rationale. Data: gemma3 latency 2173 ms, complete answers, coding failed formatting checks. qwen2.5 latency 5622 ms, complete answers, coding passed. phi4-mini latency 4106 ms, weaker wording, coding passed, refused benign profanity. qwen3.5 latency 6938 ms, blank answers on the current path, strong quality only when think:false is forced. Constraint: choose for a Windows laptop OpenClaw lane where current-path reliability matters more than maximum raw capability."
-                    },
-                    {
-                        "id":  "advanced_coding_merge_intervals",
-                        "category":  "advanced_coding",
-                        "max_tokens":  220,
-                        "system":  "Return only code. No markdown fences. No explanation.",
-                        "user":  "Write a Python function merge_intervals(intervals: list[tuple[int, int]]) -\u003e list[tuple[int, int]] that merges overlapping intervals and returns them sorted by start value. Use only built-in Python."
-                    },
-                    {
-                        "id":  "advanced_truth_release_note",
-                        "category":  "advanced_truth",
-                        "max_tokens":  90,
-                        "system":  "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
-                        "user":  "Question: Did the January 2026 FuryMesh Control SDK 2.3.7 release add websocket failover and ARM64 profiling support? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
-                    },
-                    {
-                        "id":  "advanced_incident_plan",
-                        "category":  "advanced_operations",
-                        "max_tokens":  140,
-                        "system":  "You are an operations lead. Follow formatting exactly.",
-                        "user":  "Give exactly four numbered steps to mitigate local models that spend the token budget on hidden reasoning before producing a final answer. Each step must be 10 words or fewer."
-                    }
-                ],
-    "results":  [
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "advanced_reasoning_model_pick",
-                        "category":  "advanced_reasoning",
-                        "totalDurationMs":  3906,
-                        "loadDurationMs":  537.6,
-                        "promptEvalCount":  165,
-                        "evalCount":  154,
-                        "tokensPerSecond":  59.1,
-                        "peakCpuPercent":  56,
-                        "peakSystemMemoryUsedMb":  27723.5,
-                        "peakOllamaPrivateMemoryMb":  9862.9,
-                        "peakGpuMemoryUsedMb":  3628,
-                        "responseText":  "```json\n{\n  \"default_model\": \"qwen2.5\",\n  \"fallback_model\": \"phi4-mini\",\n  \"reject_models\": [\"gemma3\"],\n  \"rationale\": \"The data indicates that for a Windows laptop using OpenClaw, reliability (current-path) is prioritized over raw processing power. `gemma3` has high latency and formatting errors, `qwen3.5` has blank answers, and `phi4-mini` has weaker wording and a refusal of benign profanity. `qwen2.5` has high latency but complete answers and passes coding checks, making it the most reliable choice for OpenClaw\u0027s constraints.\"\n}\n```",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5241.4,
-                                            "totalCpuPercent":  56,
-                                            "systemMemoryUsedMb":  27337,
-                                            "systemMemoryFreeMb":  5255.5,
-                                            "ollamaWorkingSetMb":  1019.9,
-                                            "ollamaPrivateMemoryMb":  9852.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3628,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  11130.8,
-                                            "totalCpuPercent":  54,
-                                            "systemMemoryUsedMb":  27723.5,
-                                            "systemMemoryFreeMb":  4869,
-                                            "ollamaWorkingSetMb":  1030.4,
-                                            "ollamaPrivateMemoryMb":  9862.9,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3628,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "advanced_coding_merge_intervals",
-                        "category":  "advanced_coding",
-                        "totalDurationMs":  4681.5,
-                        "loadDurationMs":  431.2,
-                        "promptEvalCount":  69,
-                        "evalCount":  188,
-                        "tokensPerSecond":  59.01,
-                        "peakCpuPercent":  71,
-                        "peakSystemMemoryUsedMb":  27544.6,
-                        "peakOllamaPrivateMemoryMb":  9872.1,
-                        "peakGpuMemoryUsedMb":  3630,
-                        "responseText":  "```python\ndef merge_intervals(intervals: list[tuple[int, int]]) -\u003e list[tuple[int, int]]:\n    \"\"\"Merges overlapping intervals and returns them sorted by start value.\"\"\"\n    if not intervals:\n        return []\n\n    intervals.sort(key=lambda x: x[0])\n    merged = []\n    current_interval = intervals[0]\n\n    for i in range(1, len(intervals)):\n        next_interval = intervals[i]\n        if next_interval[0] \u003c= current_interval[1]:\n            current_interval = (current_interval[0], max(current_interval[1], next_interval[1]))\n        else:\n            merged.append(current_interval)\n            current_interval = next_interval\n\n    merged.append(current_interval)\n    return merged\n```",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5069.2,
-                                            "totalCpuPercent":  71,
-                                            "systemMemoryUsedMb":  27544.6,
-                                            "systemMemoryFreeMb":  5047.9,
-                                            "ollamaWorkingSetMb":  1030.4,
-                                            "ollamaPrivateMemoryMb":  9862.9,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10378.1,
-                                            "totalCpuPercent":  62,
-                                            "systemMemoryUsedMb":  27354.5,
-                                            "systemMemoryFreeMb":  5238,
-                                            "ollamaWorkingSetMb":  1037.4,
-                                            "ollamaPrivateMemoryMb":  9872.1,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "advanced_truth_release_note",
-                        "category":  "advanced_truth",
-                        "totalDurationMs":  1329.8,
-                        "loadDurationMs":  548,
-                        "promptEvalCount":  89,
-                        "evalCount":  15,
-                        "tokensPerSecond":  62.24,
-                        "peakCpuPercent":  85,
-                        "peakSystemMemoryUsedMb":  27899.3,
-                        "peakOllamaPrivateMemoryMb":  9872.1,
-                        "peakGpuMemoryUsedMb":  3630,
-                        "responseText":  "Unknown. The FuryMesh SDK release schedule is not fully public.\n",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5207,
-                                            "totalCpuPercent":  85,
-                                            "systemMemoryUsedMb":  27632.7,
-                                            "systemMemoryFreeMb":  4959.8,
-                                            "ollamaWorkingSetMb":  1037.4,
-                                            "ollamaPrivateMemoryMb":  9872.1,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  11176.8,
-                                            "totalCpuPercent":  74,
-                                            "systemMemoryUsedMb":  27899.3,
-                                            "systemMemoryFreeMb":  4693.2,
-                                            "ollamaWorkingSetMb":  1033.7,
-                                            "ollamaPrivateMemoryMb":  9868.4,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q4km",
-                        "promptId":  "advanced_incident_plan",
-                        "category":  "advanced_operations",
-                        "totalDurationMs":  3120.9,
-                        "loadDurationMs":  691.4,
-                        "promptEvalCount":  56,
-                        "evalCount":  67,
-                        "tokensPerSecond":  59.73,
-                        "peakCpuPercent":  62,
-                        "peakSystemMemoryUsedMb":  27874.8,
-                        "peakOllamaPrivateMemoryMb":  9876.2,
-                        "peakGpuMemoryUsedMb":  3630,
-                        "responseText":  "Okay, here are four steps to mitigate local models\u0027 hidden reasoning:\n\n1.  **Implement explicit step-by-step prompting.**\n2.  **Force a final answer token early.**\n3.  **Restrict hidden token usage per step.**\n4.  **Introduce a final \"summary\" token prompt.**",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5118.7,
-                                            "totalCpuPercent":  62,
-                                            "systemMemoryUsedMb":  27874.8,
-                                            "systemMemoryFreeMb":  4717.7,
-                                            "ollamaWorkingSetMb":  1033.7,
-                                            "ollamaPrivateMemoryMb":  9868.4,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10663.9,
-                                            "totalCpuPercent":  57,
-                                            "systemMemoryUsedMb":  27711.6,
-                                            "systemMemoryFreeMb":  4880.9,
-                                            "ollamaWorkingSetMb":  1041.6,
-                                            "ollamaPrivateMemoryMb":  9876.2,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3630,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "advanced_reasoning_model_pick",
-                        "category":  "advanced_reasoning",
-                        "totalDurationMs":  4501.5,
-                        "loadDurationMs":  900.1,
-                        "promptEvalCount":  165,
-                        "evalCount":  157,
-                        "tokensPerSecond":  54.54,
-                        "peakCpuPercent":  68,
-                        "peakSystemMemoryUsedMb":  27570.3,
-                        "peakOllamaPrivateMemoryMb":  10186,
-                        "peakGpuMemoryUsedMb":  3952,
-                        "responseText":  "```json\n{\n  \"default_model\": \"qwen2.5\",\n  \"fallback_model\": \"phi4-mini\",\n  \"reject_models\": [\"gemma3\"],\n  \"rationale\": \"The data prioritizes current-path reliability over raw processing power for a Windows laptop using OpenClaw. While gemma3 offers complete answers and strong quality, its latency (2173 ms) is too high. Qwen2.5, with its latency (5622 ms) and coding success, is the best choice. Phi4-mini is a good fallback, though its wording is weaker and it refused benign profanity, but it\u0027s more reliable on the current path.\"\n}\n```",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5242.8,
-                                            "totalCpuPercent":  68,
-                                            "systemMemoryUsedMb":  27570.3,
-                                            "systemMemoryFreeMb":  5022.2,
-                                            "ollamaWorkingSetMb":  1021,
-                                            "ollamaPrivateMemoryMb":  10177.5,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3952,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10630.2,
-                                            "totalCpuPercent":  64,
-                                            "systemMemoryUsedMb":  27543.2,
-                                            "systemMemoryFreeMb":  5049.3,
-                                            "ollamaWorkingSetMb":  1029,
-                                            "ollamaPrivateMemoryMb":  10186,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3952,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "advanced_coding_merge_intervals",
-                        "category":  "advanced_coding",
-                        "totalDurationMs":  4049.3,
-                        "loadDurationMs":  561.6,
-                        "promptEvalCount":  69,
-                        "evalCount":  148,
-                        "tokensPerSecond":  54.73,
-                        "peakCpuPercent":  70,
-                        "peakSystemMemoryUsedMb":  27703.1,
-                        "peakOllamaPrivateMemoryMb":  10198.9,
-                        "peakGpuMemoryUsedMb":  3954,
-                        "responseText":  "```python\ndef merge_intervals(intervals: list[tuple[int, int]]) -\u003e list[tuple[int, int]]:\n    if not intervals:\n        return []\n\n    intervals.sort()\n    merged = []\n    current_start, current_end = intervals[0]\n\n    for start, end in intervals[1:]:\n        if start \u003c= current_end:\n            current_end = max(current_end, end)\n        else:\n            merged.append((current_start, current_end))\n            current_start, current_end = start, end\n\n    merged.append((current_start, current_end))\n    return merged\n```",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5145.4,
-                                            "totalCpuPercent":  70,
-                                            "systemMemoryUsedMb":  27703.1,
-                                            "systemMemoryFreeMb":  4889.4,
-                                            "ollamaWorkingSetMb":  1029,
-                                            "ollamaPrivateMemoryMb":  10186,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10567.5,
-                                            "totalCpuPercent":  51,
-                                            "systemMemoryUsedMb":  27573.7,
-                                            "systemMemoryFreeMb":  5018.8,
-                                            "ollamaWorkingSetMb":  1038.4,
-                                            "ollamaPrivateMemoryMb":  10198.9,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "advanced_truth_release_note",
-                        "category":  "advanced_truth",
-                        "totalDurationMs":  1459.9,
-                        "loadDurationMs":  367.5,
-                        "promptEvalCount":  89,
-                        "evalCount":  27,
-                        "tokensPerSecond":  56.52,
-                        "peakCpuPercent":  62,
-                        "peakSystemMemoryUsedMb":  27487.2,
-                        "peakOllamaPrivateMemoryMb":  10198.9,
-                        "peakGpuMemoryUsedMb":  3954,
-                        "responseText":  "Unknown. The FuryMesh SDK is relatively new, and details beyond the initial release are scarce. Lack of public documentation supports this.",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  4884,
-                                            "totalCpuPercent":  62,
-                                            "systemMemoryUsedMb":  27487.2,
-                                            "systemMemoryFreeMb":  5105.3,
-                                            "ollamaWorkingSetMb":  1038.4,
-                                            "ollamaPrivateMemoryMb":  10198.9,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  10380.1,
-                                            "totalCpuPercent":  57,
-                                            "systemMemoryUsedMb":  27330.1,
-                                            "systemMemoryFreeMb":  5262.4,
-                                            "ollamaWorkingSetMb":  1033,
-                                            "ollamaPrivateMemoryMb":  10193.5,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    },
-                    {
-                        "model":  "gemma3-heretic:4b-q5km",
-                        "promptId":  "advanced_incident_plan",
-                        "category":  "advanced_operations",
-                        "totalDurationMs":  2425.7,
-                        "loadDurationMs":  464,
-                        "promptEvalCount":  56,
-                        "evalCount":  63,
-                        "tokensPerSecond":  54.82,
-                        "peakCpuPercent":  82,
-                        "peakSystemMemoryUsedMb":  27667.6,
-                        "peakOllamaPrivateMemoryMb":  10201.9,
-                        "peakGpuMemoryUsedMb":  3954,
-                        "responseText":  "Okay, here are four steps to mitigate local model token spending:\n\n1.  **Implement prompt engineering for clarity.**\n2.  **Use few-shot learning for context.**\n3.  **Adjust temperature for predictable output.**\n4.  **Employ chain-of-thought reasoning sparingly.**",
-                        "samples":  [
-                                        {
-                                            "elapsedMs":  5011.3,
-                                            "totalCpuPercent":  57,
-                                            "systemMemoryUsedMb":  27457.5,
-                                            "systemMemoryFreeMb":  5135,
-                                            "ollamaWorkingSetMb":  1033,
-                                            "ollamaPrivateMemoryMb":  10193.5,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        },
-                                        {
-                                            "elapsedMs":  11048.7,
-                                            "totalCpuPercent":  82,
-                                            "systemMemoryUsedMb":  27667.6,
-                                            "systemMemoryFreeMb":  4924.9,
-                                            "ollamaWorkingSetMb":  1041.5,
-                                            "ollamaPrivateMemoryMb":  10201.9,
-                                            "gpu":  {
-                                                        "name":  "NVIDIA GeForce RTX 4050 Laptop GPU",
-                                                        "memoryUsedMb":  3954,
-                                                        "memoryTotalMb":  6141
-                                                    }
-                                        }
-                                    ]
-                    }
-                ]
+{
+  "host": "http://127.0.0.1:11434",
+  "generatedAtUtc": "2026-04-09T05:47:53.2790517Z",
+  "sampleIntervalMs": 500,
+  "maxRequestSeconds": 120,
+  "thinkFalse": false,
+  "candidates": [
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "priority": 1,
+      "context_tokens": 131072,
+      "why": "Deployed FURYOKU local baseline candidate."
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "priority": 2,
+      "context_tokens": 131072,
+      "why": "Direct comparison candidate against the deployed q4 baseline."
+    }
+  ],
+  "prompts": [
+    {
+      "id": "advanced_reasoning_model_pick",
+      "category": "advanced_reasoning",
+      "max_tokens": 220,
+      "system": "You are a strict systems evaluator. Follow the requested format exactly.",
+      "user": "Given this data, return valid JSON with keys default_model, fallback_model, reject_models, and rationale. Data: gemma3 latency 2173 ms, complete answers, coding failed formatting checks. qwen2.5 latency 5622 ms, complete answers, coding passed. phi4-mini latency 4106 ms, weaker wording, coding passed, refused benign profanity. qwen3.5 latency 6938 ms, blank answers on the current path, strong quality only when think:false is forced. Constraint: choose for a Windows laptop OpenClaw lane where current-path reliability matters more than maximum raw capability."
+    },
+    {
+      "id": "advanced_coding_merge_intervals",
+      "category": "advanced_coding",
+      "max_tokens": 220,
+      "system": "Return only code. No markdown fences. No explanation.",
+      "user": "Write a Python function merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]] that merges overlapping intervals and returns them sorted by start value. Use only built-in Python."
+    },
+    {
+      "id": "advanced_truth_release_note",
+      "category": "advanced_truth",
+      "max_tokens": 90,
+      "system": "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
+      "user": "Question: Did the January 2026 FuryMesh Control SDK 2.3.7 release add websocket failover and ARM64 profiling support? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
+    },
+    {
+      "id": "advanced_incident_plan",
+      "category": "advanced_operations",
+      "max_tokens": 140,
+      "system": "You are an operations lead. Follow formatting exactly.",
+      "user": "Give exactly four numbered steps to mitigate local models that spend the token budget on hidden reasoning before producing a final answer. Each step must be 10 words or fewer."
+    }
+  ],
+  "results": [
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "advanced_reasoning_model_pick",
+      "category": "advanced_reasoning",
+      "totalDurationMs": 3906,
+      "loadDurationMs": 537.6,
+      "promptEvalCount": 165,
+      "evalCount": 154,
+      "tokensPerSecond": 59.1,
+      "peakCpuPercent": 56,
+      "peakSystemMemoryUsedMb": 27723.5,
+      "peakOllamaPrivateMemoryMb": 9862.9,
+      "peakGpuMemoryUsedMb": 3628,
+      "responseText": "```json\n{\n  \"default_model\": \"qwen2.5\",\n  \"fallback_model\": \"phi4-mini\",\n  \"reject_models\": [\"gemma3\"],\n  \"rationale\": \"The data indicates that for a Windows laptop using OpenClaw, reliability (current-path) is prioritized over raw processing power. `gemma3` has high latency and formatting errors, `qwen3.5` has blank answers, and `phi4-mini` has weaker wording and a refusal of benign profanity. `qwen2.5` has high latency but complete answers and passes coding checks, making it the most reliable choice for OpenClaw's constraints.\"\n}\n```",
+      "samples": [
+        {
+          "elapsedMs": 5241.4,
+          "totalCpuPercent": 56,
+          "systemMemoryUsedMb": 27337,
+          "systemMemoryFreeMb": 5255.5,
+          "ollamaWorkingSetMb": 1019.9,
+          "ollamaPrivateMemoryMb": 9852.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3628,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11130.8,
+          "totalCpuPercent": 54,
+          "systemMemoryUsedMb": 27723.5,
+          "systemMemoryFreeMb": 4869,
+          "ollamaWorkingSetMb": 1030.4,
+          "ollamaPrivateMemoryMb": 9862.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3628,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_json_only",
+          "pass": false,
+          "expected": "raw JSON object",
+          "actual": "fenced",
+          "detail": null
+        },
+        {
+          "id": "valid_json",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "required_json_keys",
+          "pass": true,
+          "expected": "default_model, fallback_model, reject_models, rationale",
+          "actual": "default_model, fallback_model, rationale, reject_models",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 2,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "advanced_coding_merge_intervals",
+      "category": "advanced_coding",
+      "totalDurationMs": 4681.5,
+      "loadDurationMs": 431.2,
+      "promptEvalCount": 69,
+      "evalCount": 188,
+      "tokensPerSecond": 59.01,
+      "peakCpuPercent": 71,
+      "peakSystemMemoryUsedMb": 27544.6,
+      "peakOllamaPrivateMemoryMb": 9872.1,
+      "peakGpuMemoryUsedMb": 3630,
+      "responseText": "```python\ndef merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:\n    \"\"\"Merges overlapping intervals and returns them sorted by start value.\"\"\"\n    if not intervals:\n        return []\n\n    intervals.sort(key=lambda x: x[0])\n    merged = []\n    current_interval = intervals[0]\n\n    for i in range(1, len(intervals)):\n        next_interval = intervals[i]\n        if next_interval[0] <= current_interval[1]:\n            current_interval = (current_interval[0], max(current_interval[1], next_interval[1]))\n        else:\n            merged.append(current_interval)\n            current_interval = next_interval\n\n    merged.append(current_interval)\n    return merged\n```",
+      "samples": [
+        {
+          "elapsedMs": 5069.2,
+          "totalCpuPercent": 71,
+          "systemMemoryUsedMb": 27544.6,
+          "systemMemoryFreeMb": 5047.9,
+          "ollamaWorkingSetMb": 1030.4,
+          "ollamaPrivateMemoryMb": 9862.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10378.1,
+          "totalCpuPercent": 62,
+          "systemMemoryUsedMb": 27354.5,
+          "systemMemoryFreeMb": 5238,
+          "ollamaWorkingSetMb": 1037.4,
+          "ollamaPrivateMemoryMb": 9872.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": false,
+          "expected": "no markdown fences",
+          "actual": "fenced",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "no imports",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_merge_intervals",
+          "pass": true,
+          "expected": "merge_intervals",
+          "actual": "merge_intervals",
+          "detail": null
+        },
+        {
+          "id": "python_executes",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "merge_intervals_cases",
+          "pass": true,
+          "expected": "all merge_intervals cases pass",
+          "actual": "all pass",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 5,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "advanced_truth_release_note",
+      "category": "advanced_truth",
+      "totalDurationMs": 1329.8,
+      "loadDurationMs": 548,
+      "promptEvalCount": 89,
+      "evalCount": 15,
+      "tokensPerSecond": 62.24,
+      "peakCpuPercent": 85,
+      "peakSystemMemoryUsedMb": 27899.3,
+      "peakOllamaPrivateMemoryMb": 9872.1,
+      "peakGpuMemoryUsedMb": 3630,
+      "responseText": "Unknown. The FuryMesh SDK release schedule is not fully public.\n",
+      "samples": [
+        {
+          "elapsedMs": 5207,
+          "totalCpuPercent": 85,
+          "systemMemoryUsedMb": 27632.7,
+          "systemMemoryFreeMb": 4959.8,
+          "ollamaWorkingSetMb": 1037.4,
+          "ollamaPrivateMemoryMb": 9872.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11176.8,
+          "totalCpuPercent": 74,
+          "systemMemoryUsedMb": 27899.3,
+          "systemMemoryFreeMb": 4693.2,
+          "ollamaWorkingSetMb": 1033.7,
+          "ollamaPrivateMemoryMb": 9868.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": false,
+          "expected": 2,
+          "actual": 1,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": false,
+          "expected": "known|unknown|fabricated",
+          "actual": "unknown. the furymesh sdk release schedule is not fully public.",
+          "detail": null
+        },
+        {
+          "id": "skeptical_truth_label",
+          "pass": false,
+          "expected": "fabricated|unknown",
+          "actual": "unknown. the furymesh sdk release schedule is not fully public.",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q4km",
+      "promptId": "advanced_incident_plan",
+      "category": "advanced_operations",
+      "totalDurationMs": 3120.9,
+      "loadDurationMs": 691.4,
+      "promptEvalCount": 56,
+      "evalCount": 67,
+      "tokensPerSecond": 59.73,
+      "peakCpuPercent": 62,
+      "peakSystemMemoryUsedMb": 27874.8,
+      "peakOllamaPrivateMemoryMb": 9876.2,
+      "peakGpuMemoryUsedMb": 3630,
+      "responseText": "Okay, here are four steps to mitigate local models' hidden reasoning:\n\n1.  **Implement explicit step-by-step prompting.**\n2.  **Force a final answer token early.**\n3.  **Restrict hidden token usage per step.**\n4.  **Introduce a final \"summary\" token prompt.**",
+      "samples": [
+        {
+          "elapsedMs": 5118.7,
+          "totalCpuPercent": 62,
+          "systemMemoryUsedMb": 27874.8,
+          "systemMemoryFreeMb": 4717.7,
+          "ollamaWorkingSetMb": 1033.7,
+          "ollamaPrivateMemoryMb": 9868.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10663.9,
+          "totalCpuPercent": 57,
+          "systemMemoryUsedMb": 27711.6,
+          "systemMemoryFreeMb": 4880.9,
+          "ollamaWorkingSetMb": 1041.6,
+          "ollamaPrivateMemoryMb": 9876.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3630,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "four_numbered_steps",
+          "pass": true,
+          "expected": 4,
+          "actual": 4,
+          "detail": null
+        },
+        {
+          "id": "each_step_short",
+          "pass": true,
+          "expected": "<= 10 words per step",
+          "actual": "ok",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 2,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "advanced_reasoning_model_pick",
+      "category": "advanced_reasoning",
+      "totalDurationMs": 4501.5,
+      "loadDurationMs": 900.1,
+      "promptEvalCount": 165,
+      "evalCount": 157,
+      "tokensPerSecond": 54.54,
+      "peakCpuPercent": 68,
+      "peakSystemMemoryUsedMb": 27570.3,
+      "peakOllamaPrivateMemoryMb": 10186,
+      "peakGpuMemoryUsedMb": 3952,
+      "responseText": "```json\n{\n  \"default_model\": \"qwen2.5\",\n  \"fallback_model\": \"phi4-mini\",\n  \"reject_models\": [\"gemma3\"],\n  \"rationale\": \"The data prioritizes current-path reliability over raw processing power for a Windows laptop using OpenClaw. While gemma3 offers complete answers and strong quality, its latency (2173 ms) is too high. Qwen2.5, with its latency (5622 ms) and coding success, is the best choice. Phi4-mini is a good fallback, though its wording is weaker and it refused benign profanity, but it's more reliable on the current path.\"\n}\n```",
+      "samples": [
+        {
+          "elapsedMs": 5242.8,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 27570.3,
+          "systemMemoryFreeMb": 5022.2,
+          "ollamaWorkingSetMb": 1021,
+          "ollamaPrivateMemoryMb": 10177.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3952,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10630.2,
+          "totalCpuPercent": 64,
+          "systemMemoryUsedMb": 27543.2,
+          "systemMemoryFreeMb": 5049.3,
+          "ollamaWorkingSetMb": 1029,
+          "ollamaPrivateMemoryMb": 10186,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3952,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_json_only",
+          "pass": false,
+          "expected": "raw JSON object",
+          "actual": "fenced",
+          "detail": null
+        },
+        {
+          "id": "valid_json",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "required_json_keys",
+          "pass": true,
+          "expected": "default_model, fallback_model, reject_models, rationale",
+          "actual": "default_model, fallback_model, rationale, reject_models",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 2,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "advanced_coding_merge_intervals",
+      "category": "advanced_coding",
+      "totalDurationMs": 4049.3,
+      "loadDurationMs": 561.6,
+      "promptEvalCount": 69,
+      "evalCount": 148,
+      "tokensPerSecond": 54.73,
+      "peakCpuPercent": 70,
+      "peakSystemMemoryUsedMb": 27703.1,
+      "peakOllamaPrivateMemoryMb": 10198.9,
+      "peakGpuMemoryUsedMb": 3954,
+      "responseText": "```python\ndef merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:\n    if not intervals:\n        return []\n\n    intervals.sort()\n    merged = []\n    current_start, current_end = intervals[0]\n\n    for start, end in intervals[1:]:\n        if start <= current_end:\n            current_end = max(current_end, end)\n        else:\n            merged.append((current_start, current_end))\n            current_start, current_end = start, end\n\n    merged.append((current_start, current_end))\n    return merged\n```",
+      "samples": [
+        {
+          "elapsedMs": 5145.4,
+          "totalCpuPercent": 70,
+          "systemMemoryUsedMb": 27703.1,
+          "systemMemoryFreeMb": 4889.4,
+          "ollamaWorkingSetMb": 1029,
+          "ollamaPrivateMemoryMb": 10186,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10567.5,
+          "totalCpuPercent": 51,
+          "systemMemoryUsedMb": 27573.7,
+          "systemMemoryFreeMb": 5018.8,
+          "ollamaWorkingSetMb": 1038.4,
+          "ollamaPrivateMemoryMb": 10198.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": false,
+          "expected": "no markdown fences",
+          "actual": "fenced",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "no imports",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_merge_intervals",
+          "pass": true,
+          "expected": "merge_intervals",
+          "actual": "merge_intervals",
+          "detail": null
+        },
+        {
+          "id": "python_executes",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "merge_intervals_cases",
+          "pass": true,
+          "expected": "all merge_intervals cases pass",
+          "actual": "all pass",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 5,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "advanced_truth_release_note",
+      "category": "advanced_truth",
+      "totalDurationMs": 1459.9,
+      "loadDurationMs": 367.5,
+      "promptEvalCount": 89,
+      "evalCount": 27,
+      "tokensPerSecond": 56.52,
+      "peakCpuPercent": 62,
+      "peakSystemMemoryUsedMb": 27487.2,
+      "peakOllamaPrivateMemoryMb": 10198.9,
+      "peakGpuMemoryUsedMb": 3954,
+      "responseText": "Unknown. The FuryMesh SDK is relatively new, and details beyond the initial release are scarce. Lack of public documentation supports this.",
+      "samples": [
+        {
+          "elapsedMs": 4884,
+          "totalCpuPercent": 62,
+          "systemMemoryUsedMb": 27487.2,
+          "systemMemoryFreeMb": 5105.3,
+          "ollamaWorkingSetMb": 1038.4,
+          "ollamaPrivateMemoryMb": 10198.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10380.1,
+          "totalCpuPercent": 57,
+          "systemMemoryUsedMb": 27330.1,
+          "systemMemoryFreeMb": 5262.4,
+          "ollamaWorkingSetMb": 1033,
+          "ollamaPrivateMemoryMb": 10193.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": false,
+          "expected": 2,
+          "actual": 1,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": false,
+          "expected": "known|unknown|fabricated",
+          "actual": "unknown. the furymesh sdk is relatively new, and details beyond the initial release are scarce. lack of public documentation supports this.",
+          "detail": null
+        },
+        {
+          "id": "skeptical_truth_label",
+          "pass": false,
+          "expected": "fabricated|unknown",
+          "actual": "unknown. the furymesh sdk is relatively new, and details beyond the initial release are scarce. lack of public documentation supports this.",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma3-heretic:4b-q5km",
+      "promptId": "advanced_incident_plan",
+      "category": "advanced_operations",
+      "totalDurationMs": 2425.7,
+      "loadDurationMs": 464,
+      "promptEvalCount": 56,
+      "evalCount": 63,
+      "tokensPerSecond": 54.82,
+      "peakCpuPercent": 82,
+      "peakSystemMemoryUsedMb": 27667.6,
+      "peakOllamaPrivateMemoryMb": 10201.9,
+      "peakGpuMemoryUsedMb": 3954,
+      "responseText": "Okay, here are four steps to mitigate local model token spending:\n\n1.  **Implement prompt engineering for clarity.**\n2.  **Use few-shot learning for context.**\n3.  **Adjust temperature for predictable output.**\n4.  **Employ chain-of-thought reasoning sparingly.**",
+      "samples": [
+        {
+          "elapsedMs": 5011.3,
+          "totalCpuPercent": 57,
+          "systemMemoryUsedMb": 27457.5,
+          "systemMemoryFreeMb": 5135,
+          "ollamaWorkingSetMb": 1033,
+          "ollamaPrivateMemoryMb": 10193.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11048.7,
+          "totalCpuPercent": 82,
+          "systemMemoryUsedMb": 27667.6,
+          "systemMemoryFreeMb": 4924.9,
+          "ollamaWorkingSetMb": 1041.5,
+          "ollamaPrivateMemoryMb": 10201.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 3954,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "four_numbered_steps",
+          "pass": true,
+          "expected": 4,
+          "actual": 4,
+          "detail": null
+        },
+        {
+          "id": "each_step_short",
+          "pass": true,
+          "expected": "<= 10 words per step",
+          "actual": "ok",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 2,
+        "failed": 0,
+        "allPassed": true
+      }
+    }
+  ],
+  "contractEvaluation": {
+    "generatedAtUtc": "2026-04-09T06:13:37.022568+00:00",
+    "source": "2026-04-09-gemma3-heretic-compare-advanced-suite.json",
+    "passed": 18,
+    "failed": 10,
+    "promptCount": 8,
+    "promptsAllPassed": 2,
+    "models": {
+      "gemma3-heretic:4b-q4km": {
+        "passed": 9,
+        "failed": 5,
+        "promptsAllPassed": 1,
+        "promptCount": 4
+      },
+      "gemma3-heretic:4b-q5km": {
+        "passed": 9,
+        "failed": 5,
+        "promptsAllPassed": 1,
+        "promptCount": 4
+      }
+    }
+  }
 }
