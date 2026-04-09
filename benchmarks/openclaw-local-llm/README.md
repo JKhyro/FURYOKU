@@ -23,7 +23,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 
 ## Current Runtime Truth
 
-- Current bounded follow-on: [#54](https://github.com/JKhyro/FURYOKU/issues/54)
+- Current bounded follow-on: [#57](https://github.com/JKhyro/FURYOKU/issues/57)
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
@@ -33,7 +33,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - The benchmark outputs now also attach a machine-readable `promotionVerdict` per model so candidate promotion can be gated mechanically
 - The benchmark outputs now also attach a machine-readable `resourceFitVerdict` so local RAM, GPU, and latency regressions can be gated mechanically against the 32 GB RAM / 4 GB VRAM target profile
 - Compare reports now also attach a machine-readable `compareDecision` so the deployed baseline and each comparison candidate can be evaluated with explicit roles and with contract-versus-machine-fit blocker reasons
-- The next benchmark follow-on is to add machine-profile overrides so the current compare and `resourceFitVerdict` logic can be rerun against other local RAM/VRAM targets without editing the reporting script
+- The next benchmark follow-on is to add reusable machine-profile preset input so benchmark runs can target named local hardware profiles without repeating raw memory values on each command
 - `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
 - `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
 - `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
