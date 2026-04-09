@@ -4,19 +4,27 @@ Current note:
 - This report exposes prompt-contract pass/fail signals derived directly from the benchmark prompts.
 - It is generated from the benchmark JSON outputs rather than manual scoring alone.
 - Promotion gates now separate hard blockers from non-blocking degradations.
+- Compare decisions now also encode resource-fit blockers and degradations for the 32 GB RAM / 4 GB VRAM local machine profile.
 
 ## Current Verdict
 
 Retain `gemma3-heretic:4b-q4km` as the deployed local baseline.
 
-Comparison candidates `gemma3-heretic:4b-q5km` are blocked from promotion by the current compare gates.
+Comparison candidates `gemma3-heretic:4b-q5km` are blocked from promotion by the current contract and machine-fit gates.
 
 ## Compare Decisions
 
-| Model | Role | Compare decision | Promotion verdict | Promotable |
-| --- | --- | --- | --- | ---: |
-| `gemma3-heretic:4b-q4km` | `baseline` | `retain-baseline` | `blocked` | `no` |
-| `gemma3-heretic:4b-q5km` | `candidate` | `candidate-blocked` | `blocked` | `no` |
+| Model | Role | Compare decision | Promotion verdict | Resource fit | Promotable |
+| --- | --- | --- | --- | --- | ---: |
+| `gemma3-heretic:4b-q4km` | `baseline` | `retain-baseline` | `blocked` | `fit` | `no` |
+| `gemma3-heretic:4b-q5km` | `candidate` | `candidate-blocked-contract-and-machine-fit` | `blocked` | `blocked` | `no` |
+
+## Resource-Fit Verdicts
+
+| Model | Verdict | Promotable | Blockers | Degradations | Peak GPU MB | Peak Ollama MB | Avg duration | Avg tok/s |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gemma3-heretic:4b-q4km` | `fit` | `yes` | `0` | `0` | `3630.0` | `9885.1` | `2827.33 ms` | `60.98` |
+| `gemma3-heretic:4b-q5km` | `blocked` | `no` | `8` | `5` | `3954.0` | `10207.0` | `4970.58 ms` | `56.39` |
 
 ## Promotion Gate Verdicts
 
@@ -101,13 +109,18 @@ Comparison candidates `gemma3-heretic:4b-q5km` are blocked from promotion by the
 - `advanced_truth_release_note:allowed_truth_label`
 - `advanced_truth_release_note:skeptical_truth_label`
 
-## Promotion Gate Details
+## Compare Gate Details
 
 ### `gemma3-heretic:4b-q4km`
 
 - Role: `baseline`
 - Compare decision: `retain-baseline`
-- Compare summary: Current deployed baseline remains in place until a candidate clears the compare gates.
+- Compare summary: Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.
+- Resource-fit verdict: `fit`
+- Resource-fit summary: Resource-fit checks stay within the current machine profile across the current suites.
+- Resource metrics: avgDurationMs=`2827.33`, avgTokensPerSecond=`60.98`, peakGpuMemoryUsedMb=`3630.0`, peakOllamaPrivateMemoryMb=`9885.1`, peakSystemMemoryUsedMb=`27899.3`, peakPrivateMemoryMb=`9874.0`
+- Resource blockers: none
+- Resource degradations: none
 - Promotion verdict: `blocked`
 - Promotable now: `no`
 - Blocking failure: `route_decision:expected_route_decision`: Route decision correctness is a promotion blocker for the benchmark lane.
@@ -131,9 +144,25 @@ Comparison candidates `gemma3-heretic:4b-q5km` are blocked from promotion by the
 ### `gemma3-heretic:4b-q5km`
 
 - Role: `candidate`
-- Compare decision: `candidate-blocked`
-- Compare summary: Candidate does not clear the current compare gates and cannot be promoted yet.
+- Compare decision: `candidate-blocked-contract-and-machine-fit`
+- Compare summary: Candidate fails both the contract/promotion gates and the local machine-fit gates.
 - Compared against: `gemma3-heretic:4b-q4km`
+- Resource-fit verdict: `blocked`
+- Resource-fit summary: Resource-fit blockers remain after aggregating the current benchmark suites.
+- Resource metrics: avgDurationMs=`4970.58`, avgTokensPerSecond=`56.39`, peakGpuMemoryUsedMb=`3954.0`, peakOllamaPrivateMemoryMb=`10207.0`, peakSystemMemoryUsedMb=`27703.1`, peakPrivateMemoryMb=`10189.4`
+- Resource blocker: `benchmark:resource_fit:private_memory_regression`: Candidate increases benchmark-process private memory enough to materially reduce local machine fit.
+- Resource blocker: `response:resource_fit:gpu_headroom`: GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.
+- Resource blocker: `response:resource_fit:ollama_private_memory_regression`: Candidate increases Ollama private memory enough to materially reduce local machine fit.
+- Resource blocker: `sexual-boundary:resource_fit:gpu_headroom`: GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.
+- Resource blocker: `sexual-boundary:resource_fit:ollama_private_memory_regression`: Candidate increases Ollama private memory enough to materially reduce local machine fit.
+- Resource blocker: `sexual-boundary:resource_fit:latency_regression`: Candidate latency regresses too far beyond the deployed baseline for the local machine profile.
+- Resource blocker: `advanced:resource_fit:gpu_headroom`: GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.
+- Resource blocker: `advanced:resource_fit:ollama_private_memory_regression`: Candidate increases Ollama private memory enough to materially reduce local machine fit.
+- Resource degradation: `benchmark:resource_fit:tokens_per_second_regression`: Candidate throughput drops below the preferred baseline tolerance.
+- Resource degradation: `response:resource_fit:tokens_per_second_regression`: Candidate throughput drops below the preferred baseline tolerance.
+- Resource degradation: `sexual-boundary:resource_fit:system_memory_regression`: Candidate increases peak system memory versus the deployed baseline.
+- Resource degradation: `sexual-boundary:resource_fit:tokens_per_second_regression`: Candidate throughput drops below the preferred baseline tolerance.
+- Resource degradation: `advanced:resource_fit:tokens_per_second_regression`: Candidate throughput drops below the preferred baseline tolerance.
 - Promotion verdict: `blocked`
 - Promotable now: `no`
 - Blocking failure: `tool_style_json:raw_json_only`: Tool-style prompts must return raw JSON without markdown fencing.

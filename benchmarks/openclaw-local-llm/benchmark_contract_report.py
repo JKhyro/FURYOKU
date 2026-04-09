@@ -66,6 +66,27 @@ BLOCKER_FAILURE_REASONS = {
 
 DEFAULT_DEGRADATION_REASON = "Non-blocking contract-discipline regression that still warrants review before promotion."
 
+DEFAULT_MACHINE_PROFILE = {
+    "label": "32 GB RAM / 4 GB VRAM local profile",
+    "systemMemoryMb": 32768,
+    "gpuMemoryMb": 4096,
+}
+
+RESOURCE_FIT_THRESHOLDS = {
+    "gpuHeadroomBlockerMb": 256,
+    "gpuHeadroomDegradationMb": 384,
+    "systemMemoryRegressionBlockerMb": 2048,
+    "systemMemoryRegressionDegradationMb": 1024,
+    "ollamaRegressionBlockerMb": 256,
+    "ollamaRegressionDegradationMb": 128,
+    "privateRegressionBlockerMb": 256,
+    "privateRegressionDegradationMb": 128,
+    "latencyRegressionBlockerRatio": 1.5,
+    "latencyRegressionDegradationRatio": 1.15,
+    "tokensRegressionBlockerRatio": 0.9,
+    "tokensRegressionDegradationRatio": 0.95,
+}
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -500,29 +521,325 @@ def build_candidate_registry(payload: dict, args) -> dict[str, dict]:
     return registry
 
 
-def build_compare_verdict(model: str, role: str | None, promotion: dict, baseline_models: list[str]) -> dict:
+def average_or_none(values: list[float]) -> float | None:
+    return round(mean(values), 2) if values else None
+
+
+def max_or_none(values: list[float]) -> float | None:
+    return round(max(values), 2) if values else None
+
+
+def summarize_resource_metrics(rows: list[dict]) -> dict:
+    duration_values = [float(row["totalDurationMs"]) for row in rows if row.get("totalDurationMs") is not None]
+    token_values = [float(row["tokensPerSecond"]) for row in rows if row.get("tokensPerSecond") is not None]
+    gpu_values = [float(row["peakGpuMemoryUsedMb"]) for row in rows if row.get("peakGpuMemoryUsedMb") is not None]
+    ollama_values = [float(row["peakOllamaPrivateMemoryMb"]) for row in rows if row.get("peakOllamaPrivateMemoryMb") is not None]
+    system_values = [float(row["peakSystemMemoryUsedMb"]) for row in rows if row.get("peakSystemMemoryUsedMb") is not None]
+    private_values = [
+        float(row.get("processAfter", {}).get("privateMemoryMb"))
+        for row in rows
+        if row.get("processAfter", {}).get("privateMemoryMb") is not None
+    ]
+    return {
+        "avgDurationMs": average_or_none(duration_values),
+        "avgTokensPerSecond": average_or_none(token_values),
+        "peakGpuMemoryUsedMb": max_or_none(gpu_values),
+        "peakOllamaPrivateMemoryMb": max_or_none(ollama_values),
+        "peakSystemMemoryUsedMb": max_or_none(system_values),
+        "peakPrivateMemoryMb": max_or_none(private_values),
+    }
+
+
+def make_resource_issue(
+    issue_id: str,
+    severity: str,
+    reason: str,
+    *,
+    metric: str,
+    actual=None,
+    expected=None,
+    baseline=None,
+    delta=None,
+) -> dict:
+    return {
+        "id": issue_id,
+        "severity": severity,
+        "reason": reason,
+        "metric": metric,
+        "actual": actual,
+        "expected": expected,
+        "baseline": baseline,
+        "delta": delta,
+    }
+
+
+def compare_regression(
+    issues: list[dict],
+    *,
+    metric: str,
+    actual,
+    baseline,
+    blocker_threshold,
+    degradation_threshold,
+    blocker_reason: str,
+    degradation_reason: str,
+) -> None:
+    if actual is None or baseline is None:
+        return
+    delta = round(float(actual) - float(baseline), 2)
+    if delta >= blocker_threshold:
+        issues.append(
+            make_resource_issue(
+                f"resource_fit:{metric}",
+                "blocker",
+                blocker_reason,
+                metric=metric,
+                actual=actual,
+                baseline=baseline,
+                delta=delta,
+                expected=f"< +{blocker_threshold}",
+            )
+        )
+    elif delta >= degradation_threshold:
+        issues.append(
+            make_resource_issue(
+                f"resource_fit:{metric}",
+                "degradation",
+                degradation_reason,
+                metric=metric,
+                actual=actual,
+                baseline=baseline,
+                delta=delta,
+                expected=f"< +{degradation_threshold}",
+            )
+        )
+
+
+def compare_ratio_regression(
+    issues: list[dict],
+    *,
+    metric: str,
+    actual,
+    baseline,
+    blocker_ratio,
+    degradation_ratio,
+    blocker_reason: str,
+    degradation_reason: str,
+    inverse: bool = False,
+) -> None:
+    if actual in (None, 0) or baseline in (None, 0):
+        return
+    ratio = round(float(actual) / float(baseline), 3)
+    ratio_delta = round(ratio - 1.0, 3)
+    if inverse:
+        if ratio <= blocker_ratio:
+            issues.append(
+                make_resource_issue(
+                    f"resource_fit:{metric}",
+                    "blocker",
+                    blocker_reason,
+                    metric=metric,
+                    actual=actual,
+                    baseline=baseline,
+                    delta=ratio_delta,
+                    expected=f"> {blocker_ratio}x baseline",
+                )
+            )
+        elif ratio <= degradation_ratio:
+            issues.append(
+                make_resource_issue(
+                    f"resource_fit:{metric}",
+                    "degradation",
+                    degradation_reason,
+                    metric=metric,
+                    actual=actual,
+                    baseline=baseline,
+                    delta=ratio_delta,
+                    expected=f"> {degradation_ratio}x baseline",
+                )
+            )
+        return
+
+    if ratio >= blocker_ratio:
+        issues.append(
+            make_resource_issue(
+                f"resource_fit:{metric}",
+                "blocker",
+                blocker_reason,
+                metric=metric,
+                actual=actual,
+                baseline=baseline,
+                delta=ratio_delta,
+                expected=f"< {blocker_ratio}x baseline",
+            )
+        )
+    elif ratio >= degradation_ratio:
+        issues.append(
+            make_resource_issue(
+                f"resource_fit:{metric}",
+                "degradation",
+                degradation_reason,
+                metric=metric,
+                actual=actual,
+                baseline=baseline,
+                delta=ratio_delta,
+                expected=f"< {degradation_ratio}x baseline",
+            )
+        )
+
+
+def build_resource_fit_verdict(
+    model: str,
+    role: str | None,
+    metrics: dict,
+    baseline_metrics: dict,
+    machine_profile: dict,
+) -> dict:
+    issues: list[dict] = []
+    thresholds = RESOURCE_FIT_THRESHOLDS
+    gpu_total = machine_profile.get("gpuMemoryMb")
+    gpu_peak = metrics.get("peakGpuMemoryUsedMb")
+    if gpu_peak is not None and gpu_total is not None:
+        headroom = round(float(gpu_total) - float(gpu_peak), 2)
+        if headroom < thresholds["gpuHeadroomBlockerMb"]:
+            issues.append(
+                make_resource_issue(
+                    "resource_fit:gpu_headroom",
+                    "blocker",
+                    "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+                    metric="peakGpuMemoryUsedMb",
+                    actual=gpu_peak,
+                    expected=f"<= {gpu_total - thresholds['gpuHeadroomBlockerMb']}",
+                    delta=headroom,
+                )
+            )
+        elif headroom < thresholds["gpuHeadroomDegradationMb"]:
+            issues.append(
+                make_resource_issue(
+                    "resource_fit:gpu_headroom",
+                    "degradation",
+                    "GPU headroom is narrow enough to merit review before promotion on the local 4 GB VRAM profile.",
+                    metric="peakGpuMemoryUsedMb",
+                    actual=gpu_peak,
+                    expected=f"<= {gpu_total - thresholds['gpuHeadroomDegradationMb']}",
+                    delta=headroom,
+                )
+            )
+
+    if role == "candidate" and baseline_metrics:
+        compare_regression(
+            issues,
+            metric="system_memory_regression",
+            actual=metrics.get("peakSystemMemoryUsedMb"),
+            baseline=baseline_metrics.get("peakSystemMemoryUsedMb"),
+            blocker_threshold=thresholds["systemMemoryRegressionBlockerMb"],
+            degradation_threshold=thresholds["systemMemoryRegressionDegradationMb"],
+            blocker_reason="Candidate increases peak system memory enough to materially reduce local machine fit.",
+            degradation_reason="Candidate increases peak system memory versus the deployed baseline.",
+        )
+        compare_regression(
+            issues,
+            metric="ollama_private_memory_regression",
+            actual=metrics.get("peakOllamaPrivateMemoryMb"),
+            baseline=baseline_metrics.get("peakOllamaPrivateMemoryMb"),
+            blocker_threshold=thresholds["ollamaRegressionBlockerMb"],
+            degradation_threshold=thresholds["ollamaRegressionDegradationMb"],
+            blocker_reason="Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            degradation_reason="Candidate increases Ollama private memory versus the deployed baseline.",
+        )
+        compare_regression(
+            issues,
+            metric="private_memory_regression",
+            actual=metrics.get("peakPrivateMemoryMb"),
+            baseline=baseline_metrics.get("peakPrivateMemoryMb"),
+            blocker_threshold=thresholds["privateRegressionBlockerMb"],
+            degradation_threshold=thresholds["privateRegressionDegradationMb"],
+            blocker_reason="Candidate increases benchmark-process private memory enough to materially reduce local machine fit.",
+            degradation_reason="Candidate increases benchmark-process private memory versus the deployed baseline.",
+        )
+        compare_ratio_regression(
+            issues,
+            metric="latency_regression",
+            actual=metrics.get("avgDurationMs"),
+            baseline=baseline_metrics.get("avgDurationMs"),
+            blocker_ratio=thresholds["latencyRegressionBlockerRatio"],
+            degradation_ratio=thresholds["latencyRegressionDegradationRatio"],
+            blocker_reason="Candidate latency regresses too far beyond the deployed baseline for the local machine profile.",
+            degradation_reason="Candidate latency regresses beyond the preferred local-machine tolerance.",
+        )
+        compare_ratio_regression(
+            issues,
+            metric="tokens_per_second_regression",
+            actual=metrics.get("avgTokensPerSecond"),
+            baseline=baseline_metrics.get("avgTokensPerSecond"),
+            blocker_ratio=thresholds["tokensRegressionBlockerRatio"],
+            degradation_ratio=thresholds["tokensRegressionDegradationRatio"],
+            blocker_reason="Candidate throughput drops too far below the deployed baseline for promotion.",
+            degradation_reason="Candidate throughput drops below the preferred baseline tolerance.",
+            inverse=True,
+        )
+
+    blockers = [issue for issue in issues if issue["severity"] == "blocker"]
+    degradations = [issue for issue in issues if issue["severity"] != "blocker"]
+    if blockers:
+        status = "blocked"
+        summary = "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM machine profile."
+    elif degradations:
+        status = "review"
+        summary = "Resource-fit degradations need review before promotion on the local machine profile."
+    else:
+        status = "fit"
+        summary = "Resource-fit checks are within the current local machine profile."
+    return {
+        "model": model,
+        "role": role or "unscoped",
+        "status": status,
+        "promotable": status == "fit",
+        "summary": summary,
+        "machineProfile": machine_profile,
+        "metrics": metrics,
+        "blockingFailureCount": len(blockers),
+        "degradationCount": len(degradations),
+        "blockingFailures": blockers,
+        "degradations": degradations,
+    }
+
+
+def build_compare_verdict(model: str, role: str | None, promotion: dict, baseline_models: list[str], resource_fit: dict) -> dict:
     if role == "baseline":
         return {
             "model": model,
             "role": role,
             "status": "retain-baseline",
-            "summary": "Current deployed baseline remains in place until a candidate clears the compare gates.",
+            "summary": "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.",
             "comparedAgainst": [entry for entry in baseline_models if entry != model],
+            "resourceStatus": resource_fit.get("status", "fit"),
         }
 
     if role == "candidate":
-        status = "promote-candidate" if promotion.get("promotable") else "candidate-blocked"
-        summary = (
-            "Candidate clears the current compare gates and is eligible for promotion."
-            if status == "promote-candidate"
-            else "Candidate does not clear the current compare gates and cannot be promoted yet."
-        )
+        promotion_status = promotion.get("status", "pass")
+        resource_status = resource_fit.get("status", "fit")
+        blocked_on_contract = promotion_status != "pass"
+        blocked_on_machine_fit = resource_status != "fit"
+        if blocked_on_contract and blocked_on_machine_fit:
+            status = "candidate-blocked-contract-and-machine-fit"
+            summary = "Candidate fails both the contract/promotion gates and the local machine-fit gates."
+        elif blocked_on_contract:
+            status = "candidate-blocked-contract"
+            summary = "Candidate does not clear the current contract/promotion gates and cannot be promoted yet."
+        elif blocked_on_machine_fit:
+            status = "candidate-blocked-machine-fit"
+            summary = "Candidate clears contract gates but is blocked by local machine-fit regression."
+        else:
+            status = "promote-candidate"
+            summary = "Candidate clears the current compare gates and is eligible for promotion."
         return {
             "model": model,
             "role": role,
             "status": status,
             "summary": summary,
             "comparedAgainst": list(baseline_models),
+            "resourceStatus": resource_status,
         }
 
     return {
@@ -531,12 +848,14 @@ def build_compare_verdict(model: str, role: str | None, promotion: dict, baselin
         "status": "unscoped",
         "summary": "Model role was not declared for compare decisioning.",
         "comparedAgainst": list(baseline_models),
+        "resourceStatus": resource_fit.get("status", "fit"),
     }
 
 
 def evaluate_results(payload: dict, source_name: str, args) -> dict:
     results = payload.get("results", [])
     candidate_registry = build_candidate_registry(payload, args)
+    machine_profile = DEFAULT_MACHINE_PROFILE
     if payload.get("candidates"):
         enriched_candidates = []
         for candidate in payload.get("candidates", []) or []:
@@ -589,6 +908,23 @@ def evaluate_results(payload: dict, source_name: str, args) -> dict:
         for model in sorted(rollup.keys())
     }
     baseline_models = [model for model, info in candidate_registry.items() if info.get("role") == "baseline"]
+    rows_by_model: dict[str, list[dict]] = {}
+    for row in results:
+        rows_by_model.setdefault(row.get("model", "unknown"), []).append(row)
+    resource_metrics = {model: summarize_resource_metrics(rows) for model, rows in rows_by_model.items()}
+    baseline_metrics: dict = {}
+    if baseline_models:
+        baseline_metrics = resource_metrics.get(baseline_models[0], {})
+    resource_fit_models = {
+        model: build_resource_fit_verdict(
+            model,
+            candidate_registry.get(model, {}).get("role"),
+            resource_metrics.get(model, {}),
+            baseline_metrics,
+            machine_profile,
+        )
+        for model in sorted(rollup.keys())
+    }
     payload["contractEvaluation"] = {
         "generatedAtUtc": utc_now(),
         "source": source_name,
@@ -603,13 +939,25 @@ def evaluate_results(payload: dict, source_name: str, args) -> dict:
         "source": source_name,
         "models": promotion_models,
     }
+    payload["resourceFitVerdict"] = {
+        "generatedAtUtc": utc_now(),
+        "source": source_name,
+        "machineProfile": machine_profile,
+        "models": resource_fit_models,
+    }
     payload["compareDecision"] = {
         "generatedAtUtc": utc_now(),
         "source": source_name,
         "baselineModels": baseline_models,
         "candidateModels": [model for model, info in candidate_registry.items() if info.get("role") == "candidate"],
         "models": {
-            model: build_compare_verdict(model, candidate_registry.get(model, {}).get("role"), promotion_models[model], baseline_models)
+            model: build_compare_verdict(
+                model,
+                candidate_registry.get(model, {}).get("role"),
+                promotion_models[model],
+                baseline_models,
+                resource_fit_models[model],
+            )
             for model in sorted(rollup.keys())
         },
     }
@@ -631,6 +979,7 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
     suite = suite_name_for_path(path)
     by_model: dict[str, list[dict]] = {}
     promotion_models = payload.get("promotionVerdict", {}).get("models", {})
+    resource_models = payload.get("resourceFitVerdict", {}).get("models", {})
     compare_models = payload.get("compareDecision", {}).get("models", {})
     for row in payload.get("results", []):
         by_model.setdefault(row.get("model", "unknown"), []).append(row)
@@ -646,6 +995,7 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
                 if not check["pass"]:
                     failed_checks.append(f"{row.get('promptId')}:{check['id']}")
         promotion = promotion_models.get(model, {})
+        resource_fit = resource_models.get(model, {})
         compare = compare_models.get(model, {})
         summaries.append(
             {
@@ -664,6 +1014,13 @@ def summarize_input(path: Path, payload: dict) -> list[dict]:
                 "degradationCount": promotion.get("degradationCount", 0),
                 "blockingFailures": promotion.get("blockingFailures", []),
                 "degradations": promotion.get("degradations", []),
+                "resourceFitStatus": resource_fit.get("status", "fit"),
+                "resourceFitSummary": resource_fit.get("summary", ""),
+                "resourceBlockingFailureCount": resource_fit.get("blockingFailureCount", 0),
+                "resourceDegradationCount": resource_fit.get("degradationCount", 0),
+                "resourceBlockingFailures": resource_fit.get("blockingFailures", []),
+                "resourceDegradations": resource_fit.get("degradations", []),
+                "resourceMetrics": resource_fit.get("metrics", {}),
                 "compareRole": compare.get("role", "unscoped"),
                 "compareStatus": compare.get("status", "unscoped"),
                 "compareSummary": compare.get("summary", ""),
@@ -702,8 +1059,82 @@ def aggregate_promotion_summaries(summaries: list[dict]) -> list[dict]:
     return rolled_up
 
 
-def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[dict]) -> list[dict]:
+def aggregate_resource_fit_summaries(summaries: list[dict]) -> list[dict]:
+    aggregated: dict[str, dict] = {}
+    for item in summaries:
+        target = aggregated.setdefault(
+            item["model"],
+            {
+                "model": item["model"],
+                "role": item.get("compareRole", "unscoped"),
+                "suites": [],
+                "blockingFailures": {},
+                "degradations": {},
+                "metrics": {
+                    "avgDurationMs": [],
+                    "avgTokensPerSecond": [],
+                    "peakGpuMemoryUsedMb": [],
+                    "peakOllamaPrivateMemoryMb": [],
+                    "peakSystemMemoryUsedMb": [],
+                    "peakPrivateMemoryMb": [],
+                },
+            },
+        )
+        target["suites"].append(item["suite"])
+        if target["role"] == "unscoped" and item.get("compareRole") != "unscoped":
+            target["role"] = item.get("compareRole")
+        for failure in item.get("resourceBlockingFailures", []):
+            target["blockingFailures"].setdefault(f"{item['suite']}::{failure['id']}", dict(failure, suite=item["suite"]))
+        for failure in item.get("resourceDegradations", []):
+            target["degradations"].setdefault(f"{item['suite']}::{failure['id']}", dict(failure, suite=item["suite"]))
+        metrics = item.get("resourceMetrics", {})
+        for key in target["metrics"]:
+            value = metrics.get(key)
+            if value is not None:
+                target["metrics"][key].append(value)
+
+    rolled_up = []
+    for model, item in sorted(aggregated.items()):
+        blockers = list(item["blockingFailures"].values())
+        degradations = list(item["degradations"].values())
+        if blockers:
+            status = "blocked"
+            summary = "Resource-fit blockers remain after aggregating the current benchmark suites."
+        elif degradations:
+            status = "review"
+            summary = "Resource-fit degradations remain after aggregating the current benchmark suites."
+        else:
+            status = "fit"
+            summary = "Resource-fit checks stay within the current machine profile across the current suites."
+        metrics = {
+            "avgDurationMs": average_or_none(item["metrics"]["avgDurationMs"]),
+            "avgTokensPerSecond": average_or_none(item["metrics"]["avgTokensPerSecond"]),
+            "peakGpuMemoryUsedMb": max_or_none(item["metrics"]["peakGpuMemoryUsedMb"]),
+            "peakOllamaPrivateMemoryMb": max_or_none(item["metrics"]["peakOllamaPrivateMemoryMb"]),
+            "peakSystemMemoryUsedMb": max_or_none(item["metrics"]["peakSystemMemoryUsedMb"]),
+            "peakPrivateMemoryMb": max_or_none(item["metrics"]["peakPrivateMemoryMb"]),
+        }
+        rolled_up.append(
+            {
+                "model": model,
+                "role": item["role"],
+                "status": status,
+                "promotable": status == "fit",
+                "summary": summary,
+                "suites": sorted(item["suites"]),
+                "metrics": metrics,
+                "blockingFailureCount": len(blockers),
+                "degradationCount": len(degradations),
+                "blockingFailures": blockers,
+                "degradations": degradations,
+            }
+        )
+    return rolled_up
+
+
+def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[dict], resource_rollup: list[dict]) -> list[dict]:
     promotion_by_model = {item["model"]: item for item in promotion_rollup}
+    resource_by_model = {item["model"]: item for item in resource_rollup}
     compare_by_model: dict[str, dict] = {}
     for item in summaries:
         target = compare_by_model.setdefault(
@@ -723,14 +1154,22 @@ def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[di
     rolled_up = []
     for model, item in sorted(compare_by_model.items()):
         promotion = promotion_by_model.get(model, {})
-        compare = build_compare_verdict(model, item["role"], promotion, baseline_models)
+        resource_fit = resource_by_model.get(model, {})
+        compare = build_compare_verdict(model, item["role"], promotion, baseline_models, resource_fit)
         compare["comparedAgainst"] = sorted(item["comparedAgainst"])
         compare["promotionStatus"] = promotion.get("status", "unknown")
-        compare["promotable"] = promotion.get("promotable", False)
+        compare["promotable"] = promotion.get("promotable", False) and resource_fit.get("promotable", False)
         compare["blockingFailureCount"] = promotion.get("blockingFailureCount", 0)
         compare["degradationCount"] = promotion.get("degradationCount", 0)
         compare["blockingFailures"] = promotion.get("blockingFailures", [])
         compare["degradations"] = promotion.get("degradations", [])
+        compare["resourceStatus"] = resource_fit.get("status", "fit")
+        compare["resourceSummary"] = resource_fit.get("summary", "")
+        compare["resourceBlockingFailureCount"] = resource_fit.get("blockingFailureCount", 0)
+        compare["resourceDegradationCount"] = resource_fit.get("degradationCount", 0)
+        compare["resourceBlockingFailures"] = resource_fit.get("blockingFailures", [])
+        compare["resourceDegradations"] = resource_fit.get("degradations", [])
+        compare["resourceMetrics"] = resource_fit.get("metrics", {})
         rolled_up.append(compare)
     return rolled_up
 
@@ -738,14 +1177,23 @@ def aggregate_compare_summaries(summaries: list[dict], promotion_rollup: list[di
 def build_auto_verdict(compare_rollup: list[dict]) -> tuple[str, str] | None:
     baseline_models = [item for item in compare_rollup if item["role"] == "baseline"]
     promoted_candidates = [item for item in compare_rollup if item["status"] == "promote-candidate"]
-    blocked_candidates = [item for item in compare_rollup if item["status"] == "candidate-blocked"]
+    blocked_candidates = [item for item in compare_rollup if item["status"].startswith("candidate-blocked")]
 
     if baseline_models and not promoted_candidates:
         baseline_names = ", ".join(f"`{item['model']}`" for item in baseline_models)
         decision = f"Retain {baseline_names} as the deployed local baseline."
         if blocked_candidates:
             candidate_names = ", ".join(f"`{item['model']}`" for item in blocked_candidates)
-            reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current compare gates."
+            blocked_on_contract = any("contract" in item["status"] for item in blocked_candidates)
+            blocked_on_machine_fit = any("machine-fit" in item["status"] for item in blocked_candidates)
+            if blocked_on_contract and blocked_on_machine_fit:
+                reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current contract and machine-fit gates."
+            elif blocked_on_contract:
+                reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current contract gates."
+            elif blocked_on_machine_fit:
+                reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current machine-fit gates."
+            else:
+                reason = f"Comparison candidates {candidate_names} are blocked from promotion by the current compare gates."
         else:
             reason = "No comparison candidate currently clears the compare gates."
         return decision, reason
@@ -765,9 +1213,11 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
     lines.append("- This report exposes prompt-contract pass/fail signals derived directly from the benchmark prompts.")
     lines.append("- It is generated from the benchmark JSON outputs rather than manual scoring alone.")
     lines.append("- Promotion gates now separate hard blockers from non-blocking degradations.")
+    lines.append("- Compare decisions now also encode resource-fit blockers and degradations for the 32 GB RAM / 4 GB VRAM local machine profile.")
     lines.append("")
     promotion_rollup = aggregate_promotion_summaries(summaries)
-    compare_rollup = aggregate_compare_summaries(summaries, promotion_rollup)
+    resource_rollup = aggregate_resource_fit_summaries(summaries)
+    compare_rollup = aggregate_compare_summaries(summaries, promotion_rollup, resource_rollup)
     decision_text = args.decision
     decision_reason = args.decision_reason
     if not decision_text:
@@ -784,12 +1234,24 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
         lines.append("")
     lines.append("## Compare Decisions")
     lines.append("")
-    lines.append("| Model | Role | Compare decision | Promotion verdict | Promotable |")
-    lines.append("| --- | --- | --- | --- | ---: |")
+    lines.append("| Model | Role | Compare decision | Promotion verdict | Resource fit | Promotable |")
+    lines.append("| --- | --- | --- | --- | --- | ---: |")
     for item in compare_rollup:
         lines.append(
             f"| `{item['model']}` | `{item['role']}` | `{item['status']}` | `{item['promotionStatus']}` | "
-            f"`{'yes' if item['promotable'] else 'no'}` |"
+            f"`{item['resourceStatus']}` | `{'yes' if item['promotable'] else 'no'}` |"
+        )
+    lines.append("")
+    lines.append("## Resource-Fit Verdicts")
+    lines.append("")
+    lines.append("| Model | Verdict | Promotable | Blockers | Degradations | Peak GPU MB | Peak Ollama MB | Avg duration | Avg tok/s |")
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for item in resource_rollup:
+        metrics = item["metrics"]
+        lines.append(
+            f"| `{item['model']}` | `{item['status']}` | `{'yes' if item['promotable'] else 'no'}` | `{item['blockingFailureCount']}` | `{item['degradationCount']}` | "
+            f"`{metrics.get('peakGpuMemoryUsedMb', 'n/a')}` | `{metrics.get('peakOllamaPrivateMemoryMb', 'n/a')}` | "
+            f"`{metrics.get('avgDurationMs', 'n/a')} ms` | `{metrics.get('avgTokensPerSecond', 'n/a')}` |"
         )
     lines.append("")
     lines.append("## Promotion Gate Verdicts")
@@ -824,7 +1286,7 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
         else:
             lines.append("- No contract failures.")
         lines.append("")
-    lines.append("## Promotion Gate Details")
+    lines.append("## Compare Gate Details")
     lines.append("")
     for item in compare_rollup:
         lines.append(f"### `{item['model']}`")
@@ -834,6 +1296,32 @@ def build_summary_markdown(summaries: list[dict], args) -> str:
         lines.append(f"- Compare summary: {item['summary']}")
         if item["comparedAgainst"]:
             lines.append(f"- Compared against: `{', '.join(item['comparedAgainst'])}`")
+        lines.append(f"- Resource-fit verdict: `{item['resourceStatus']}`")
+        if item.get("resourceSummary"):
+            lines.append(f"- Resource-fit summary: {item['resourceSummary']}")
+        metrics = item.get("resourceMetrics", {})
+        if metrics:
+            lines.append(
+                "- Resource metrics: "
+                f"avgDurationMs=`{metrics.get('avgDurationMs', 'n/a')}`, "
+                f"avgTokensPerSecond=`{metrics.get('avgTokensPerSecond', 'n/a')}`, "
+                f"peakGpuMemoryUsedMb=`{metrics.get('peakGpuMemoryUsedMb', 'n/a')}`, "
+                f"peakOllamaPrivateMemoryMb=`{metrics.get('peakOllamaPrivateMemoryMb', 'n/a')}`, "
+                f"peakSystemMemoryUsedMb=`{metrics.get('peakSystemMemoryUsedMb', 'n/a')}`, "
+                f"peakPrivateMemoryMb=`{metrics.get('peakPrivateMemoryMb', 'n/a')}`"
+            )
+        if item["resourceBlockingFailures"]:
+            for failure in item["resourceBlockingFailures"]:
+                label = f"{failure.get('suite')}:{failure['id']}" if failure.get("suite") else failure["id"]
+                lines.append(f"- Resource blocker: `{label}`: {failure['reason']}")
+        else:
+            lines.append("- Resource blockers: none")
+        if item["resourceDegradations"]:
+            for failure in item["resourceDegradations"]:
+                label = f"{failure.get('suite')}:{failure['id']}" if failure.get("suite") else failure["id"]
+                lines.append(f"- Resource degradation: `{label}`: {failure['reason']}")
+        else:
+            lines.append("- Resource degradations: none")
         lines.append(f"- Promotion verdict: `{item['promotionStatus']}`")
         lines.append(f"- Promotable now: `{'yes' if item['promotable'] else 'no'}`")
         if item["blockingFailures"]:
