@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current bounded follow-on: [#39](https://github.com/JKhyro/FURYOKU/issues/39)
+- Current bounded follow-on: [#42](https://github.com/JKhyro/FURYOKU/issues/42)
 
 ## Current Baseline
 
@@ -21,7 +21,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: publish and integrate the new hard-check benchmark scoring surfaced by the April 9, 2026 Gemma Heretic rerun
+- Current follow-on focus: add promotion gates so benchmark contract failures become explicit blocker/degradation signals for local-model decisions
 
 ## Benchmark Evidence Lane
 
