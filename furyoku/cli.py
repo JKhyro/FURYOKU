@@ -64,8 +64,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         tasks = load_decision_suite(args.decision_suite).situations if args.decision_suite else tuple(
             load_task_profile(path) for path in args.task_profile
         )
-        report = evaluate_model_decisions(models, tasks or None)
-        _write_json(_decision_report_to_dict(report))
+        readiness = None
+        if args.check_health:
+            readiness = check_provider_health_many(
+                models,
+                ProviderHealthCheckRequest(
+                    probe=args.health_probe,
+                    probe_prompt=args.health_probe_prompt,
+                    timeout_seconds=args.health_timeout_seconds,
+                ),
+            )
+        report = evaluate_model_decisions(models, tasks or None, readiness=readiness)
+        _write_json(_decision_report_to_dict(report, readiness=readiness))
         return 0 if not report.blocked_tasks else 2
 
     if args.command == "character-select":
@@ -120,6 +130,14 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional task profile to include. Repeat for multiple situations. Defaults to built-in scenarios.",
     )
+    decide_parser.add_argument(
+        "--check-health",
+        action="store_true",
+        help="Run provider readiness checks before deciding, and demote not-ready endpoints.",
+    )
+    decide_parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
+    decide_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
+    decide_parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
     character_parser = subparsers.add_parser(
         "character-select",
         help="Select concrete model endpoints for every role in a CHARACTER profile.",
@@ -270,8 +288,8 @@ def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
     }
 
 
-def _decision_report_to_dict(report: ModelDecisionReport) -> dict:
-    return {
+def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> dict:
+    payload = {
         "ok": not report.blocked_tasks,
         "blockedTasks": list(report.blocked_tasks),
         "decisions": [
@@ -295,6 +313,9 @@ def _decision_report_to_dict(report: ModelDecisionReport) -> dict:
             for summary in report.summaries
         ],
     }
+    if readiness is not None:
+        payload["readiness"] = [_health_to_dict(result) for result in readiness]
+    return payload
 
 
 def _character_role_result_to_dict(result: CharacterRoleExecutionResult) -> dict:

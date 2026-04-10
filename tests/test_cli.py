@@ -136,6 +136,12 @@ def write_decision_suite(path: Path) -> None:
                 "requireTools": True,
                 "requiredCapabilities": {"coding": 0.9, "reasoning": 0.85},
             },
+            {
+                "taskId": "memory",
+                "minContextTokens": 64000,
+                "requireJson": True,
+                "requiredCapabilities": {"retrieval": 0.9, "summarization": 0.9},
+            },
         ],
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
@@ -361,9 +367,41 @@ class CliTests(unittest.TestCase):
 
             payload = json.loads(stdout.getvalue())
             self.assertEqual(exit_code, 0)
-            self.assertEqual([decision["taskId"] for decision in payload["decisions"]], ["private-chat", "coding"])
+            self.assertEqual([decision["taskId"] for decision in payload["decisions"]], ["private-chat", "coding", "memory"])
             self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "local-echo")
             self.assertEqual(payload["decisions"][1]["selectedModel"]["modelId"], "cli-coder")
+            self.assertEqual(payload["decisions"][2]["selectedModel"]["modelId"], "api-memory")
+
+    def test_decide_check_health_demotes_not_ready_endpoints(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_executable_character_registry(registry_path)
+            write_decision_suite(suite_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--check-health",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(payload["blockedTasks"], ["memory"])
+            readiness_by_model = {result["modelId"]: result for result in payload["readiness"]}
+            self.assertEqual(readiness_by_model["local-echo"]["status"], "ready")
+            self.assertEqual(readiness_by_model["api-memory"]["status"], "missing-transport")
+            memory_decision = next(decision for decision in payload["decisions"] if decision["taskId"] == "memory")
+            api_rank = next(score for score in memory_decision["rankedModels"] if score["modelId"] == "api-memory")
+            self.assertFalse(api_rank["eligible"])
+            self.assertTrue(any("provider readiness" in blocker for blocker in api_rank["blockers"]))
 
     def test_character_select_outputs_role_to_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:
