@@ -145,6 +145,20 @@ def write_feedback_log(path: Path) -> None:
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
+def write_feedback_decision_suite(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "suiteId": "feedback-suite",
+        "situations": [
+            {
+                "taskId": "feedback-chat",
+                "requiredCapabilities": {"conversation": 0.8},
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_decision_suite(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -454,6 +468,39 @@ class CliTests(unittest.TestCase):
                     for blocker in payload["decision"]["blockers"]["local-echo"]
                 )
             )
+
+    def test_run_decision_suite_feedback_log_adjusts_executed_model(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_executable_character_registry(registry_path)
+            write_feedback_decision_suite(suite_path)
+            write_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--situation-id",
+                        "feedback-chat",
+                        "--prompt",
+                        "hello",
+                        "--feedback-log",
+                        str(feedback_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
 
     def test_select_accepts_task_profile_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
