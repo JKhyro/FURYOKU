@@ -121,6 +121,26 @@ def write_task_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_decision_suite(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "suiteId": "test-suite",
+        "situations": [
+            {
+                "taskId": "private-chat",
+                "privacyRequirement": "local_only",
+                "requiredCapabilities": {"conversation": 0.9},
+            },
+            {
+                "taskId": "coding",
+                "requireTools": True,
+                "requiredCapabilities": {"coding": 0.9, "reasoning": 0.85},
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_character_profile(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -319,6 +339,31 @@ class CliTests(unittest.TestCase):
             self.assertEqual(len(payload["decisions"]), 1)
             self.assertEqual(payload["decisions"][0]["taskId"], "private-chat")
             self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "local-echo")
+
+    def test_decide_accepts_decision_suite_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_executable_character_registry(registry_path)
+            write_decision_suite(suite_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual([decision["taskId"] for decision in payload["decisions"]], ["private-chat", "coding"])
+            self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["decisions"][1]["selectedModel"]["modelId"], "cli-coder")
 
     def test_character_select_outputs_role_to_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:

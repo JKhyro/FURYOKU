@@ -13,7 +13,7 @@ from .character_profiles import (
 )
 from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
-from .model_decisions import ModelDecisionReport, evaluate_model_decisions
+from .model_decisions import ModelDecisionReport, evaluate_model_decisions, load_decision_suite
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .runtime import (
@@ -59,7 +59,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if all(result.ready for result in results) else 2
 
     if args.command == "decide":
-        tasks = tuple(load_task_profile(path) for path in args.task_profile)
+        if args.decision_suite and args.task_profile:
+            parser.error("--decision-suite cannot be combined with --task-profile")
+        tasks = load_decision_suite(args.decision_suite).situations if args.decision_suite else tuple(
+            load_task_profile(path) for path in args.task_profile
+        )
         report = evaluate_model_decisions(models, tasks or None)
         _write_json(_decision_report_to_dict(report))
         return 0 if not report.blocked_tasks else 2
@@ -104,6 +108,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Evaluate local, CLI, and API models across multiple decision situations.",
     )
     decide_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    decide_parser.add_argument(
+        "--decision-suite",
+        type=Path,
+        help="Path to a reusable FURYOKU decision suite JSON file.",
+    )
     decide_parser.add_argument(
         "--task-profile",
         action="append",

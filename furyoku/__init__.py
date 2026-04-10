@@ -15,6 +15,7 @@ from .model_router import (
     select_model,
 )
 from .model_decisions import (
+    DecisionSuite,
     ModelCoverage,
     ModelDecisionAggregate,
     ModelDecisionError,
@@ -24,6 +25,8 @@ from .model_decisions import (
     SituationDecision,
     default_decision_scenarios,
     evaluate_model_decisions,
+    load_decision_suite,
+    parse_decision_suite,
 )
 from .character_profiles import (
     CharacterProfile,
@@ -67,6 +70,7 @@ __all__ = [
     "CharacterProfileSelection",
     "CharacterRoleExecutionResult",
     "CharacterRoleSpec",
+    "DecisionSuite",
     "ModelCoverage",
     "ModelDecisionAggregate",
     "ModelDecisionError",
@@ -98,9 +102,11 @@ __all__ = [
     "check_provider_health_many",
     "load_model_registry",
     "load_character_profile",
+    "load_decision_suite",
     "load_task_profile",
     "parse_model_registry",
     "parse_character_profile",
+    "parse_decision_suite",
     "parse_task_profile",
     "rank_models",
     "route_and_execute",

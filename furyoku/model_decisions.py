@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-from typing import Iterable, Mapping
+from pathlib import Path
+from typing import Any, Iterable, Mapping
 
 from .model_router import ModelEndpoint, ModelScore, TaskProfile, rank_models
+from .task_profiles import parse_task_profile
 
 
 class ModelDecisionError(ValueError):
     """Raised when a multi-situation model decision request is malformed."""
+
+
+@dataclass(frozen=True)
+class DecisionSuite:
+    """Reusable set of situations for comparing local, CLI, and API models."""
+
+    suite_id: str
+    situations: tuple[TaskProfile, ...]
+    description: str = ""
 
 
 @dataclass(frozen=True)
@@ -251,6 +263,40 @@ def default_decision_scenarios() -> tuple[TaskProfile, ...]:
     )
 
 
+def load_decision_suite(path: str | Path) -> DecisionSuite:
+    suite_path = Path(path)
+    with suite_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    return parse_decision_suite(payload, source=str(suite_path))
+
+
+def parse_decision_suite(payload: Mapping[str, Any], *, source: str = "<memory>") -> DecisionSuite:
+    if not isinstance(payload, Mapping):
+        raise ModelDecisionError(f"{source}: decision suite must be a JSON object")
+    schema_version = payload.get("schemaVersion", payload.get("schema_version", 1))
+    if schema_version != 1:
+        raise ModelDecisionError(f"{source}: unsupported decision suite schemaVersion {schema_version!r}")
+
+    suite_id = str(payload.get("suiteId", payload.get("suite_id", "")) or "").strip()
+    if not suite_id:
+        raise ModelDecisionError(f"{source}: suiteId is required")
+
+    situations_payload = payload.get("situations")
+    if not isinstance(situations_payload, list) or not situations_payload:
+        raise ModelDecisionError(f"{source}: situations must be a non-empty array")
+
+    situations = tuple(
+        parse_task_profile({"schemaVersion": 1, **raw}, source=f"{source}:situations[{index}]")
+        for index, raw in enumerate(situations_payload)
+    )
+    _validate_unique_tasks(situations, source=source)
+    return DecisionSuite(
+        suite_id=suite_id,
+        situations=situations,
+        description=str(payload.get("description", "") or ""),
+    )
+
+
 def evaluate_model_decisions(
     models: Iterable[ModelEndpoint],
     tasks: Iterable[TaskProfile] | None = None,
@@ -300,10 +346,14 @@ def _validate_inputs(models: list[ModelEndpoint], tasks: list[TaskProfile]) -> N
     if duplicate_model_ids:
         raise ModelDecisionError(f"Duplicate model ids: {', '.join(duplicate_model_ids)}")
 
+    _validate_unique_tasks(tasks)
+
+
+def _validate_unique_tasks(tasks: Iterable[TaskProfile], *, source: str = "<memory>") -> None:
     task_ids = [task.task_id for task in tasks]
     duplicate_task_ids = sorted({task_id for task_id in task_ids if task_ids.count(task_id) > 1})
     if duplicate_task_ids:
-        raise ModelDecisionError(f"Duplicate task ids: {', '.join(duplicate_task_ids)}")
+        raise ModelDecisionError(f"{source}: duplicate task ids: {', '.join(duplicate_task_ids)}")
 
 
 def _situation_rationale(

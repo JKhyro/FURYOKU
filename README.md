@@ -54,6 +54,7 @@ Current routing core:
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
+- [`examples/decision_suite.primary-routing.json`](examples/decision_suite.primary-routing.json) shows a reusable multi-situation decision suite.
 - [`examples/task_profile.private-chat.json`](examples/task_profile.private-chat.json) shows reusable task profile configuration.
 - [`examples/character_profile.tertiary-symbiote.json`](examples/character_profile.tertiary-symbiote.json) shows a one-role tertiary Symbiote composition.
 - [`examples/character_profile.kira-array.json`](examples/character_profile.kira-array.json) shows a larger Kira-style one-primary/seven-secondary role array.
@@ -71,6 +72,7 @@ CLI example:
 ```powershell
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json
+python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json
 python -m furyoku.cli character-run --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.tertiary-symbiote.json --prompt "Hello"
