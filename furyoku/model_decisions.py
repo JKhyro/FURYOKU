@@ -412,7 +412,7 @@ def default_decision_scenarios() -> tuple[TaskProfile, ...]:
 
 def load_decision_suite(path: str | Path) -> DecisionSuite:
     suite_path = Path(path)
-    with suite_path.open("r", encoding="utf-8") as handle:
+    with suite_path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
     return parse_decision_suite(payload, source=str(suite_path))
 

@@ -13,7 +13,7 @@ class TaskProfileError(ValueError):
 
 def load_task_profile(path: str | Path) -> TaskProfile:
     profile_path = Path(path)
-    with profile_path.open("r", encoding="utf-8") as handle:
+    with profile_path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
     return parse_task_profile(payload, source=str(profile_path))
 

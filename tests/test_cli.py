@@ -254,6 +254,32 @@ def write_readiness_character_registry(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_readiness_api_registry(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "models": [
+            {
+                "modelId": "local-ready",
+                "provider": "local",
+                "privacyLevel": "local",
+                "contextWindowTokens": 4096,
+                "averageLatencyMs": 20,
+                "invocation": [sys.executable, "-c", "print('ready')"],
+                "capabilities": {"conversation": 0.95},
+            },
+            {
+                "modelId": "api-missing-transport",
+                "provider": "api",
+                "privacyLevel": "remote",
+                "contextWindowTokens": 128000,
+                "averageLatencyMs": 10,
+                "capabilities": {"conversation": 1.0},
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_readiness_character_profile(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -603,6 +629,61 @@ class CliTests(unittest.TestCase):
             )
             self.assertEqual(payload["feedbackPolicy"]["policy"]["maxAdjustment"], 4.0)
 
+    def test_select_check_health_demotes_missing_cli_endpoint(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_readiness_character_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "readiness-chat",
+                        "--capability",
+                        "conversation=0.9",
+                        "--check-health",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            readiness_by_model = {result["modelId"]: result for result in payload["readiness"]}
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-ready")
+            self.assertNotIn("feedbackAdjustments", payload)
+            self.assertEqual(readiness_by_model["cli-missing"]["status"], "missing-command")
+            self.assertTrue(any("provider readiness ready" in reason for reason in payload["reasons"]))
+
+    def test_select_check_health_demotes_missing_api_transport(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_readiness_api_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "api-readiness-chat",
+                        "--capability",
+                        "conversation=0.9",
+                        "--check-health",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            readiness_by_model = {result["modelId"]: result for result in payload["readiness"]}
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-ready")
+            self.assertEqual(readiness_by_model["api-missing-transport"]["status"], "missing-transport")
+            self.assertTrue(any("provider readiness ready" in reason for reason in payload["reasons"]))
+
     def test_run_feedback_log_adjusts_single_task_executed_model(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
@@ -633,6 +714,36 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["selection"]["modelId"], "local-echo")
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+
+    def test_run_check_health_demotes_missing_cli_endpoint(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_readiness_character_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "readiness-chat",
+                        "--capability",
+                        "conversation=0.9",
+                        "--prompt",
+                        "hello",
+                        "--check-health",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            readiness_by_model = {result["modelId"]: result for result in payload["readiness"]}
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["selection"]["modelId"], "local-ready")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "ready")
+            self.assertNotIn("feedbackAdjustments", payload)
+            self.assertEqual(readiness_by_model["cli-missing"]["status"], "missing-command")
 
     def test_health_reports_registry_provider_readiness(self):
         with tempfile.TemporaryDirectory() as temp_dir:

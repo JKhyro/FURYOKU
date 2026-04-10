@@ -510,7 +510,7 @@ class ModelDecisionTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "suite.json"
-            path.write_text(json.dumps(payload), encoding="utf-8")
+            path.write_text(json.dumps(payload), encoding="utf-8-sig")
             suite = load_decision_suite(path)
 
         self.assertEqual(suite.suite_id, "primary-routing")
