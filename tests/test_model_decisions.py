@@ -341,9 +341,14 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(payload["recommendations"][0]["taskId"], "feedback-chat")
         self.assertTrue(payload["recommendations"][0]["recommended"])
         selected = payload["recommendations"][0]["selectedModel"]
+        confidence = payload["recommendations"][0]["confidence"]
         self.assertEqual(selected["modelId"], "local-gemma3-heretic")
         self.assertGreater(selected["feedbackAdjustment"], 0.0)
         self.assertEqual(selected["outcomeRecordCount"], 1)
+        self.assertEqual(confidence["level"], "medium")
+        self.assertEqual(confidence["evidenceQuality"], "sparse")
+        self.assertEqual(confidence["outcomeRecordCount"], 1)
+        self.assertEqual(confidence["successRate"], 1.0)
         self.assertIn("decisionReport", payload)
         self.assertEqual(payload["outcomeSummary"]["recordCount"], 1)
 
@@ -361,7 +366,54 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(payload["blockedTasks"], ["too-strict"])
         self.assertFalse(payload["recommendations"][0]["recommended"])
         self.assertIsNone(payload["recommendations"][0]["selectedModel"])
+        self.assertEqual(payload["recommendations"][0]["confidence"]["level"], "blocked")
+        self.assertEqual(payload["recommendations"][0]["confidence"]["evidenceQuality"], "blocked")
         self.assertIn("local-gemma3-heretic", payload["recommendations"][0]["blockers"])
+
+    def test_recommendation_confidence_drops_for_negative_outcome_evidence(self):
+        task = TaskProfile(task_id="feedback-chat", required_capabilities={"conversation": 0.8})
+        positive_feedback = [
+            DecisionOutcomeRecord(
+                record_id="feedback-positive",
+                report_path="decision-report.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                situation_id="feedback-chat",
+                selected_model_id="local-gemma3-heretic",
+                selected_provider="local",
+                verdict="success",
+                score=1.0,
+            )
+        ]
+        negative_feedback = [
+            DecisionOutcomeRecord(
+                record_id="feedback-negative",
+                report_path="decision-report.json",
+                report_sha256="1" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                situation_id="feedback-chat",
+                selected_model_id="local-gemma3-heretic",
+                selected_provider="local",
+                verdict="failure",
+                score=0.0,
+            )
+        ]
+
+        positive = build_model_recommendation_report(
+            [sample_models()[0]],
+            [task],
+            feedback=positive_feedback,
+        ).to_dict()["recommendations"][0]["confidence"]
+        negative = build_model_recommendation_report(
+            [sample_models()[0]],
+            [task],
+            feedback=negative_feedback,
+        ).to_dict()["recommendations"][0]["confidence"]
+
+        self.assertGreater(positive["score"], negative["score"])
+        self.assertEqual(negative["level"], "low")
+        self.assertEqual(negative["evidenceQuality"], "mixed")
+        self.assertEqual(negative["failureRate"], 1.0)
 
     def test_feedback_adjustment_does_not_bypass_hard_blockers(self):
         task = TaskProfile(

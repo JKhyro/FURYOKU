@@ -746,6 +746,10 @@ class CliTests(unittest.TestCase):
                 recommendation["taskId"]: recommendation["selectedModel"]
                 for recommendation in report["recommendations"]
             }
+            confidence_by_task = {
+                recommendation["taskId"]: recommendation["confidence"]
+                for recommendation in report["recommendations"]
+            }
             self.assertEqual(recommendation_exit, 0)
             self.assertTrue(report["ok"])
             self.assertEqual(report["blockedTasks"], [])
@@ -757,6 +761,10 @@ class CliTests(unittest.TestCase):
             self.assertEqual(selected_by_task["decision.structured-json"]["modelId"], "cli-codex-high")
             self.assertEqual({model["provider"] for model in selected_by_task.values()}, {"local", "cli", "api"})
             self.assertIn("feedbackAdjustment", selected_by_task["decision.tool-heavy-coding"])
+            self.assertEqual(confidence_by_task["decision.tool-heavy-coding"]["level"], "high")
+            self.assertEqual(confidence_by_task["decision.tool-heavy-coding"]["evidenceQuality"], "sparse")
+            self.assertEqual(confidence_by_task["decision.private-chat"]["evidenceQuality"], "mixed")
+            self.assertGreater(confidence_by_task["decision.structured-json"]["scoreMargin"], 0.0)
             self.assertEqual(persisted_report["schemaVersion"], 1)
             self.assertEqual(len(persisted_report["recommendations"]), 6)
 
