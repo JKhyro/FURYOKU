@@ -4,8 +4,11 @@ import unittest
 from furyoku import (
     ModelEndpoint,
     ProviderExecutionRequest,
+    RouterError,
     SubprocessProviderAdapter,
     TaskProfile,
+    execute_character_role,
+    parse_character_profile,
     route_and_execute,
 )
 
@@ -31,6 +34,7 @@ def cli_endpoint() -> ModelEndpoint:
         average_latency_ms=20,
         invocation=("cli-coder",),
         capabilities={"conversation": 0.8, "instruction_following": 0.85, "coding": 0.95},
+        supports_tools=True,
     )
 
 
@@ -71,6 +75,125 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(result.selection.eligible)
         self.assertEqual(result.execution.status, "error")
         self.assertEqual(result.execution.stderr, "bad runtime")
+
+    def test_execute_character_role_defaults_to_primary_role(self):
+        profile = parse_character_profile(
+            {
+                "schemaVersion": 1,
+                "characterId": "test-symbiote",
+                "roles": [
+                    {
+                        "roleId": "primary",
+                        "primary": True,
+                        "task": {
+                            "taskId": "test-symbiote.primary",
+                            "privacyRequirement": "local_only",
+                            "requiredCapabilities": {"conversation": 0.9},
+                        },
+                    },
+                    {
+                        "roleId": "coding",
+                        "task": {
+                            "taskId": "test-symbiote.coding",
+                            "requireTools": True,
+                            "requiredCapabilities": {"coding": 0.9},
+                        },
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_character_role(
+            [local_endpoint(), cli_endpoint()],
+            profile,
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.character_id, "test-symbiote")
+        self.assertEqual(result.role_id, "primary")
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertEqual(result.execution.response_text, "local-chat:hello")
+        self.assertIn("coding", result.character_selection.roles)
+
+    def test_execute_character_role_can_execute_named_secondary_role(self):
+        profile = parse_character_profile(
+            {
+                "schemaVersion": 1,
+                "characterId": "test-symbiote",
+                "roles": [
+                    {
+                        "roleId": "primary",
+                        "primary": True,
+                        "task": {
+                            "taskId": "test-symbiote.primary",
+                            "privacyRequirement": "local_only",
+                            "requiredCapabilities": {"conversation": 0.9},
+                        },
+                    },
+                    {
+                        "roleId": "coding",
+                        "maxSubagents": 4,
+                        "task": {
+                            "taskId": "test-symbiote.coding",
+                            "requireTools": True,
+                            "requiredCapabilities": {"coding": 0.9},
+                        },
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_character_role(
+            [local_endpoint(), cli_endpoint()],
+            profile,
+            ProviderExecutionRequest("write code", timeout_seconds=2),
+            role_id="coding",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.role_id, "coding")
+        self.assertEqual(result.model_id, "cli-coder")
+        self.assertEqual(result.provider, "cli")
+        self.assertEqual(result.character_selection.max_subagents_for("coding"), 4)
+        self.assertEqual(result.execution.response_text, "cli-coder:write code")
+
+    def test_execute_character_role_rejects_unknown_role(self):
+        profile = parse_character_profile(
+            {
+                "schemaVersion": 1,
+                "characterId": "test-symbiote",
+                "roles": [
+                    {
+                        "roleId": "primary",
+                        "primary": True,
+                        "task": {
+                            "taskId": "test-symbiote.primary",
+                            "requiredCapabilities": {"conversation": 0.9},
+                        },
+                    }
+                ],
+            }
+        )
+
+        with self.assertRaises(RouterError) as error:
+            execute_character_role([local_endpoint()], profile, "hello", role_id="missing")
+
+        self.assertIn("Unknown CHARACTER role", str(error.exception))
 
 
 if __name__ == "__main__":

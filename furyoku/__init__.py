@@ -39,7 +39,12 @@ from .provider_health import (
     check_provider_health,
     check_provider_health_many,
 )
-from .runtime import RoutedExecutionResult, route_and_execute
+from .runtime import (
+    CharacterRoleExecutionResult,
+    RoutedExecutionResult,
+    execute_character_role,
+    route_and_execute,
+)
 from .task_profiles import TaskProfileError, load_task_profile, parse_task_profile
 
 __all__ = [
@@ -49,6 +54,7 @@ __all__ = [
     "CharacterProfile",
     "CharacterProfileError",
     "CharacterProfileSelection",
+    "CharacterRoleExecutionResult",
     "CharacterRoleSpec",
     "ModelEndpoint",
     "ModelScore",
@@ -66,6 +72,7 @@ __all__ = [
     "default_character_role_tasks",
     "default_provider_adapters",
     "execute_model",
+    "execute_character_role",
     "execute_selected_model",
     "check_provider_health",
     "check_provider_health_many",
