@@ -109,7 +109,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "character-select":
         profile = load_character_profile(args.character_profile)
         selection = select_character_profile_models(models, profile, allow_reuse=not args.no_reuse)
-        _write_json(_character_profile_selection_to_dict(selection))
+        _write_json(_character_profile_selection_to_dict(selection), output_path=args.output)
         return 0
 
     if args.command == "character-run":
@@ -121,7 +121,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             role_id=args.role_id,
             allow_reuse=not args.no_reuse,
         )
-        _write_json(_character_role_result_to_dict(result))
+        _write_json(_character_role_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
 
     parser.error(f"unsupported command {args.command}")
@@ -222,6 +222,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Require each CHARACTER role to use a distinct registered model.",
     )
+    character_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON CHARACTER envelope.")
     character_run_parser = subparsers.add_parser(
         "character-run",
         help="Select CHARACTER role assignments and execute one role.",
@@ -244,6 +245,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Require each CHARACTER role to use a distinct registered model.",
     )
+    character_run_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON CHARACTER execution report.")
     return parser
 
 
