@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#132](https://github.com/JKhyro/FURYOKU/issues/132)
+- Current active lane: [#135](https://github.com/JKhyro/FURYOKU/issues/135)
 - Current downstream CHARACTER/MOA lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: surface feedback policy metadata in reports for runtime auditability.
+- Current follow-on focus: add readiness checks to single-task `select` and `run` so direct local/CLI/API routing avoids unavailable providers.
 
 ## Product Direction
 
