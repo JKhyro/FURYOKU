@@ -59,6 +59,12 @@ Publish current compare truth:
 powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\publish_compare_truth.ps1
 ```
 
+Verify checked-in compare truth is fresh:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\check_compare_truth_fresh.ps1
+```
+
 Publish an alternate compare set:
 
 ```powershell
