@@ -14,7 +14,7 @@ from .character_profiles import (
     select_character_profile_models,
 )
 from .model_registry import load_model_registry
-from .model_router import ModelScore, TaskProfile, select_model
+from .model_router import ModelScore, RouterError, TaskProfile, select_model
 from .model_decisions import ModelDecisionReport, evaluate_model_decisions, load_decision_suite
 from .outcome_feedback import (
     VALID_OUTCOME_VERDICTS,
@@ -56,13 +56,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "select":
         task = _task_from_args(args, parser)
-        selection = select_model(models, task)
-        _write_json(_score_to_dict(selection))
+        feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
+        selection, report = _select_with_optional_feedback(models, task, feedback)
+        _write_json(_single_selection_to_dict(selection, report=report))
         return 0
 
     if args.command == "run":
-        if args.feedback_log and not args.decision_suite:
-            parser.error("--feedback-log is only supported with --decision-suite")
         if args.decision_suite:
             if not args.situation_id:
                 parser.error("--situation-id is required when --decision-suite is provided")
@@ -80,10 +79,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0 if result.ok else 2
 
         task = _task_from_args(args, parser)
+        feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
         result = route_and_execute(
             models,
             task,
             ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
+            feedback=feedback,
         )
         _write_json(_routed_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
@@ -150,7 +151,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="FURYOKU multi-model router/runtime CLI.")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    _add_common_task_args(subparsers.add_parser("select", help="Select the best eligible model for a task."))
+    select_parser = subparsers.add_parser("select", help="Select the best eligible model for a task.")
+    _add_common_task_args(select_parser)
+    select_parser.add_argument(
+        "--feedback-log",
+        type=Path,
+        help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
+    )
     run_parser = subparsers.add_parser("run", help="Select and execute the best eligible model for a task.")
     _add_common_task_args(run_parser)
     run_parser.add_argument(
@@ -377,6 +384,21 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
     return capabilities
 
 
+def _select_with_optional_feedback(models, task: TaskProfile, feedback):
+    if feedback is None:
+        return select_model(models, task), None
+    report = evaluate_model_decisions(models, [task], feedback=feedback)
+    selection = report.selected_for(task.task_id)
+    if selection is None:
+        decision = report.situations[task.task_id]
+        blocker_summary = "; ".join(
+            f"{model_id}: {', '.join(blockers)}"
+            for model_id, blockers in decision.blockers.items()
+        )
+        raise RouterError(f"No eligible model for task '{task.task_id}'. {blocker_summary}")
+    return selection, report
+
+
 def _readiness_from_args(args: argparse.Namespace, models):
     if not getattr(args, "check_health", False):
         return None
@@ -401,12 +423,22 @@ def _score_to_dict(selection: ModelScore) -> dict:
     }
 
 
+def _single_selection_to_dict(selection: ModelScore, *, report: ModelDecisionReport | None = None) -> dict:
+    payload = _score_to_dict(selection)
+    if report is not None:
+        payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(report)
+    return payload
+
+
 def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
-    return {
+    payload = {
         "ok": result.ok,
         "selection": _score_to_dict(result.selection),
         "execution": _execution_to_dict(result.execution),
     }
+    if result.report is not None:
+        payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(result.report)
+    return payload
 
 
 def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult, *, readiness=None) -> dict:
@@ -417,10 +449,7 @@ def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult,
         "decision": result.decision.to_dict(),
         "execution": _execution_to_dict(result.execution) if result.execution else None,
         "aggregate": result.report.aggregate.to_dict(),
-        "feedbackAdjustments": {
-            model_id: summary.to_dict()
-            for model_id, summary in result.report.feedback_adjustments.items()
-        },
+        "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
     }
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
@@ -457,10 +486,7 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
             for summary in report.summaries
         ],
         "aggregate": report.aggregate.to_dict(),
-        "feedbackAdjustments": {
-            model_id: summary.to_dict()
-            for model_id, summary in report.feedback_adjustments.items()
-        },
+        "feedbackAdjustments": _feedback_adjustments_to_dict(report),
     }
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
@@ -494,6 +520,13 @@ def _execution_to_dict(execution: ProviderExecutionResult) -> dict:
 
 def _character_profile_selection_to_dict(selection: CharacterProfileSelection) -> dict:
     return build_character_orchestration_envelope(selection).to_dict()
+
+
+def _feedback_adjustments_to_dict(report: ModelDecisionReport) -> dict:
+    return {
+        model_id: summary.to_dict()
+        for model_id, summary in report.feedback_adjustments.items()
+    }
 
 
 def _health_to_dict(result: ProviderHealthCheckResult) -> dict:

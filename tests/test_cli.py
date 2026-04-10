@@ -525,6 +525,65 @@ class CliTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["modelId"], "local-echo")
 
+    def test_select_feedback_log_adjusts_single_task_ranking(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-echo")
+            self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+
+    def test_run_feedback_log_adjusts_single_task_executed_model(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_executable_character_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--prompt",
+                        "hello",
+                        "--feedback-log",
+                        str(feedback_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["selection"]["modelId"], "local-echo")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+
     def test_health_reports_registry_provider_readiness(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
