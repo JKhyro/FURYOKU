@@ -34,6 +34,8 @@ from .runtime import (
     RoutedExecutionResult,
     execute_character_role,
     execute_decision_situation,
+    execute_decision_situation_with_fallback,
+    route_and_execute_with_fallback,
     route_and_execute,
 )
 from .task_profiles import load_task_profile
@@ -87,13 +89,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "run":
         if args.capture_outcome_log and not args.output:
             parser.error("--capture-outcome-log requires --output so feedback evidence can link to a stable report")
+        if args.max_attempts is not None and not args.fallback:
+            parser.error("--max-attempts requires --fallback")
+        if args.max_attempts is not None and args.max_attempts < 1:
+            parser.error("--max-attempts must be at least 1")
         if args.decision_suite:
             if not args.situation_id:
                 parser.error("--situation-id is required when --decision-suite is provided")
             readiness = _readiness_from_args(args, models)
             feedback, feedback_policy = _feedback_from_args(args, parser)
             routing_policy = _routing_policy_from_args(args)
-            result = execute_decision_situation(
+            execution_function = (
+                execute_decision_situation_with_fallback
+                if args.fallback
+                else execute_decision_situation
+            )
+            result = execution_function(
                 models,
                 load_decision_suite(args.decision_suite),
                 args.situation_id,
@@ -102,6 +113,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 feedback=feedback,
                 feedback_policy=feedback_policy,
                 routing_policy=routing_policy,
+                **({"max_attempts": args.max_attempts} if args.fallback else {}),
             )
             _write_json_with_outcome_capture(
                 _decision_execution_result_to_dict(result, readiness=readiness),
@@ -115,7 +127,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
         routing_policy = _routing_policy_from_args(args)
-        result = route_and_execute(
+        execution_function = route_and_execute_with_fallback if args.fallback else route_and_execute
+        result = execution_function(
             models,
             task,
             ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
@@ -123,6 +136,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             feedback=feedback,
             feedback_policy=feedback_policy,
             routing_policy=routing_policy,
+            **({"max_attempts": args.max_attempts} if args.fallback else {}),
         )
         _write_json_with_outcome_capture(
             _routed_result_to_dict(result, readiness=readiness),
@@ -240,6 +254,16 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--prompt", required=True, help="Prompt text passed to the selected model.")
     run_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
     run_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON execution report.")
+    run_parser.add_argument(
+        "--fallback",
+        action="store_true",
+        help="Try the next eligible ranked model if the selected provider fails or times out.",
+    )
+    run_parser.add_argument(
+        "--max-attempts",
+        type=int,
+        help="Maximum eligible models to attempt when --fallback is set. Defaults to all eligible models.",
+    )
     _add_outcome_capture_args(run_parser)
     run_parser.add_argument(
         "--check-health",
@@ -646,6 +670,7 @@ def _routed_result_to_dict(result: RoutedExecutionResult, *, readiness=None) -> 
         "selection": _score_to_dict(result.selection),
         "execution": _execution_to_dict(result.execution),
     }
+    _add_execution_attempts(payload, result.execution_attempts)
     if result.report is not None:
         _add_optional_feedback_metadata(payload, result.report)
         _add_routing_policy_metadata(payload, result.report)
@@ -664,6 +689,7 @@ def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult,
         "aggregate": result.report.aggregate.to_dict(),
         "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
     }
+    _add_execution_attempts(payload, result.execution_attempts)
     _add_feedback_policy_metadata(payload, result.report)
     _add_routing_policy_metadata(payload, result.report)
     if readiness is not None:
@@ -733,6 +759,28 @@ def _execution_to_dict(execution: ProviderExecutionResult) -> dict:
         "error": execution.error,
         "timedOut": execution.timed_out,
     }
+
+
+def _execution_attempt_to_dict(attempt) -> dict:
+    return {
+        "attemptNumber": attempt.attempt_number,
+        "selectedModel": _score_to_dict(attempt.selection),
+        "execution": _execution_to_dict(attempt.execution),
+    }
+
+
+def _add_execution_attempts(payload: dict, attempts: tuple) -> None:
+    if not attempts:
+        return
+    payload["fallback"] = {
+        "enabled": True,
+        "attemptCount": len(attempts),
+        "succeeded": any(attempt.ok for attempt in attempts),
+    }
+    payload["executionAttempts"] = [
+        _execution_attempt_to_dict(attempt)
+        for attempt in attempts
+    ]
 
 
 def _character_profile_selection_to_dict(selection: CharacterProfileSelection) -> dict:

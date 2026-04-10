@@ -12,10 +12,12 @@ from furyoku import (
     SubprocessProviderAdapter,
     TaskProfile,
     execute_decision_situation,
+    execute_decision_situation_with_fallback,
     execute_character_role,
     parse_decision_suite,
     parse_character_profile,
     route_and_execute,
+    route_and_execute_with_fallback,
 )
 
 
@@ -203,6 +205,81 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.execution.status, "error")
         self.assertEqual(result.execution.stderr, "bad runtime")
 
+    def test_route_and_execute_with_fallback_tries_next_eligible_model_after_failure(self):
+        def runner(invocation, prompt, timeout):
+            if invocation[0] == "local-chat":
+                return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="local failed")
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = route_and_execute_with_fallback(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(
+                task_id="fallback-chat",
+                privacy_requirement="prefer_local",
+                required_capabilities={"conversation": 0.8},
+            ),
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "cli-coder")
+        self.assertEqual(len(result.execution_attempts), 2)
+        self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
+        self.assertEqual(result.execution_attempts[0].execution.status, "error")
+        self.assertEqual(result.execution_attempts[1].selection.model.model_id, "cli-coder")
+        self.assertEqual(result.execution.response_text, "cli-coder:hello")
+
+    def test_route_and_execute_with_fallback_never_tries_blocked_models(self):
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="runtime failed")
+
+        result = route_and_execute_with_fallback(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(
+                task_id="private-chat",
+                privacy_requirement="local_only",
+                required_capabilities={"conversation": 0.8},
+            ),
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertEqual(len(result.execution_attempts), 1)
+        self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
+        self.assertIn("cli-coder", result.report.situations["private-chat"].blockers)
+
+    def test_route_and_execute_with_fallback_respects_max_attempts(self):
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="runtime failed")
+
+        result = route_and_execute_with_fallback(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(
+                task_id="fallback-chat",
+                privacy_requirement="prefer_local",
+                required_capabilities={"conversation": 0.8},
+            ),
+            "hello",
+            max_attempts=1,
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertEqual(len(result.execution_attempts), 1)
+
     def test_execute_decision_situation_runs_named_suite_task(self):
         suite = parse_decision_suite(
             {
@@ -305,6 +382,44 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(
             any("below minimum score 120.00" in blocker for blocker in result.decision.blockers["local-chat"])
         )
+
+    def test_execute_decision_situation_with_fallback_tries_next_eligible_model(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "fallback-suite",
+                "situations": [
+                    {
+                        "taskId": "fallback-chat",
+                        "privacyRequirement": "prefer_local",
+                        "requiredCapabilities": {"conversation": 0.8},
+                    }
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            if invocation[0] == "local-chat":
+                return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="local failed")
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_decision_situation_with_fallback(
+            [local_endpoint(), cli_endpoint()],
+            suite,
+            "fallback-chat",
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "cli-coder")
+        self.assertEqual(result.situation_id, "fallback-chat")
+        self.assertEqual(len(result.execution_attempts), 2)
+        self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
+        self.assertEqual(result.execution_attempts[1].selection.model.model_id, "cli-coder")
 
     def test_execute_decision_situation_rejects_unknown_situation(self):
         suite = parse_decision_suite(

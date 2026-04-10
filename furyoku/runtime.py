@@ -16,10 +16,24 @@ from .model_router import ModelEndpoint, ModelScore, RouterError, RoutingScorePo
 from .outcome_feedback import FeedbackAdjustmentInput, FeedbackAdjustmentPolicyInput
 from .provider_adapters import (
     ProviderAdapter,
+    ProviderAdapterError,
     ProviderExecutionRequest,
     ProviderExecutionResult,
     execute_selected_model,
 )
+
+
+@dataclass(frozen=True)
+class ProviderExecutionAttempt:
+    """One attempted execution in a routed fallback chain."""
+
+    attempt_number: int
+    selection: ModelScore
+    execution: ProviderExecutionResult
+
+    @property
+    def ok(self) -> bool:
+        return self.selection.eligible and self.execution.ok
 
 
 @dataclass(frozen=True)
@@ -29,6 +43,7 @@ class RoutedExecutionResult:
     selection: ModelScore
     execution: ProviderExecutionResult
     report: ModelDecisionReport | None = None
+    execution_attempts: tuple[ProviderExecutionAttempt, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -78,6 +93,7 @@ class DecisionSituationExecutionResult:
     decision: SituationDecision
     selection: ModelScore | None
     execution: ProviderExecutionResult | None
+    execution_attempts: tuple[ProviderExecutionAttempt, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -129,6 +145,52 @@ def route_and_execute(
     return RoutedExecutionResult(selection=selection, execution=execution, report=report)
 
 
+def route_and_execute_with_fallback(
+    models: list[ModelEndpoint],
+    task: TaskProfile,
+    request: ProviderExecutionRequest | str,
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    max_attempts: int | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> RoutedExecutionResult:
+    """Execute eligible ranked candidates in order until one succeeds or all attempts fail."""
+
+    _validate_max_attempts(max_attempts)
+    report = evaluate_model_decisions(
+        models,
+        [task],
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
+    )
+    decision = report.situations[task.task_id]
+    if decision.selected is None:
+        blocker_summary = "; ".join(
+            f"{model_id}: {', '.join(blockers)}"
+            for model_id, blockers in decision.blockers.items()
+        )
+        raise RouterError(f"No eligible model for task '{task.task_id}'. {blocker_summary}")
+
+    attempts = _execute_fallback_attempts(
+        decision.ranked,
+        request,
+        max_attempts=max_attempts,
+        adapters=adapters,
+    )
+    final_attempt = attempts[-1]
+    return RoutedExecutionResult(
+        selection=final_attempt.selection,
+        execution=final_attempt.execution,
+        report=report,
+        execution_attempts=attempts,
+    )
+
+
 def execute_decision_situation(
     models: list[ModelEndpoint],
     decision_input: DecisionSuite | Iterable[TaskProfile] | None,
@@ -178,6 +240,64 @@ def execute_decision_situation(
     )
 
 
+def execute_decision_situation_with_fallback(
+    models: list[ModelEndpoint],
+    decision_input: DecisionSuite | Iterable[TaskProfile] | None,
+    situation_id: str,
+    request: ProviderExecutionRequest | str,
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    max_attempts: int | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> DecisionSituationExecutionResult:
+    """Run a calibrated situation with fallback across eligible ranked candidates."""
+
+    _validate_max_attempts(max_attempts)
+    report = evaluate_model_decisions(
+        models,
+        decision_input,
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
+    )
+    try:
+        decision = report.situations[situation_id]
+    except KeyError as exc:
+        available = ", ".join(report.situations)
+        raise ModelDecisionError(
+            f"Unknown decision situation '{situation_id}'. Available situations: {available}"
+        ) from exc
+
+    if decision.selected is None:
+        return DecisionSituationExecutionResult(
+            report=report,
+            situation_id=situation_id,
+            decision=decision,
+            selection=None,
+            execution=None,
+        )
+
+    attempts = _execute_fallback_attempts(
+        decision.ranked,
+        request,
+        max_attempts=max_attempts,
+        adapters=adapters,
+    )
+    final_attempt = attempts[-1]
+    return DecisionSituationExecutionResult(
+        report=report,
+        situation_id=situation_id,
+        decision=decision,
+        selection=final_attempt.selection,
+        execution=final_attempt.execution,
+        execution_attempts=attempts,
+    )
+
+
 def execute_character_role(
     models: list[ModelEndpoint],
     profile: CharacterProfile,
@@ -208,3 +328,50 @@ def execute_character_role(
         selection=selection,
         execution=execution,
     )
+
+
+def _execute_fallback_attempts(
+    ranked: tuple[ModelScore, ...],
+    request: ProviderExecutionRequest | str,
+    *,
+    max_attempts: int | None,
+    adapters: Mapping[str, ProviderAdapter] | None,
+) -> tuple[ProviderExecutionAttempt, ...]:
+    eligible = [selection for selection in ranked if selection.eligible]
+    if max_attempts is not None:
+        eligible = eligible[:max_attempts]
+    attempts: list[ProviderExecutionAttempt] = []
+    for attempt_number, selection in enumerate(eligible, start=1):
+        execution = _execute_selected_model_safely(selection, request, adapters=adapters)
+        attempts.append(
+            ProviderExecutionAttempt(
+                attempt_number=attempt_number,
+                selection=selection,
+                execution=execution,
+            )
+        )
+        if execution.ok:
+            break
+    return tuple(attempts)
+
+
+def _execute_selected_model_safely(
+    selection: ModelScore,
+    request: ProviderExecutionRequest | str,
+    *,
+    adapters: Mapping[str, ProviderAdapter] | None,
+) -> ProviderExecutionResult:
+    try:
+        return execute_selected_model(selection, request, adapters=adapters)
+    except ProviderAdapterError as exc:
+        return ProviderExecutionResult(
+            model_id=selection.model.model_id,
+            provider=selection.model.provider,
+            status="error",
+            error=str(exc),
+        )
+
+
+def _validate_max_attempts(max_attempts: int | None) -> None:
+    if max_attempts is not None and max_attempts < 1:
+        raise RouterError("max_attempts must be at least 1")

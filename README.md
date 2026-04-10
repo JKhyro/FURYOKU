@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: local/CLI/API runtime milestone complete through [#150](https://github.com/JKhyro/FURYOKU/issues/150); no unblocked primary implementation lane is currently open.
+- Current active lane: [#153](https://github.com/JKhyro/FURYOKU/issues/153)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: unblock benchmark truth CI publication in [#73](https://github.com/JKhyro/FURYOKU/issues/73), then choose the next feature phase.
+- Current follow-on focus: add fallback execution chains so routed runs can try the next eligible local, CLI, or API model when the selected provider fails or times out.
 
 ## Product Direction
 
@@ -67,6 +67,7 @@ Current routing core:
 - [`examples/routing_score_policy.speed-first.json`](examples/routing_score_policy.speed-first.json) shows a speed-heavy routing score policy profile.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
+- Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/decision_suite.primary-routing.json`](examples/decision_suite.primary-routing.json) shows a reusable multi-situation decision suite.
@@ -99,6 +100,7 @@ python -m furyoku.cli decide --registry .\examples\model_registry.example.json -
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --routing-policy .\examples\routing_score_policy.speed-first.json
 python -m furyoku.cli recommend --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\examples\decision_outcomes.example.jsonl --output .\recommendations.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
+python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --fallback --max-attempts 2
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json

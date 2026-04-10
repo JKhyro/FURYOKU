@@ -97,10 +97,13 @@ from .outcome_feedback import (
 from .runtime import (
     CharacterRoleExecutionResult,
     DecisionSituationExecutionResult,
+    ProviderExecutionAttempt,
     RoutedExecutionResult,
     execute_decision_situation,
+    execute_decision_situation_with_fallback,
     execute_character_role,
     route_and_execute,
+    route_and_execute_with_fallback,
 )
 from .task_profiles import TaskProfileError, load_task_profile, parse_task_profile
 
@@ -142,6 +145,7 @@ __all__ = [
     "ProviderCoverage",
     "ProviderExecutionRequest",
     "ProviderExecutionResult",
+    "ProviderExecutionAttempt",
     "ProviderHealthCheckRequest",
     "ProviderHealthCheckResult",
     "RouterError",
@@ -169,6 +173,7 @@ __all__ = [
     "execute_model",
     "execute_character_role",
     "execute_decision_situation",
+    "execute_decision_situation_with_fallback",
     "execute_selected_model",
     "check_provider_health",
     "check_provider_health_many",
@@ -192,6 +197,7 @@ __all__ = [
     "parse_task_profile",
     "rank_models",
     "route_and_execute",
+    "route_and_execute_with_fallback",
     "select_character_composition",
     "select_character_orchestration_envelope",
     "select_character_profile_models",
