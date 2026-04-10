@@ -25,6 +25,7 @@ from .provider_adapters import (
     execute_model,
     execute_selected_model,
 )
+from .runtime import RoutedExecutionResult, route_and_execute
 
 __all__ = [
     "ApiProviderAdapter",
@@ -38,6 +39,7 @@ __all__ = [
     "ProviderExecutionResult",
     "RouterError",
     "RegistryError",
+    "RoutedExecutionResult",
     "SubprocessProviderAdapter",
     "TaskProfile",
     "default_character_role_tasks",
@@ -47,6 +49,7 @@ __all__ = [
     "load_model_registry",
     "parse_model_registry",
     "rank_models",
+    "route_and_execute",
     "select_character_composition",
     "select_character_panel",
     "select_model",
