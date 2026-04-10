@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterable, Mapping
 
 
@@ -65,8 +65,36 @@ class ModelScore:
 
 
 @dataclass(frozen=True)
+class CharacterRoleSpec:
+    """One role inside a flexible CHARACTER composition."""
+
+    role_id: str
+    task: TaskProfile
+    primary: bool = False
+    max_subagents: int = 0
+
+
+@dataclass(frozen=True)
+class CharacterCompositionSelection:
+    """Flexible role selection for a CHARACTER/MOA-style agent array."""
+
+    roles: Mapping[str, ModelScore]
+    role_specs: Mapping[str, CharacterRoleSpec]
+    primary_role: str | None = None
+
+    def as_dict(self) -> dict[str, ModelScore]:
+        return dict(self.roles)
+
+    def max_subagents_for(self, role_id: str) -> int:
+        spec = self.role_specs.get(role_id)
+        if spec is None:
+            raise RouterError(f"Unknown CHARACTER role '{role_id}'")
+        return spec.max_subagents
+
+
+@dataclass(frozen=True)
 class CharacterPanelSelection:
-    """Three-role selection for a CHARACTER/MOA-style agent array."""
+    """Backward-compatible three-role selection for the earlier example panel."""
 
     face: ModelScore
     memory: ModelScore
@@ -205,6 +233,33 @@ def select_model(models: Iterable[ModelEndpoint], task: TaskProfile) -> ModelSco
     raise RouterError(f"No eligible model for task '{task.task_id}'. {blocker_summary}")
 
 
+def select_character_composition(
+    models: Iterable[ModelEndpoint],
+    roles: Iterable[CharacterRoleSpec] | Mapping[str, TaskProfile],
+    *,
+    allow_reuse: bool = True,
+) -> CharacterCompositionSelection:
+    role_specs = _normalize_character_role_specs(roles)
+    remaining_models = list(models)
+    selections: dict[str, ModelScore] = {}
+
+    for spec in _selection_order(role_specs):
+        selected = select_model(remaining_models, spec.task)
+        selections[spec.role_id] = selected
+        if not allow_reuse:
+            remaining_models = [
+                model for model in remaining_models if model.model_id != selected.model.model_id
+            ]
+
+    primary_roles = [spec.role_id for spec in role_specs if spec.primary]
+    primary_role = primary_roles[0] if primary_roles else role_specs[0].role_id
+    return CharacterCompositionSelection(
+        roles=selections,
+        role_specs={spec.role_id: spec for spec in role_specs},
+        primary_role=primary_role,
+    )
+
+
 def select_character_panel(
     models: Iterable[ModelEndpoint],
     role_tasks: Mapping[str, TaskProfile] | None = None,
@@ -216,21 +271,59 @@ def select_character_panel(
     if missing_roles:
         raise RouterError(f"Missing CHARACTER role task profiles: {', '.join(sorted(missing_roles))}")
 
-    remaining_models = list(models)
-    selections: dict[str, ModelScore] = {}
-    for role in ("face", "memory", "reasoning"):
-        selected = select_model(remaining_models, tasks[role])
-        selections[role] = selected
-        if not allow_reuse:
-            remaining_models = [
-                model for model in remaining_models if model.model_id != selected.model.model_id
-            ]
+    composition = select_character_composition(
+        models,
+        [
+            CharacterRoleSpec("face", tasks["face"], primary=True),
+            CharacterRoleSpec("memory", tasks["memory"], max_subagents=12),
+            CharacterRoleSpec("reasoning", tasks["reasoning"], max_subagents=12),
+        ],
+        allow_reuse=allow_reuse,
+    )
 
     return CharacterPanelSelection(
-        face=selections["face"],
-        memory=selections["memory"],
-        reasoning=selections["reasoning"],
+        face=composition.roles["face"],
+        memory=composition.roles["memory"],
+        reasoning=composition.roles["reasoning"],
     )
+
+
+def _normalize_character_role_specs(
+    roles: Iterable[CharacterRoleSpec] | Mapping[str, TaskProfile],
+) -> list[CharacterRoleSpec]:
+    if isinstance(roles, Mapping):
+        role_specs = [
+            CharacterRoleSpec(role_id=str(role_id), task=task, primary=index == 0)
+            for index, (role_id, task) in enumerate(roles.items())
+        ]
+    else:
+        role_specs = list(roles)
+
+    if not role_specs:
+        raise RouterError("CHARACTER composition requires at least one role")
+
+    seen: set[str] = set()
+    primary_count = 0
+    for spec in role_specs:
+        if not spec.role_id.strip():
+            raise RouterError("CHARACTER role ids must be non-empty")
+        if spec.role_id in seen:
+            raise RouterError(f"Duplicate CHARACTER role id '{spec.role_id}'")
+        if spec.max_subagents < 0:
+            raise RouterError(f"CHARACTER role '{spec.role_id}' has negative max_subagents")
+        if spec.primary:
+            primary_count += 1
+        seen.add(spec.role_id)
+
+    if primary_count > 1:
+        raise RouterError("CHARACTER composition can only mark one primary role")
+    return role_specs
+
+
+def _selection_order(role_specs: list[CharacterRoleSpec]) -> list[CharacterRoleSpec]:
+    primary_specs = [spec for spec in role_specs if spec.primary]
+    secondary_specs = [spec for spec in role_specs if not spec.primary]
+    return primary_specs + secondary_specs if primary_specs else role_specs
 
 
 def _weighted_capability_score(model: ModelEndpoint, task: TaskProfile) -> float:

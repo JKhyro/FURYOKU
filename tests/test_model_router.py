@@ -1,10 +1,12 @@
 import unittest
 
 from furyoku import (
+    CharacterRoleSpec,
     ModelEndpoint,
     RouterError,
     TaskProfile,
     rank_models,
+    select_character_composition,
     select_character_panel,
     select_model,
 )
@@ -127,6 +129,75 @@ class ModelRouterTests(unittest.TestCase):
         self.assertEqual(panel.memory.model.model_id, "api-long-context-memory")
         self.assertEqual(panel.reasoning.model.model_id, "local-gemma3-heretic-q4")
         self.assertEqual(len({score.model.model_id for score in panel.as_dict().values()}), 3)
+
+    def test_character_composition_supports_single_role_tertiary_symbiote(self):
+        composition = select_character_composition(
+            sample_models(),
+            [
+                CharacterRoleSpec(
+                    "primary",
+                    TaskProfile(
+                        task_id="symbiote.tertiary.primary",
+                        required_capabilities={
+                            "conversation": 0.75,
+                            "instruction_following": 0.75,
+                        },
+                        privacy_requirement="local_only",
+                    ),
+                    primary=True,
+                )
+            ],
+        )
+
+        self.assertEqual(composition.primary_role, "primary")
+        self.assertEqual(list(composition.roles), ["primary"])
+        self.assertEqual(composition.roles["primary"].model.model_id, "local-gemma3-heretic-q4")
+        self.assertEqual(composition.max_subagents_for("primary"), 0)
+
+    def test_character_composition_supports_large_reused_role_arrays(self):
+        role_specs = [
+            CharacterRoleSpec(
+                "primary",
+                TaskProfile(
+                    task_id="kira.primary",
+                    required_capabilities={"conversation": 0.85, "instruction_following": 0.85},
+                ),
+                primary=True,
+                max_subagents=12,
+            )
+        ]
+        for index in range(1, 8):
+            role_specs.append(
+                CharacterRoleSpec(
+                    f"secondary-{index}",
+                    TaskProfile(
+                        task_id=f"kira.secondary.{index}",
+                        required_capabilities={"reasoning": 0.8, "instruction_following": 0.8},
+                    ),
+                    max_subagents=12,
+                )
+            )
+
+        composition = select_character_composition(sample_models(), role_specs, allow_reuse=True)
+
+        self.assertEqual(composition.primary_role, "primary")
+        self.assertEqual(len(composition.roles), 8)
+        self.assertTrue(all(composition.max_subagents_for(role_id) == 12 for role_id in composition.roles))
+        self.assertEqual(composition.roles["primary"].model.model_id, "cli-codex-high")
+
+    def test_character_composition_rejects_duplicate_roles(self):
+        role_task = TaskProfile(task_id="duplicate", required_capabilities={"conversation": 0.5})
+
+        with self.assertRaises(RouterError) as error:
+            select_character_composition(
+                sample_models(),
+                [
+                    CharacterRoleSpec("primary", role_task, primary=True),
+                    CharacterRoleSpec("primary", role_task),
+                ],
+            )
+
+        self.assertIn("Duplicate CHARACTER role id", str(error.exception))
 
     def test_no_eligible_model_raises_with_blocker_summary(self):
         task = TaskProfile(

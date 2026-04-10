@@ -1,7 +1,15 @@
 import unittest
 from pathlib import Path
 
-from furyoku import RegistryError, load_model_registry, parse_model_registry, select_character_panel, select_model
+from furyoku import (
+    CharacterRoleSpec,
+    RegistryError,
+    load_model_registry,
+    parse_model_registry,
+    select_character_composition,
+    select_character_panel,
+    select_model,
+)
 from furyoku.model_router import TaskProfile
 
 
@@ -31,6 +39,22 @@ class ModelRegistryTests(unittest.TestCase):
 
         self.assertEqual(selected.model.provider, "local")
         self.assertEqual(selected.model.invocation[0], "ollama")
+
+    def test_registry_drives_single_role_character_composition(self):
+        models = load_model_registry(EXAMPLE_REGISTRY)
+        task = TaskProfile(
+            task_id="symbiote.tertiary.primary",
+            required_capabilities={"conversation": 0.8, "instruction_following": 0.8},
+            privacy_requirement="local_only",
+        )
+
+        composition = select_character_composition(
+            models,
+            [CharacterRoleSpec("primary", task, primary=True)],
+        )
+
+        self.assertEqual(composition.primary_role, "primary")
+        self.assertEqual(composition.roles["primary"].model.model_id, "local-gemma3-heretic-q4")
 
     def test_duplicate_model_ids_are_rejected(self):
         payload = {
