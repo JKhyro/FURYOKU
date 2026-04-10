@@ -108,6 +108,37 @@ class DecisionSituationExecutionResult:
         return self.selection.model.provider if self.selection else None
 
 
+@dataclass(frozen=True)
+class ComparativeEvaluationResult:
+    """Execution comparison across eligible ranked candidates for one task/situation."""
+
+    report: ModelDecisionReport
+    decision: SituationDecision
+    execution_attempts: tuple[ProviderExecutionAttempt, ...]
+    situation_id: str = ""
+    max_candidates: int | None = None
+
+    @property
+    def ok(self) -> bool:
+        return any(attempt.ok for attempt in self.execution_attempts)
+
+    @property
+    def executed_count(self) -> int:
+        return len(self.execution_attempts)
+
+    @property
+    def task_id(self) -> str:
+        return self.decision.task.task_id
+
+    @property
+    def successful_count(self) -> int:
+        return sum(1 for attempt in self.execution_attempts if attempt.ok)
+
+    @property
+    def failed_count(self) -> int:
+        return len(self.execution_attempts) - self.successful_count
+
+
 def route_and_execute(
     models: list[ModelEndpoint],
     task: TaskProfile,
@@ -188,6 +219,50 @@ def route_and_execute_with_fallback(
         execution=final_attempt.execution,
         report=report,
         execution_attempts=attempts,
+    )
+
+
+def compare_model_executions(
+    models: list[ModelEndpoint],
+    task: TaskProfile,
+    request: ProviderExecutionRequest | str,
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    max_candidates: int | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> ComparativeEvaluationResult:
+    """Execute the same request across eligible ranked candidates for comparison."""
+
+    _validate_positive_limit(max_candidates, "max_candidates")
+    report = evaluate_model_decisions(
+        models,
+        [task],
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
+    )
+    decision = report.situations[task.task_id]
+    if decision.selected is None:
+        blocker_summary = "; ".join(
+            f"{model_id}: {', '.join(blockers)}"
+            for model_id, blockers in decision.blockers.items()
+        )
+        raise RouterError(f"No eligible model for task '{task.task_id}'. {blocker_summary}")
+
+    return ComparativeEvaluationResult(
+        report=report,
+        decision=decision,
+        max_candidates=max_candidates,
+        execution_attempts=_execute_comparative_attempts(
+            decision.ranked,
+            request,
+            max_candidates=max_candidates,
+            adapters=adapters,
+        ),
     )
 
 
@@ -298,6 +373,52 @@ def execute_decision_situation_with_fallback(
     )
 
 
+def compare_decision_situation_executions(
+    models: list[ModelEndpoint],
+    decision_input: DecisionSuite | Iterable[TaskProfile] | None,
+    situation_id: str,
+    request: ProviderExecutionRequest | str,
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    max_candidates: int | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> ComparativeEvaluationResult:
+    """Compare eligible ranked candidates for one calibrated decision-suite situation."""
+
+    _validate_positive_limit(max_candidates, "max_candidates")
+    report = evaluate_model_decisions(
+        models,
+        decision_input,
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
+    )
+    try:
+        decision = report.situations[situation_id]
+    except KeyError as exc:
+        available = ", ".join(report.situations)
+        raise ModelDecisionError(
+            f"Unknown decision situation '{situation_id}'. Available situations: {available}"
+        ) from exc
+
+    return ComparativeEvaluationResult(
+        report=report,
+        decision=decision,
+        situation_id=situation_id,
+        max_candidates=max_candidates,
+        execution_attempts=_execute_comparative_attempts(
+            decision.ranked,
+            request,
+            max_candidates=max_candidates,
+            adapters=adapters,
+        ) if decision.selected is not None else (),
+    )
+
+
 def execute_character_role(
     models: list[ModelEndpoint],
     profile: CharacterProfile,
@@ -337,6 +458,39 @@ def _execute_fallback_attempts(
     max_attempts: int | None,
     adapters: Mapping[str, ProviderAdapter] | None,
 ) -> tuple[ProviderExecutionAttempt, ...]:
+    return _execute_eligible_attempts(
+        ranked,
+        request,
+        max_attempts=max_attempts,
+        adapters=adapters,
+        stop_on_success=True,
+    )
+
+
+def _execute_comparative_attempts(
+    ranked: tuple[ModelScore, ...],
+    request: ProviderExecutionRequest | str,
+    *,
+    max_candidates: int | None,
+    adapters: Mapping[str, ProviderAdapter] | None,
+) -> tuple[ProviderExecutionAttempt, ...]:
+    return _execute_eligible_attempts(
+        ranked,
+        request,
+        max_attempts=max_candidates,
+        adapters=adapters,
+        stop_on_success=False,
+    )
+
+
+def _execute_eligible_attempts(
+    ranked: tuple[ModelScore, ...],
+    request: ProviderExecutionRequest | str,
+    *,
+    max_attempts: int | None,
+    adapters: Mapping[str, ProviderAdapter] | None,
+    stop_on_success: bool,
+) -> tuple[ProviderExecutionAttempt, ...]:
     eligible = [selection for selection in ranked if selection.eligible]
     if max_attempts is not None:
         eligible = eligible[:max_attempts]
@@ -350,7 +504,7 @@ def _execute_fallback_attempts(
                 execution=execution,
             )
         )
-        if execution.ok:
+        if stop_on_success and execution.ok:
             break
     return tuple(attempts)
 
@@ -373,5 +527,9 @@ def _execute_selected_model_safely(
 
 
 def _validate_max_attempts(max_attempts: int | None) -> None:
-    if max_attempts is not None and max_attempts < 1:
-        raise RouterError("max_attempts must be at least 1")
+    _validate_positive_limit(max_attempts, "max_attempts")
+
+
+def _validate_positive_limit(limit: int | None, name: str) -> None:
+    if limit is not None and limit < 1:
+        raise RouterError(f"{name} must be at least 1")

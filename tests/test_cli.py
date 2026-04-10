@@ -634,6 +634,96 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["executionAttempts"][0]["selectedModel"]["modelId"], "local-failing")
             self.assertEqual(payload["executionAttempts"][1]["execution"]["status"], "ok")
 
+    def test_compare_run_executes_eligible_models_and_persists_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            output_path = Path(temp_dir) / "reports" / "comparison.json"
+            write_fallback_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "compare-run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "fallback-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--privacy",
+                        "prefer_local",
+                        "--prompt",
+                        "hello",
+                        "--max-candidates",
+                        "2",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["taskId"], "fallback-chat")
+            self.assertEqual(payload["selectedModel"]["modelId"], "local-failing")
+            self.assertEqual(payload["comparison"]["executedCount"], 2)
+            self.assertEqual(payload["comparison"]["successfulCount"], 1)
+            self.assertEqual(payload["comparison"]["failedCount"], 1)
+            self.assertEqual(payload["comparison"]["maxCandidates"], 2)
+            self.assertEqual(payload["executions"][0]["selectedModel"]["modelId"], "local-failing")
+            self.assertEqual(payload["executions"][0]["execution"]["status"], "error")
+            self.assertEqual(payload["executions"][1]["selectedModel"]["modelId"], "cli-fallback")
+            self.assertEqual(payload["executions"][1]["execution"]["responseText"].strip(), "fallback:hello")
+            self.assertEqual(persisted["comparison"]["executedCount"], 2)
+
+    def test_compare_run_decision_suite_outputs_candidate_executions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_fallback_registry(registry_path)
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "suiteId": "comparison-suite",
+                        "situations": [
+                            {
+                                "taskId": "fallback-chat",
+                                "privacyRequirement": "prefer_local",
+                                "requiredCapabilities": {"conversation": 0.8},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "compare-run",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--situation-id",
+                        "fallback-chat",
+                        "--prompt",
+                        "hello",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["situationId"], "fallback-chat")
+            self.assertEqual(payload["comparison"]["executedCount"], 2)
+            self.assertEqual(payload["executions"][0]["execution"]["status"], "error")
+            self.assertEqual(payload["executions"][1]["execution"]["status"], "ok")
+
     def test_run_decision_suite_executes_named_situation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
