@@ -61,16 +61,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
+        if args.feedback_log and not args.decision_suite:
+            parser.error("--feedback-log is only supported with --decision-suite")
         if args.decision_suite:
             if not args.situation_id:
                 parser.error("--situation-id is required when --decision-suite is provided")
             readiness = _readiness_from_args(args, models)
+            feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
             result = execute_decision_situation(
                 models,
                 load_decision_suite(args.decision_suite),
                 args.situation_id,
                 ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
                 readiness=readiness,
+                feedback=feedback,
             )
             _write_json(_decision_execution_result_to_dict(result, readiness=readiness), output_path=args.output)
             return 0 if result.ok else 2
@@ -169,6 +173,11 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
     run_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
     run_parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    run_parser.add_argument(
+        "--feedback-log",
+        type=Path,
+        help="Optional JSONL outcome feedback log used to adjust decision-suite execution selection.",
+    )
     health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
     health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
@@ -408,6 +417,10 @@ def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult,
         "decision": result.decision.to_dict(),
         "execution": _execution_to_dict(result.execution) if result.execution else None,
         "aggregate": result.report.aggregate.to_dict(),
+        "feedbackAdjustments": {
+            model_id: summary.to_dict()
+            for model_id, summary in result.report.feedback_adjustments.items()
+        },
     }
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]

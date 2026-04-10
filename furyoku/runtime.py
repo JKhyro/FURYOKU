@@ -13,6 +13,7 @@ from .model_decisions import (
     evaluate_model_decisions,
 )
 from .model_router import ModelEndpoint, ModelScore, RouterError, TaskProfile, select_model
+from .outcome_feedback import FeedbackAdjustmentInput
 from .provider_adapters import (
     ProviderAdapter,
     ProviderExecutionRequest,
@@ -111,11 +112,12 @@ def execute_decision_situation(
     request: ProviderExecutionRequest | str,
     *,
     readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> DecisionSituationExecutionResult:
     """Run one calibrated decision situation using the same selection evidence as `decide`."""
 
-    report = evaluate_model_decisions(models, decision_input, readiness=readiness)
+    report = evaluate_model_decisions(models, decision_input, readiness=readiness, feedback=feedback)
     try:
         decision = report.situations[situation_id]
     except KeyError as exc:

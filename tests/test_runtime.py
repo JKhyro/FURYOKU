@@ -2,6 +2,7 @@ import subprocess
 import unittest
 
 from furyoku import (
+    DecisionOutcomeRecord,
     ModelDecisionError,
     ModelEndpoint,
     ProviderExecutionRequest,
@@ -110,6 +111,52 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.model_id, "local-chat")
         self.assertEqual(result.decision.weight, 3.0)
+        self.assertEqual(result.execution.response_text, "local-chat:hello")
+
+    def test_execute_decision_situation_uses_feedback_informed_selection(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "feedback-suite",
+                "situations": [
+                    {
+                        "taskId": "feedback-chat",
+                        "requiredCapabilities": {"conversation": 0.8},
+                    }
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_decision_situation(
+            [local_endpoint(), cli_endpoint()],
+            suite,
+            "feedback-chat",
+            "hello",
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-chat",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertIn("local-chat", result.report.feedback_adjustments)
+        self.assertTrue(any("outcome feedback adjustment" in reason for reason in result.selection.reasons))
         self.assertEqual(result.execution.response_text, "local-chat:hello")
 
     def test_execute_decision_situation_does_not_execute_threshold_blocked_task(self):
