@@ -291,6 +291,51 @@ class CliTests(unittest.TestCase):
             self.assertIn("generatedAt", persisted["reportMetadata"])
             self.assertEqual(persisted["situationId"], "private-chat")
 
+    def test_feedback_appends_outcome_record_for_persisted_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "run-report.json"
+            feedback_log = Path(temp_dir) / "feedback" / "outcomes.jsonl"
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "reportMetadata": {"schemaVersion": 1, "generatedAt": "2026-04-10T12:00:00+00:00"},
+                        "situationId": "private-chat",
+                        "selectedModel": {"modelId": "local-echo", "provider": "local"},
+                        "execution": {"status": "ok"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "feedback",
+                        "--report",
+                        str(report_path),
+                        "--feedback-log",
+                        str(feedback_log),
+                        "--verdict",
+                        "success",
+                        "--score",
+                        "0.95",
+                        "--reason",
+                        "accepted response",
+                        "--tag",
+                        "operator-accepted",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            logged = [json.loads(line) for line in feedback_log.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["verdict"], "success")
+            self.assertEqual(payload["selectedModelId"], "local-echo")
+            self.assertEqual(payload["score"], 0.95)
+            self.assertEqual(payload["tags"], ["operator-accepted"])
+            self.assertEqual(logged[0]["recordId"], payload["recordId"])
+
     def test_run_decision_suite_returns_blockers_without_execution_when_threshold_blocks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"

@@ -15,6 +15,11 @@ from .character_profiles import (
 from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
 from .model_decisions import ModelDecisionReport, evaluate_model_decisions, load_decision_suite
+from .outcome_feedback import (
+    VALID_OUTCOME_VERDICTS,
+    append_decision_outcome,
+    create_decision_outcome_record,
+)
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .runtime import (
@@ -31,6 +36,20 @@ from .task_profiles import load_task_profile
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "feedback":
+        record = create_decision_outcome_record(
+            args.report,
+            verdict=args.verdict,
+            score=args.score,
+            reason=args.reason,
+            tags=args.tag,
+            override_model_id=args.override_model_id or "",
+        )
+        append_decision_outcome(args.feedback_log, record)
+        _write_json(record.to_dict())
+        return 0
+
     models = load_model_registry(args.registry)
 
     if args.command == "select":
@@ -165,6 +184,27 @@ def _build_parser() -> argparse.ArgumentParser:
     decide_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
     decide_parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
     decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
+    feedback_parser = subparsers.add_parser(
+        "feedback",
+        help="Append an outcome feedback record linked to a persisted decision or execution report.",
+    )
+    feedback_parser.add_argument("--report", required=True, type=Path, help="Path to a persisted FURYOKU report JSON file.")
+    feedback_parser.add_argument(
+        "--feedback-log",
+        required=True,
+        type=Path,
+        help="JSONL file where feedback records should be appended.",
+    )
+    feedback_parser.add_argument(
+        "--verdict",
+        required=True,
+        choices=VALID_OUTCOME_VERDICTS,
+        help="Outcome verdict for the selected decision/execution.",
+    )
+    feedback_parser.add_argument("--score", type=float, default=None, help="Optional normalized quality score from 0.0 to 1.0.")
+    feedback_parser.add_argument("--reason", default="", help="Short reason or operator note for this outcome.")
+    feedback_parser.add_argument("--tag", action="append", default=[], help="Optional feedback tag. Repeat for multiple tags.")
+    feedback_parser.add_argument("--override-model-id", help="Model id that should have been used when verdict is manual_override.")
     character_parser = subparsers.add_parser(
         "character-select",
         help="Select concrete model endpoints for every role in a CHARACTER profile.",
