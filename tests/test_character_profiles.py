@@ -4,8 +4,10 @@ from pathlib import Path
 from furyoku import (
     CharacterProfileError,
     ModelEndpoint,
+    build_character_orchestration_envelope,
     load_character_profile,
     parse_character_profile,
+    select_character_orchestration_envelope,
     select_character_profile_models,
 )
 
@@ -122,6 +124,32 @@ class CharacterProfileTests(unittest.TestCase):
         self.assertEqual(selection.roles["memory"].model.model_id, "api-memory")
         self.assertEqual(selection.roles["coding"].model.model_id, "cli-codex")
         self.assertEqual(selection.max_subagents_for("reflection"), 12)
+
+    def test_character_orchestration_envelope_serializes_role_assignments(self):
+        profile = load_character_profile(KIRA_PROFILE)
+
+        envelope = select_character_orchestration_envelope(sample_models(), profile)
+        payload = envelope.to_dict()
+
+        self.assertEqual(envelope.character_id, "kira")
+        self.assertEqual(envelope.primary_role, "primary")
+        self.assertEqual(envelope.role_count, 8)
+        self.assertEqual(envelope.total_max_subagents, 96)
+        self.assertEqual(payload["roleCount"], 8)
+        self.assertEqual(payload["totalMaxSubagents"], 96)
+        self.assertEqual(payload["roles"][1]["roleId"], "memory")
+        self.assertEqual(payload["roles"][1]["selectedModelId"], "api-memory")
+        self.assertEqual(payload["roles"][3]["selectedProvider"], "cli")
+
+    def test_build_character_orchestration_envelope_preserves_single_role_symbiote(self):
+        profile = load_character_profile(TERTIARY_PROFILE)
+        selection = select_character_profile_models(sample_models(), profile)
+
+        envelope = build_character_orchestration_envelope(selection)
+
+        self.assertEqual(envelope.role_count, 1)
+        self.assertEqual(envelope.total_max_subagents, 0)
+        self.assertEqual(envelope.assignment_for("primary").selection.model.model_id, "local-gemma")
 
     def test_duplicate_roles_are_rejected(self):
         payload = {

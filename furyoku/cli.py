@@ -9,6 +9,7 @@ from typing import Sequence
 
 from .character_profiles import (
     CharacterProfileSelection,
+    build_character_orchestration_envelope,
     load_character_profile,
     select_character_profile_models,
 )
@@ -444,24 +445,7 @@ def _execution_to_dict(execution: ProviderExecutionResult) -> dict:
 
 
 def _character_profile_selection_to_dict(selection: CharacterProfileSelection) -> dict:
-    profile = selection.profile
-    return {
-        "characterId": profile.character_id,
-        "class": profile.character_class,
-        "rank": profile.rank,
-        "description": profile.description,
-        "primaryRole": selection.primary_role,
-        "roles": [
-            {
-                "roleId": role_spec.role_id,
-                "primary": role_spec.role_id == selection.primary_role,
-                "maxSubagents": role_spec.max_subagents,
-                "taskId": role_spec.task.task_id,
-                "selection": _score_to_dict(selection.roles[role_spec.role_id]),
-            }
-            for role_spec in profile.role_specs
-        ],
-    }
+    return build_character_orchestration_envelope(selection).to_dict()
 
 
 def _health_to_dict(result: ProviderHealthCheckResult) -> dict:

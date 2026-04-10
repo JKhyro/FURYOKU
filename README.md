@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current primary lane: [#115](https://github.com/JKhyro/FURYOKU/issues/115)
+- Current active lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current downstream CHARACTER/MOA lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: capture decision outcome feedback records before advancing downstream CHARACTER/MOA orchestration.
+- Current follow-on focus: add a CHARACTER/MOA orchestration envelope for selected role assignments using the multi-model selection layer.
 
 ## Product Direction
 
@@ -47,7 +47,7 @@ Current routing core:
 
 - [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract and flexible CHARACTER composition selection.
 - [`furyoku/model_decisions.py`](furyoku/model_decisions.py) evaluates multiple local, CLI, and API models across representative decision situations.
-- [`furyoku/character_profiles.py`](furyoku/character_profiles.py) loads flexible JSON CHARACTER role compositions for Symbiote/Curator/Synth/Agent-style arrays.
+- [`furyoku/character_profiles.py`](furyoku/character_profiles.py) loads flexible JSON CHARACTER role compositions for Symbiote/Curator/Synth/Agent-style arrays and serializes selected role assignments into CHARACTER orchestration envelopes.
 - [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
 - [`furyoku/task_profiles.py`](furyoku/task_profiles.py) loads reusable JSON task profiles into router-ready task requirements.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
