@@ -726,7 +726,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T21:41:21.856058+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.891094+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "passed": 12,
     "failed": 8,
@@ -748,7 +748,7 @@
     }
   },
   "promotionVerdict": {
-    "generatedAtUtc": "2026-04-09T21:41:21.856080+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.891114+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -820,7 +820,7 @@
     }
   },
   "compareDecision": {
-    "generatedAtUtc": "2026-04-09T21:41:21.856095+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.891129+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "machineProfile": {
       "label": "32 GB RAM / 4 GB VRAM local profile",
@@ -940,7 +940,7 @@
     }
   },
   "resourceFitVerdict": {
-    "generatedAtUtc": "2026-04-09T21:41:21.856086+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.891121+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-response-suite.json",
     "machineProfile": {
       "label": "32 GB RAM / 4 GB VRAM local profile",

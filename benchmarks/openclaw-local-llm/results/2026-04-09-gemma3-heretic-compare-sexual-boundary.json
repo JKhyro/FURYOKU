@@ -683,7 +683,7 @@
     }
   ],
   "contractEvaluation": {
-    "generatedAtUtc": "2026-04-09T21:41:21.860908+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.895279+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
     "passed": 10,
     "failed": 12,
@@ -705,7 +705,7 @@
     }
   },
   "promotionVerdict": {
-    "generatedAtUtc": "2026-04-09T21:41:21.860924+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.895292+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
     "models": {
       "gemma3-heretic:4b-q4km": {
@@ -797,7 +797,7 @@
     }
   },
   "compareDecision": {
-    "generatedAtUtc": "2026-04-09T21:41:21.860943+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.895308+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
     "machineProfile": {
       "label": "32 GB RAM / 4 GB VRAM local profile",
@@ -937,7 +937,7 @@
     }
   },
   "resourceFitVerdict": {
-    "generatedAtUtc": "2026-04-09T21:41:21.860934+00:00",
+    "generatedAtUtc": "2026-04-10T03:23:29.895300+00:00",
     "source": "2026-04-09-gemma3-heretic-compare-sexual-boundary.json",
     "machineProfile": {
       "label": "32 GB RAM / 4 GB VRAM local profile",

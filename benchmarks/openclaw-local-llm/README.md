@@ -45,13 +45,28 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 2. Run `run_ollama_benchmark.ps1`.
 3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
 4. Review the JSON output, including the attached `contractEvaluation`, `contractChecks`, `contractSummary`, `promotionVerdict`, `resourceFitVerdict`, and `compareDecision` fields.
-5. When you publish a compare lane, also emit `--current-baseline-output` so downstream runtime glue and automation can consume one compact baseline-selection manifest.
+5. When you publish a compare lane, run `publish_compare_truth.ps1` so the compare summary and current-baseline manifest are emitted together.
 6. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
 
 Preset file:
 
 - `machine_profiles.json` contains reusable local hardware presets shared by the benchmark entrypoints and the Python contract reporter.
 - Use `-MachineProfileName <preset>` or `--machine-profile-name <preset>` to select a preset, and keep the direct `*MemoryMb` flags for one-off overrides.
+
+Publish current compare truth:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\publish_compare_truth.ps1
+```
+
+Publish an alternate compare set:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\publish_compare_truth.ps1 `
+  -InputPath .\benchmarks\openclaw-local-llm\results\candidate-compare-benchmark.json,.\benchmarks\openclaw-local-llm\results\candidate-compare-response-suite.json `
+  -SummaryOutputPath .\benchmarks\openclaw-local-llm\results\candidate-compare-summary.md `
+  -CurrentBaselineOutputPath .\benchmarks\openclaw-local-llm\results\candidate-current-baseline.json
+```
 
 Example:
 
