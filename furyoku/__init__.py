@@ -15,17 +15,35 @@ from .model_router import (
     select_model,
 )
 from .model_registry import RegistryError, load_model_registry, parse_model_registry
+from .provider_adapters import (
+    ApiProviderAdapter,
+    ProviderAdapterError,
+    ProviderExecutionRequest,
+    ProviderExecutionResult,
+    SubprocessProviderAdapter,
+    default_provider_adapters,
+    execute_model,
+    execute_selected_model,
+)
 
 __all__ = [
+    "ApiProviderAdapter",
     "CharacterCompositionSelection",
     "CharacterPanelSelection",
     "CharacterRoleSpec",
     "ModelEndpoint",
     "ModelScore",
+    "ProviderAdapterError",
+    "ProviderExecutionRequest",
+    "ProviderExecutionResult",
     "RouterError",
     "RegistryError",
+    "SubprocessProviderAdapter",
     "TaskProfile",
     "default_character_role_tasks",
+    "default_provider_adapters",
+    "execute_model",
+    "execute_selected_model",
     "load_model_registry",
     "parse_model_registry",
     "rank_models",
