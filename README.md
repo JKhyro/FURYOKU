@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#125](https://github.com/JKhyro/FURYOKU/issues/125)
+- Current active lane: [#127](https://github.com/JKhyro/FURYOKU/issues/127)
 - Current downstream CHARACTER/MOA lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: use persisted outcome feedback during decision-suite execution.
+- Current follow-on focus: use persisted outcome feedback during single-task selection and execution.
 
 ## Product Direction
 
@@ -77,12 +77,14 @@ CLI example:
 
 ```powershell
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json
+python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --output .\decision-report.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
+python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli feedback --report .\decision-report.json --feedback-log .\decision-outcomes.jsonl --verdict success --score 0.9 --reason "accepted response"
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json

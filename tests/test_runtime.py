@@ -64,6 +64,38 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.execution.response_text, "local-chat:hello")
         self.assertGreater(result.selection.score, 0)
 
+    def test_route_and_execute_uses_feedback_informed_selection(self):
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = route_and_execute(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(task_id="feedback-chat", required_capabilities={"conversation": 0.8}),
+            "hello",
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-chat",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertIsNotNone(result.report)
+        self.assertIn("local-chat", result.report.feedback_adjustments)
+        self.assertEqual(result.execution.response_text, "local-chat:hello")
+
     def test_route_and_execute_preserves_execution_failure_observability(self):
         def runner(invocation, prompt, timeout):
             return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="bad runtime")

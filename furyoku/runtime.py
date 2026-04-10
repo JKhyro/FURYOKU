@@ -28,6 +28,7 @@ class RoutedExecutionResult:
 
     selection: ModelScore
     execution: ProviderExecutionResult
+    report: ModelDecisionReport | None = None
 
     @property
     def ok(self) -> bool:
@@ -96,13 +97,26 @@ def route_and_execute(
     task: TaskProfile,
     request: ProviderExecutionRequest | str,
     *,
+    feedback: FeedbackAdjustmentInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> RoutedExecutionResult:
     """Select the best eligible model for a task, then execute it."""
 
-    selection = select_model(models, task)
+    report = None
+    if feedback is None:
+        selection = select_model(models, task)
+    else:
+        report = evaluate_model_decisions(models, [task], feedback=feedback)
+        selection = report.selected_for(task.task_id)
+        if selection is None:
+            decision = report.situations[task.task_id]
+            blocker_summary = "; ".join(
+                f"{model_id}: {', '.join(blockers)}"
+                for model_id, blockers in decision.blockers.items()
+            )
+            raise RouterError(f"No eligible model for task '{task.task_id}'. {blocker_summary}")
     execution = execute_selected_model(selection, request, adapters=adapters)
-    return RoutedExecutionResult(selection=selection, execution=execution)
+    return RoutedExecutionResult(selection=selection, execution=execution, report=report)
 
 
 def execute_decision_situation(
