@@ -57,6 +57,24 @@ def write_task_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_local_only_registry(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "models": [
+            {
+                "modelId": "python-local",
+                "provider": "local",
+                "privacyLevel": "local",
+                "contextWindowTokens": 4096,
+                "averageLatencyMs": 10,
+                "invocation": [sys.executable, "-c", "print('ready')"],
+                "capabilities": {"conversation": 0.9},
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 class CliTests(unittest.TestCase):
     def test_select_outputs_selected_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -136,6 +154,21 @@ class CliTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["modelId"], "local-echo")
+
+    def test_health_reports_registry_provider_readiness(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_local_only_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(["health", "--registry", str(registry_path)])
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["providers"][0]["modelId"], "python-local")
+            self.assertEqual(payload["providers"][0]["status"], "ready")
 
 
 if __name__ == "__main__":

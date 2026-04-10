@@ -25,6 +25,12 @@ from .provider_adapters import (
     execute_model,
     execute_selected_model,
 )
+from .provider_health import (
+    ProviderHealthCheckRequest,
+    ProviderHealthCheckResult,
+    check_provider_health,
+    check_provider_health_many,
+)
 from .runtime import RoutedExecutionResult, route_and_execute
 from .task_profiles import TaskProfileError, load_task_profile, parse_task_profile
 
@@ -38,6 +44,8 @@ __all__ = [
     "ProviderAdapterError",
     "ProviderExecutionRequest",
     "ProviderExecutionResult",
+    "ProviderHealthCheckRequest",
+    "ProviderHealthCheckResult",
     "RouterError",
     "RegistryError",
     "RoutedExecutionResult",
@@ -48,6 +56,8 @@ __all__ = [
     "default_provider_adapters",
     "execute_model",
     "execute_selected_model",
+    "check_provider_health",
+    "check_provider_health_many",
     "load_model_registry",
     "load_task_profile",
     "parse_model_registry",
