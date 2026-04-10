@@ -590,6 +590,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
             character_path = Path(temp_dir) / "character.json"
+            output_path = Path(temp_dir) / "reports" / "character-select.json"
             write_registry(registry_path)
             write_character_profile(character_path)
             stdout = io.StringIO()
@@ -602,10 +603,13 @@ class CliTests(unittest.TestCase):
                         str(registry_path),
                         "--character-profile",
                         str(character_path),
+                        "--output",
+                        str(output_path),
                     ]
                 )
 
             payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["characterId"], "test-character")
             self.assertEqual(payload["primaryRole"], "primary")
@@ -617,11 +621,14 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["roles"][1]["roleId"], "coding")
             self.assertEqual(payload["roles"][1]["maxSubagents"], 4)
             self.assertEqual(payload["roles"][1]["selection"]["modelId"], "remote-coder")
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+            self.assertEqual(persisted["roleCount"], 2)
 
     def test_character_run_executes_effective_primary_role(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
             character_path = Path(temp_dir) / "character.json"
+            output_path = Path(temp_dir) / "reports" / "character-run.json"
             write_executable_character_registry(registry_path)
             write_character_profile(character_path)
             stdout = io.StringIO()
@@ -636,10 +643,13 @@ class CliTests(unittest.TestCase):
                         str(character_path),
                         "--prompt",
                         "hello",
+                        "--output",
+                        str(output_path),
                     ]
                 )
 
             payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(exit_code, 0)
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["characterId"], "test-character")
@@ -649,6 +659,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["roleAssignments"]["primaryRole"], "primary")
             self.assertEqual(payload["roleAssignments"]["roles"][1]["roleId"], "coding")
             self.assertEqual(payload["roleAssignments"]["roles"][1]["maxSubagents"], 4)
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+            self.assertEqual(persisted["executedRoleId"], "primary")
 
     def test_character_run_executes_named_secondary_role(self):
         with tempfile.TemporaryDirectory() as temp_dir:
