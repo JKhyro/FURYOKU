@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, Mapping
+from dataclasses import dataclass, field
+from typing import Any, Iterable, Mapping
 
 
 ProviderKind = str
@@ -29,6 +29,7 @@ class ModelEndpoint:
     supports_tools: bool = False
     supports_json: bool = False
     tags: tuple[str, ...] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def capability(self, name: str) -> float:
         return max(0.0, min(1.0, float(self.capabilities.get(name, 0.0))))

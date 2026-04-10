@@ -53,6 +53,12 @@
       "inputCostPer1k": 0.004,
       "outputCostPer1k": 0.012,
       "supportsJson": true,
+      "metadata": {
+        "apiUrl": "https://api.example.invalid/v1/chat/completions",
+        "apiKeyEnv": "FURYOKU_API_KEY",
+        "apiModel": "example-long-context-model",
+        "apiFormat": "openai-chat"
+      },
       "capabilities": {
         "conversation": 0.84,
         "instruction_following": 0.86,

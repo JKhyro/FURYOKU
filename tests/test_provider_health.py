@@ -31,6 +31,18 @@ def api_endpoint() -> ModelEndpoint:
     )
 
 
+def configured_api_endpoint(**metadata) -> ModelEndpoint:
+    return ModelEndpoint(
+        model_id="api-configured",
+        provider="api",
+        privacy_level="remote",
+        context_window_tokens=128000,
+        average_latency_ms=20,
+        capabilities={"conversation": 1.0},
+        metadata={"apiUrl": "http://127.0.0.1:9/test", **metadata},
+    )
+
+
 class ProviderHealthTests(unittest.TestCase):
     def test_local_command_ready_without_probe(self):
         result = check_provider_health(
@@ -71,6 +83,20 @@ class ProviderHealthTests(unittest.TestCase):
         self.assertFalse(result.ready)
         self.assertEqual(result.status, "missing-transport")
         self.assertIn("transport", result.reason)
+
+    def test_api_configured_transport_ready_without_probe(self):
+        result = check_provider_health(configured_api_endpoint())
+
+        self.assertTrue(result.ready)
+        self.assertEqual(result.status, "ready")
+        self.assertIn("configuration", result.reason)
+
+    def test_api_configured_transport_missing_key_env_is_not_ready(self):
+        result = check_provider_health(configured_api_endpoint(apiKeyEnv="FURYOKU_TEST_MISSING_KEY"))
+
+        self.assertFalse(result.ready)
+        self.assertEqual(result.status, "missing-credential")
+        self.assertIn("FURYOKU_TEST_MISSING_KEY", result.reason)
 
     def test_api_probe_success_uses_injected_transport(self):
         calls = []
