@@ -355,6 +355,20 @@ class _OutcomeSummaryStats:
             self.manual_override_count += 1
 
 
+@dataclass(frozen=True)
+class _ComparativeExecutionCapture:
+    attempt: Mapping[str, Any]
+    source_label: str
+    report_type: str
+    situation_id: str
+    comparison_attempt_number: int
+    comparison_executed_count: int
+    suite_id: str = ""
+    situation_index: int | None = None
+    situation_count: int | None = None
+    batch_executed_candidate_count: int | None = None
+
+
 def create_decision_outcome_record(
     report_path: str | Path,
     *,
@@ -452,22 +466,38 @@ def create_comparative_execution_outcome_records(
     normalized_success_score = _optional_score(success_score, source="<comparison-outcome-capture:success-score>")
     normalized_failure_score = _optional_score(failure_score, source="<comparison-outcome-capture:failure-score>")
     path, report_bytes, report = _read_report_payload(report_path)
-    executions = _comparative_execution_attempts(report, source=str(path))
+    captures = _comparative_execution_attempts(report, source=str(path))
     report_sha256 = hashlib.sha256(report_bytes).hexdigest()
     report_generated_at = _report_generated_at(report)
-    situation_id = str(report.get("situationId", report.get("taskId", _first_decision_task_id(report))) or "")
     generated_at = datetime.now(timezone.utc).isoformat()
+    normalized_tags = tuple(str(tag) for tag in tags)
+    extra_metadata = dict(metadata or {})
     records: list[DecisionOutcomeRecord] = []
 
-    for index, attempt in enumerate(executions, start=1):
+    for capture in captures:
+        attempt = capture.attempt
         selected = attempt.get("selectedModel")
         if not isinstance(selected, Mapping):
-            raise OutcomeFeedbackError(f"{path}: executions[{index}].selectedModel must be an object")
+            raise OutcomeFeedbackError(f"{path}: {capture.source_label}.selectedModel must be an object")
         execution = attempt.get("execution")
         execution_status = _execution_status(execution)
         if not execution_status:
-            raise OutcomeFeedbackError(f"{path}: executions[{index}].execution.status is required")
+            raise OutcomeFeedbackError(f"{path}: {capture.source_label}.execution.status is required")
         verdict = "success" if execution_status == "ok" else "failure"
+        capture_metadata = {
+            "captureSource": "furyoku.comparative-execution",
+            "comparisonAttemptNumber": capture.comparison_attempt_number,
+            "comparisonExecutedCount": capture.comparison_executed_count,
+            "comparisonReportType": capture.report_type,
+        }
+        if capture.suite_id:
+            capture_metadata["comparisonSuiteId"] = capture.suite_id
+        if capture.situation_index is not None:
+            capture_metadata["comparisonSituationIndex"] = capture.situation_index
+        if capture.situation_count is not None:
+            capture_metadata["comparisonSituationCount"] = capture.situation_count
+        if capture.batch_executed_candidate_count is not None:
+            capture_metadata["comparisonBatchExecutedCandidateCount"] = capture.batch_executed_candidate_count
         records.append(
             DecisionOutcomeRecord(
                 record_id=str(uuid4()),
@@ -475,21 +505,15 @@ def create_comparative_execution_outcome_records(
                 report_sha256=report_sha256,
                 report_generated_at=report_generated_at,
                 generated_at=generated_at,
-                situation_id=situation_id,
+                situation_id=capture.situation_id,
                 selected_model_id=str(selected.get("modelId", "") or ""),
                 selected_provider=str(selected.get("provider", "") or ""),
                 execution_status=execution_status,
                 verdict=verdict,
                 score=normalized_success_score if verdict == "success" else normalized_failure_score,
                 reason=reason,
-                tags=tuple(str(tag) for tag in tags),
-                metadata={
-                    "captureSource": "furyoku.comparative-execution",
-                    "comparisonAttemptNumber": _comparison_attempt_number(attempt, fallback=index),
-                    "comparisonExecutedCount": len(executions),
-                    "comparisonReportType": "compare-run",
-                    **dict(metadata or {}),
-                },
+                tags=normalized_tags,
+                metadata={**capture_metadata, **extra_metadata},
             )
         )
     return tuple(records)
@@ -1118,18 +1142,99 @@ def _first_decision_task_id(report: Mapping[str, Any]) -> str:
     return ""
 
 
-def _comparative_execution_attempts(report: Mapping[str, Any], *, source: str) -> tuple[Mapping[str, Any], ...]:
+def _comparative_execution_attempts(
+    report: Mapping[str, Any],
+    *,
+    source: str,
+) -> tuple[_ComparativeExecutionCapture, ...]:
     executions = report.get("executions")
-    if not isinstance(executions, list):
-        raise OutcomeFeedbackError(f"{source}: cannot capture comparative outcomes without an executions list")
+    if isinstance(executions, list):
+        attempts: list[_ComparativeExecutionCapture] = []
+        situation_id = str(report.get("situationId", report.get("taskId", _first_decision_task_id(report))) or "")
+        for index, attempt in enumerate(executions, start=1):
+            if not isinstance(attempt, Mapping):
+                raise OutcomeFeedbackError(f"{source}: executions[{index}] must be an object")
+            attempts.append(
+                _ComparativeExecutionCapture(
+                    attempt=attempt,
+                    source_label=f"executions[{index}]",
+                    report_type="compare-run",
+                    situation_id=situation_id,
+                    comparison_attempt_number=_comparison_attempt_number(attempt, fallback=index),
+                    comparison_executed_count=len(executions),
+                )
+            )
+        if not attempts:
+            raise OutcomeFeedbackError(f"{source}: cannot capture comparative outcomes without executed candidates")
+        return tuple(attempts)
+
+    situations = report.get("situations")
+    if not isinstance(situations, list):
+        raise OutcomeFeedbackError(
+            f"{source}: cannot capture comparative outcomes without an executions list or situations list"
+        )
+
     attempts = []
-    for index, attempt in enumerate(executions, start=1):
-        if not isinstance(attempt, Mapping):
-            raise OutcomeFeedbackError(f"{source}: executions[{index}] must be an object")
-        attempts.append(attempt)
+    suite_id = str(report.get("suiteId", "") or "")
+    situation_count = len(situations)
+    batch_executed_candidate_count = _comparison_batch_executed_candidate_count(report)
+    for situation_index, situation in enumerate(situations, start=1):
+        if not isinstance(situation, Mapping):
+            raise OutcomeFeedbackError(f"{source}: situations[{situation_index}] must be an object")
+        situation_executions = situation.get("executions")
+        if not isinstance(situation_executions, list):
+            raise OutcomeFeedbackError(
+                f"{source}: situations[{situation_index}].executions must be a list"
+            )
+        situation_id = str(situation.get("situationId", situation.get("taskId", "")) or "")
+        for attempt_index, attempt in enumerate(situation_executions, start=1):
+            if not isinstance(attempt, Mapping):
+                raise OutcomeFeedbackError(
+                    f"{source}: situations[{situation_index}].executions[{attempt_index}] must be an object"
+                )
+            attempts.append(
+                _ComparativeExecutionCapture(
+                    attempt=attempt,
+                    source_label=f"situations[{situation_index}].executions[{attempt_index}]",
+                    report_type="compare-batch",
+                    situation_id=situation_id,
+                    comparison_attempt_number=_comparison_attempt_number(attempt, fallback=attempt_index),
+                    comparison_executed_count=len(situation_executions),
+                    suite_id=suite_id,
+                    situation_index=situation_index,
+                    situation_count=situation_count,
+                    batch_executed_candidate_count=batch_executed_candidate_count,
+                )
+            )
     if not attempts:
         raise OutcomeFeedbackError(f"{source}: cannot capture comparative outcomes without executed candidates")
     return tuple(attempts)
+
+
+def _comparison_batch_executed_candidate_count(report: Mapping[str, Any]) -> int:
+    comparison = report.get("comparison")
+    if isinstance(comparison, Mapping):
+        raw_value = comparison.get("executedCandidateCount")
+        try:
+            executed_candidate_count = int(raw_value)
+        except (TypeError, ValueError):
+            executed_candidate_count = None
+        if executed_candidate_count is not None and executed_candidate_count >= 0:
+            return executed_candidate_count
+
+    situations = report.get("situations")
+    if not isinstance(situations, list):
+        return 0
+
+    executed_candidate_count = 0
+    for situation in situations:
+        if not isinstance(situation, Mapping):
+            continue
+        situation_executions = situation.get("executions")
+        if not isinstance(situation_executions, list):
+            continue
+        executed_candidate_count += len(situation_executions)
+    return executed_candidate_count
 
 
 def _comparison_attempt_number(attempt: Mapping[str, Any], *, fallback: int) -> int:

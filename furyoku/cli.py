@@ -194,6 +194,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if result.ok else 2
 
     if args.command == "compare-batch":
+        if args.capture_comparison_outcomes and not args.output:
+            parser.error("--capture-comparison-outcomes requires --output so feedback evidence can link to a stable report")
         if args.max_candidates is not None and args.max_candidates < 1:
             parser.error("--max-candidates must be at least 1")
         readiness = _readiness_from_args(args, models)
@@ -213,7 +215,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             routing_policy=routing_policy,
             max_candidates=args.max_candidates,
         )
-        _write_json(_comparative_execution_batch_result_to_dict(result, readiness=readiness), output_path=args.output)
+        _write_json_with_comparison_outcome_capture(
+            _comparative_execution_batch_result_to_dict(result, readiness=readiness),
+            output_path=args.output,
+            capture_args=args,
+            can_capture=result.executed_candidate_count > 0,
+            capture_source="furyoku.cli.compare-batch",
+        )
         return 0 if result.ok else 2
 
     if args.command == "health":
@@ -432,6 +440,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Maximum eligible ranked models to execute per situation. Defaults to all eligible models.",
     )
     compare_batch_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON batch comparison report.")
+    _add_comparison_outcome_capture_args(compare_batch_parser)
     _add_health_decision_args(compare_batch_parser, "Run provider readiness checks before comparative batch execution.")
     compare_batch_parser.add_argument(
         "--feedback-log",
@@ -630,6 +639,37 @@ def _add_outcome_capture_args(parser: argparse.ArgumentParser) -> None:
         "--outcome-override-model-id",
         default="",
         help="Model id that should have been used when --outcome-verdict is manual_override.",
+    )
+
+
+def _add_comparison_outcome_capture_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--capture-comparison-outcomes",
+        type=Path,
+        help="Append one feedback record per executed comparison candidate to this JSONL log.",
+    )
+    parser.add_argument(
+        "--comparison-success-score",
+        type=float,
+        default=None,
+        help="Optional score assigned to successful comparison candidate records.",
+    )
+    parser.add_argument(
+        "--comparison-failure-score",
+        type=float,
+        default=None,
+        help="Optional score assigned to failed comparison candidate records.",
+    )
+    parser.add_argument(
+        "--comparison-outcome-reason",
+        default="",
+        help="Short reason stored on comparison outcome feedback records.",
+    )
+    parser.add_argument(
+        "--comparison-outcome-tag",
+        action="append",
+        default=[],
+        help="Optional tag stored on comparison outcome feedback records. Repeat for multiple tags.",
     )
 
 
@@ -1156,6 +1196,7 @@ def _write_json_with_comparison_outcome_capture(
     output_path: Path | None,
     capture_args: argparse.Namespace,
     can_capture: bool = True,
+    capture_source: str = "furyoku.cli.compare-run",
 ) -> None:
     outcome_log = getattr(capture_args, "capture_comparison_outcomes", None)
     if not outcome_log:
@@ -1174,7 +1215,7 @@ def _write_json_with_comparison_outcome_capture(
             failure_score=getattr(capture_args, "comparison_failure_score", None),
             reason=getattr(capture_args, "comparison_outcome_reason", ""),
             tags=getattr(capture_args, "comparison_outcome_tag", ()),
-            metadata={"captureSource": "furyoku.cli.compare-run"},
+            metadata={"captureSource": capture_source},
         )
         payload["comparisonOutcomeCapture"] = {
             "captured": True,
