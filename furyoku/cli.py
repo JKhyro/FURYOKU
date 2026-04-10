@@ -108,18 +108,26 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "character-select":
         profile = load_character_profile(args.character_profile)
-        selection = select_character_profile_models(models, profile, allow_reuse=not args.no_reuse)
+        readiness = _readiness_from_args(args, models)
+        selection = select_character_profile_models(
+            models,
+            profile,
+            allow_reuse=not args.no_reuse,
+            readiness=readiness,
+        )
         _write_json(_character_profile_selection_to_dict(selection), output_path=args.output)
         return 0
 
     if args.command == "character-run":
         profile = load_character_profile(args.character_profile)
+        readiness = _readiness_from_args(args, models)
         result = execute_character_role(
             models,
             profile,
             ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
             role_id=args.role_id,
             allow_reuse=not args.no_reuse,
+            readiness=readiness,
         )
         _write_json(_character_role_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
@@ -223,6 +231,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Require each CHARACTER role to use a distinct registered model.",
     )
     character_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON CHARACTER envelope.")
+    _add_health_decision_args(character_parser, "Run provider readiness checks before assigning CHARACTER roles.")
     character_run_parser = subparsers.add_parser(
         "character-run",
         help="Select CHARACTER role assignments and execute one role.",
@@ -246,7 +255,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Require each CHARACTER role to use a distinct registered model.",
     )
     character_run_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON CHARACTER execution report.")
+    _add_health_decision_args(character_run_parser, "Run provider readiness checks before assigning and executing a CHARACTER role.")
     return parser
+
+
+def _add_health_decision_args(parser: argparse.ArgumentParser, help_text: str) -> None:
+    parser.add_argument("--check-health", action="store_true", help=help_text)
+    parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
+    parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
+    parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
 
 
 def _add_common_task_args(parser: argparse.ArgumentParser) -> None:

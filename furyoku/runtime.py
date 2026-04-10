@@ -150,11 +150,17 @@ def execute_character_role(
     *,
     role_id: str | None = None,
     allow_reuse: bool = True,
+    readiness: ReadinessEvidenceInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> CharacterRoleExecutionResult:
     """Select all CHARACTER role assignments, then execute one role."""
 
-    character_selection = select_character_profile_models(models, profile, allow_reuse=allow_reuse)
+    character_selection = select_character_profile_models(
+        models,
+        profile,
+        allow_reuse=allow_reuse,
+        readiness=readiness,
+    )
     resolved_role_id = role_id or character_selection.primary_role
     if resolved_role_id not in character_selection.roles:
         available_roles = ", ".join(character_selection.roles)
