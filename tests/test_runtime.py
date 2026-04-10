@@ -6,6 +6,7 @@ from furyoku import (
     ModelDecisionError,
     ModelEndpoint,
     ProviderExecutionRequest,
+    ProviderHealthCheckResult,
     RouterError,
     SubprocessProviderAdapter,
     TaskProfile,
@@ -95,6 +96,60 @@ class RuntimeTests(unittest.TestCase):
         self.assertIsNotNone(result.report)
         self.assertIn("local-chat", result.report.feedback_adjustments)
         self.assertEqual(result.execution.response_text, "local-chat:hello")
+
+    def test_route_and_execute_uses_readiness_informed_selection(self):
+        local = ModelEndpoint(
+            model_id="local-fallback",
+            provider="local",
+            privacy_level="local",
+            context_window_tokens=4096,
+            average_latency_ms=20000,
+            invocation=("local-fallback",),
+            capabilities={"conversation": 0.9},
+        )
+        cli = ModelEndpoint(
+            model_id="cli-primary",
+            provider="cli",
+            privacy_level="remote",
+            context_window_tokens=128000,
+            average_latency_ms=10,
+            invocation=("missing-cli",),
+            capabilities={"conversation": 1.0},
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = route_and_execute(
+            [local, cli],
+            TaskProfile(task_id="readiness-chat", required_capabilities={"conversation": 0.8}),
+            "hello",
+            readiness=[
+                ProviderHealthCheckResult(
+                    model_id="cli-primary",
+                    provider="cli",
+                    status="missing-command",
+                    ready=False,
+                    reason="command 'missing-cli' was not found",
+                    command="missing-cli",
+                ),
+                ProviderHealthCheckResult(
+                    model_id="local-fallback",
+                    provider="local",
+                    status="ready",
+                    ready=True,
+                    reason="command is available",
+                    command="local-fallback",
+                ),
+            ],
+            adapters={"local": SubprocessProviderAdapter(runner)},
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "local-fallback")
+        self.assertIsNotNone(result.report)
+        self.assertIn("cli-primary", result.report.situations["readiness-chat"].blockers)
+        self.assertEqual(result.execution.response_text, "local-fallback:hello")
 
     def test_route_and_execute_preserves_execution_failure_observability(self):
         def runner(invocation, prompt, timeout):

@@ -97,6 +97,7 @@ def route_and_execute(
     task: TaskProfile,
     request: ProviderExecutionRequest | str,
     *,
+    readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
@@ -104,10 +105,16 @@ def route_and_execute(
     """Select the best eligible model for a task, then execute it."""
 
     report = None
-    if feedback is None:
+    if feedback is None and readiness is None:
         selection = select_model(models, task)
     else:
-        report = evaluate_model_decisions(models, [task], feedback=feedback, feedback_policy=feedback_policy)
+        report = evaluate_model_decisions(
+            models,
+            [task],
+            readiness=readiness,
+            feedback=feedback,
+            feedback_policy=feedback_policy,
+        )
         selection = report.selected_for(task.task_id)
         if selection is None:
             decision = report.situations[task.task_id]

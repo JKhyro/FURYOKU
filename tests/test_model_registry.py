@@ -1,3 +1,5 @@
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -81,6 +83,27 @@ class ModelRegistryTests(unittest.TestCase):
         self.assertEqual(models[0].metadata["apiModel"], "remote-model")
         self.assertEqual(models[0].metadata["apiFormat"], "openai-chat")
         self.assertEqual(models[0].metadata["owner"], "test")
+
+    def test_load_registry_accepts_utf8_bom_file(self):
+        payload = {
+            "schemaVersion": 1,
+            "models": [
+                {
+                    "modelId": "local-ready",
+                    "provider": "local",
+                    "contextWindowTokens": 4096,
+                    "averageLatencyMs": 20,
+                    "capabilities": {"conversation": 0.9},
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "registry.json"
+            path.write_text(json.dumps(payload), encoding="utf-8-sig")
+            models = load_model_registry(path)
+
+        self.assertEqual(models[0].model_id, "local-ready")
 
     def test_duplicate_model_ids_are_rejected(self):
         payload = {

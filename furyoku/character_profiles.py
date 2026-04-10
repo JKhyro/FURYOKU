@@ -150,7 +150,7 @@ def build_character_orchestration_envelope(
 
 def load_character_profile(path: str | Path) -> CharacterProfile:
     profile_path = Path(path)
-    with profile_path.open("r", encoding="utf-8") as handle:
+    with profile_path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
     return parse_character_profile(payload, source=str(profile_path))
 

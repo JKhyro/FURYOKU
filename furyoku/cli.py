@@ -57,9 +57,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "select":
         task = _task_from_args(args, parser)
+        readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
-        selection, report = _select_with_optional_feedback(models, task, feedback, feedback_policy=feedback_policy)
-        _write_json(_single_selection_to_dict(selection, report=report))
+        selection, report = _select_with_optional_feedback(
+            models,
+            task,
+            feedback,
+            feedback_policy=feedback_policy,
+            readiness=readiness,
+        )
+        _write_json(_single_selection_to_dict(selection, report=report, readiness=readiness))
         return 0
 
     if args.command == "run":
@@ -81,15 +88,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0 if result.ok else 2
 
         task = _task_from_args(args, parser)
+        readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
         result = route_and_execute(
             models,
             task,
             ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
+            readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
         )
-        _write_json(_routed_result_to_dict(result), output_path=args.output)
+        _write_json(_routed_result_to_dict(result, readiness=readiness), output_path=args.output)
         return 0 if result.ok else 2
 
     if args.command == "health":
@@ -157,6 +166,7 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     select_parser = subparsers.add_parser("select", help="Select the best eligible model for a task.")
     _add_common_task_args(select_parser)
+    _add_health_decision_args(select_parser, "Run provider readiness checks before selecting a model.")
     select_parser.add_argument(
         "--feedback-log",
         type=Path,
@@ -180,7 +190,7 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--check-health",
         action="store_true",
-        help="Run provider readiness checks before decision-suite execution.",
+        help="Run provider readiness checks before direct or decision-suite execution.",
     )
     run_parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
     run_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
@@ -399,10 +409,16 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
     return capabilities
 
 
-def _select_with_optional_feedback(models, task: TaskProfile, feedback, *, feedback_policy=None):
-    if feedback is None:
+def _select_with_optional_feedback(models, task: TaskProfile, feedback, *, feedback_policy=None, readiness=None):
+    if feedback is None and readiness is None:
         return select_model(models, task), None
-    report = evaluate_model_decisions(models, [task], feedback=feedback, feedback_policy=feedback_policy)
+    report = evaluate_model_decisions(
+        models,
+        [task],
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+    )
     selection = report.selected_for(task.task_id)
     if selection is None:
         decision = report.situations[task.task_id]
@@ -451,23 +467,30 @@ def _score_to_dict(selection: ModelScore) -> dict:
     }
 
 
-def _single_selection_to_dict(selection: ModelScore, *, report: ModelDecisionReport | None = None) -> dict:
+def _single_selection_to_dict(
+    selection: ModelScore,
+    *,
+    report: ModelDecisionReport | None = None,
+    readiness=None,
+) -> dict:
     payload = _score_to_dict(selection)
     if report is not None:
-        payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(report)
-        _add_feedback_policy_metadata(payload, report)
+        _add_optional_feedback_metadata(payload, report)
+    if readiness is not None:
+        payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
 
 
-def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
+def _routed_result_to_dict(result: RoutedExecutionResult, *, readiness=None) -> dict:
     payload = {
         "ok": result.ok,
         "selection": _score_to_dict(result.selection),
         "execution": _execution_to_dict(result.execution),
     }
     if result.report is not None:
-        payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(result.report)
-        _add_feedback_policy_metadata(payload, result.report)
+        _add_optional_feedback_metadata(payload, result.report)
+    if readiness is not None:
+        payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
 
 
@@ -559,6 +582,12 @@ def _feedback_adjustments_to_dict(report: ModelDecisionReport) -> dict:
         model_id: summary.to_dict()
         for model_id, summary in report.feedback_adjustments.items()
     }
+
+
+def _add_optional_feedback_metadata(payload: dict, report: ModelDecisionReport) -> None:
+    if report.feedback_adjustments or report.feedback_policy_metadata is not None:
+        payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(report)
+        _add_feedback_policy_metadata(payload, report)
 
 
 def _add_feedback_policy_metadata(payload: dict, report: ModelDecisionReport) -> None:

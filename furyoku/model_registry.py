@@ -13,7 +13,7 @@ class RegistryError(ValueError):
 
 def load_model_registry(path: str | Path) -> list[ModelEndpoint]:
     registry_path = Path(path)
-    with registry_path.open("r", encoding="utf-8") as handle:
+    with registry_path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
     return parse_model_registry(payload, source=str(registry_path))
 

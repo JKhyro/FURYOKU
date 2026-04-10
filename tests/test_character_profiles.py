@@ -1,3 +1,5 @@
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -102,6 +104,29 @@ class CharacterProfileTests(unittest.TestCase):
         self.assertTrue(profile.role_specs[0].primary)
         self.assertTrue(all(role.max_subagents == 12 for role in profile.role_specs))
         self.assertEqual([role.role_id for role in profile.role_specs][1], "memory")
+
+    def test_load_character_profile_accepts_utf8_bom_file(self):
+        payload = {
+            "schemaVersion": 1,
+            "characterId": "bom-character",
+            "roles": [
+                {
+                    "roleId": "primary",
+                    "primary": True,
+                    "task": {
+                        "taskId": "bom-character.primary",
+                        "requiredCapabilities": {"conversation": 0.8},
+                    },
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "character.json"
+            path.write_text(json.dumps(payload), encoding="utf-8-sig")
+            profile = load_character_profile(path)
+
+        self.assertEqual(profile.character_id, "bom-character")
 
     def test_select_character_profile_models_handles_single_role_profile(self):
         profile = load_character_profile(TERTIARY_PROFILE)
