@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import unittest
 
 from furyoku import (
@@ -70,6 +71,26 @@ class ProviderAdapterTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(result.model_id, "local-echo")
         self.assertEqual(calls, [((("echo-model", "--json")), "hello", 3.0)])
+
+    def test_subprocess_adapter_decodes_utf8_model_output(self):
+        endpoint = ModelEndpoint(
+            model_id="utf8-local",
+            provider="local",
+            capabilities={"conversation": 1.0},
+            context_window_tokens=4096,
+            average_latency_ms=10,
+            invocation=(
+                sys.executable,
+                "-c",
+                "import sys; sys.stdout.buffer.write('unicode model response: \\U0001f642'.encode('utf-8'))",
+            ),
+        )
+
+        result = SubprocessProviderAdapter().execute(endpoint, ProviderExecutionRequest("hello"))
+
+        self.assertTrue(result.ok)
+        self.assertIn("unicode model response", result.response_text)
+        self.assertIn("\U0001f642", result.response_text)
 
     def test_subprocess_adapter_nonzero_returns_error_result(self):
         def runner(invocation, prompt, timeout):

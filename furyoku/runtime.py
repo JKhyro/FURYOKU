@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Iterable, Mapping
 
 from .character_profiles import CharacterProfile, CharacterProfileSelection, select_character_profile_models
+from .model_decisions import (
+    DecisionSuite,
+    ModelDecisionError,
+    ModelDecisionReport,
+    ReadinessEvidenceInput,
+    SituationDecision,
+    evaluate_model_decisions,
+)
 from .model_router import ModelEndpoint, ModelScore, RouterError, TaskProfile, select_model
 from .provider_adapters import (
     ProviderAdapter,
@@ -59,6 +67,29 @@ class CharacterRoleExecutionResult:
         return self.selection.model.provider
 
 
+@dataclass(frozen=True)
+class DecisionSituationExecutionResult:
+    """A calibrated decision-suite situation executed through a selected endpoint."""
+
+    report: ModelDecisionReport
+    situation_id: str
+    decision: SituationDecision
+    selection: ModelScore | None
+    execution: ProviderExecutionResult | None
+
+    @property
+    def ok(self) -> bool:
+        return self.selection is not None and self.selection.eligible and self.execution is not None and self.execution.ok
+
+    @property
+    def model_id(self) -> str | None:
+        return self.selection.model.model_id if self.selection else None
+
+    @property
+    def provider(self) -> str | None:
+        return self.selection.model.provider if self.selection else None
+
+
 def route_and_execute(
     models: list[ModelEndpoint],
     task: TaskProfile,
@@ -71,6 +102,45 @@ def route_and_execute(
     selection = select_model(models, task)
     execution = execute_selected_model(selection, request, adapters=adapters)
     return RoutedExecutionResult(selection=selection, execution=execution)
+
+
+def execute_decision_situation(
+    models: list[ModelEndpoint],
+    decision_input: DecisionSuite | Iterable[TaskProfile] | None,
+    situation_id: str,
+    request: ProviderExecutionRequest | str,
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> DecisionSituationExecutionResult:
+    """Run one calibrated decision situation using the same selection evidence as `decide`."""
+
+    report = evaluate_model_decisions(models, decision_input, readiness=readiness)
+    try:
+        decision = report.situations[situation_id]
+    except KeyError as exc:
+        available = ", ".join(report.situations)
+        raise ModelDecisionError(
+            f"Unknown decision situation '{situation_id}'. Available situations: {available}"
+        ) from exc
+
+    if decision.selected is None:
+        return DecisionSituationExecutionResult(
+            report=report,
+            situation_id=situation_id,
+            decision=decision,
+            selection=None,
+            execution=None,
+        )
+
+    execution = execute_selected_model(decision.selected, request, adapters=adapters)
+    return DecisionSituationExecutionResult(
+        report=report,
+        situation_id=situation_id,
+        decision=decision,
+        selection=decision.selected,
+        execution=execution,
+    )
 
 
 def execute_character_role(
