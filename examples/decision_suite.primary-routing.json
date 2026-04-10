@@ -6,6 +6,8 @@
     {
       "taskId": "decision.private-chat",
       "description": "Private conversational response that must stay on a local model.",
+      "weight": 4.0,
+      "minimumScore": 90.0,
       "privacyRequirement": "local_only",
       "requiredCapabilities": {
         "conversation": 0.8,
@@ -15,6 +17,8 @@
     {
       "taskId": "decision.tool-heavy-coding",
       "description": "Tool-capable coding and reasoning task.",
+      "weight": 3.0,
+      "minimumScore": 95.0,
       "requireTools": true,
       "requiredCapabilities": {
         "coding": 0.9,
@@ -25,6 +29,8 @@
     {
       "taskId": "decision.long-context-memory",
       "description": "Long-context memory retrieval and summarization task.",
+      "weight": 3.0,
+      "minimumScore": 90.0,
       "minContextTokens": 64000,
       "requireJson": true,
       "requiredCapabilities": {
@@ -35,6 +41,8 @@
     {
       "taskId": "decision.low-latency-local",
       "description": "Low-latency local response lane.",
+      "weight": 2.0,
+      "minimumScore": 85.0,
       "privacyRequirement": "prefer_local",
       "requiredCapabilities": {
         "conversation": 0.75,
@@ -44,6 +52,8 @@
     {
       "taskId": "decision.structured-json",
       "description": "Structured response task requiring JSON output.",
+      "weight": 2.0,
+      "minimumScore": 85.0,
       "requireJson": true,
       "requiredCapabilities": {
         "instruction_following": 0.8
@@ -52,6 +62,8 @@
     {
       "taskId": "decision.cost-sensitive-remote",
       "description": "Remote-allowed task with tight cost controls.",
+      "weight": 1.0,
+      "minimumScore": 80.0,
       "maxInputCostPer1k": 0.01,
       "maxOutputCostPer1k": 0.02,
       "requiredCapabilities": {

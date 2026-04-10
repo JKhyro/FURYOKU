@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -15,12 +15,55 @@ class ModelDecisionError(ValueError):
 
 
 @dataclass(frozen=True)
+class DecisionSituationPolicy:
+    """Calibration policy for one decision-suite situation."""
+
+    task_id: str
+    weight: float = 1.0
+    minimum_score: float | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "taskId": self.task_id,
+            "weight": self.weight,
+            "minimumScore": self.minimum_score,
+        }
+
+
+@dataclass(frozen=True)
 class DecisionSuite:
     """Reusable set of situations for comparing local, CLI, and API models."""
 
     suite_id: str
     situations: tuple[TaskProfile, ...]
     description: str = ""
+    policies: Mapping[str, DecisionSituationPolicy] = field(default_factory=dict)
+
+    def policy_for(self, task_id: str) -> DecisionSituationPolicy:
+        return self.policies.get(task_id, DecisionSituationPolicy(task_id=task_id))
+
+    def weight_for(self, task_id: str) -> float:
+        return self.policy_for(task_id).weight
+
+    def minimum_score_for(self, task_id: str) -> float | None:
+        return self.policy_for(task_id).minimum_score
+
+    def to_dict(self) -> dict:
+        return {
+            "suiteId": self.suite_id,
+            "description": self.description,
+            "situations": [
+                {
+                    "taskId": task.task_id,
+                    "weight": self.weight_for(task.task_id),
+                    "minimumScore": self.minimum_score_for(task.task_id),
+                }
+                for task in self.situations
+            ],
+        }
+
+
+DecisionTaskInput = Iterable[TaskProfile] | DecisionSuite | None
 
 
 @dataclass(frozen=True)
@@ -33,6 +76,9 @@ class ModelDecisionSummary:
     eligible_count: int
     average_score: float
     blocked_count: int
+    selected_weight: float = 0.0
+    eligible_weight: float = 0.0
+    weighted_average_score: float | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -42,6 +88,9 @@ class ModelDecisionSummary:
             "eligibleCount": self.eligible_count,
             "averageScore": self.average_score,
             "blockedCount": self.blocked_count,
+            "selectedWeight": self.selected_weight,
+            "eligibleWeight": self.eligible_weight,
+            "weightedAverageScore": self.weighted_average_score,
         }
 
 
@@ -54,6 +103,8 @@ class SituationDecision:
     selected: ModelScore | None
     blockers: Mapping[str, tuple[str, ...]]
     rationale: tuple[str, ...]
+    weight: float = 1.0
+    minimum_score: float | None = None
 
     @property
     def eligible(self) -> bool:
@@ -70,6 +121,8 @@ class SituationDecision:
             "eligible": self.eligible,
             "selectedModelId": self.selected.model.model_id if self.selected else None,
             "selectedProvider": self.selected.model.provider if self.selected else None,
+            "weight": self.weight,
+            "minimumScore": self.minimum_score,
             "ranked": [_score_to_dict(score) for score in self.ranked],
             "blockers": {model_id: list(blockers) for model_id, blockers in self.blockers.items()},
             "rationale": list(self.rationale),
@@ -127,6 +180,10 @@ class ModelCoverage:
     selected_situations: tuple[str, ...]
     blocked_situations: Mapping[str, tuple[str, ...]]
     average_eligible_score: float | None
+    weighted_average_score: float | None
+    eligible_weight: float
+    selected_weight: float
+    blocked_weight: float
     rationale: tuple[str, ...]
 
     def to_dict(self) -> dict:
@@ -139,6 +196,10 @@ class ModelCoverage:
                 task_id: list(blockers) for task_id, blockers in self.blocked_situations.items()
             },
             "averageEligibleScore": self.average_eligible_score,
+            "weightedAverageScore": self.weighted_average_score,
+            "eligibleWeight": self.eligible_weight,
+            "selectedWeight": self.selected_weight,
+            "blockedWeight": self.blocked_weight,
             "rationale": list(self.rationale),
         }
 
@@ -152,6 +213,9 @@ class ProviderCoverage:
     eligible_situations: tuple[str, ...]
     selected_situations: tuple[str, ...]
     blocked_situations: Mapping[str, tuple[str, ...]]
+    eligible_weight: float
+    selected_weight: float
+    blocked_weight: float
     rationale: tuple[str, ...]
 
     def to_dict(self) -> dict:
@@ -163,6 +227,9 @@ class ProviderCoverage:
             "blockedSituations": {
                 task_id: list(blockers) for task_id, blockers in self.blocked_situations.items()
             },
+            "eligibleWeight": self.eligible_weight,
+            "selectedWeight": self.selected_weight,
+            "blockedWeight": self.blocked_weight,
             "rationale": list(self.rationale),
         }
 
@@ -173,6 +240,9 @@ class ModelDecisionAggregate:
 
     model_count: int
     situation_count: int
+    total_weight: float
+    selected_weight: float
+    blocked_weight: float
     selected_model_ids: tuple[str, ...]
     selected_providers: tuple[str, ...]
     model_coverage: Mapping[str, ModelCoverage]
@@ -184,6 +254,9 @@ class ModelDecisionAggregate:
         return {
             "modelCount": self.model_count,
             "situationCount": self.situation_count,
+            "totalWeight": self.total_weight,
+            "selectedWeight": self.selected_weight,
+            "blockedWeight": self.blocked_weight,
             "selectedModelIds": list(self.selected_model_ids),
             "selectedProviders": list(self.selected_providers),
             "modelCoverage": {
@@ -226,11 +299,23 @@ class ModelDecisionReport:
                 eligible_count=len(coverage.eligible_situations),
                 average_score=coverage.average_eligible_score or 0.0,
                 blocked_count=len(coverage.blocked_situations),
+                selected_weight=coverage.selected_weight,
+                eligible_weight=coverage.eligible_weight,
+                weighted_average_score=coverage.weighted_average_score,
             )
             for coverage in self.aggregate.model_coverage.values()
         ]
         return tuple(
-            sorted(summaries, key=lambda item: (item.selected_count, item.average_score, item.model_id), reverse=True)
+            sorted(
+                summaries,
+                key=lambda item: (
+                    item.selected_weight,
+                    item.selected_count,
+                    item.weighted_average_score or item.average_score,
+                    item.model_id,
+                ),
+                reverse=True,
+            )
         )
 
     @property
@@ -328,23 +413,80 @@ def parse_decision_suite(payload: Mapping[str, Any], *, source: str = "<memory>"
     if not isinstance(situations_payload, list) or not situations_payload:
         raise ModelDecisionError(f"{source}: situations must be a non-empty array")
 
-    situations = tuple(
-        parse_task_profile({"schemaVersion": 1, **raw}, source=f"{source}:situations[{index}]")
-        for index, raw in enumerate(situations_payload)
-    )
+    situations: list[TaskProfile] = []
+    policies: dict[str, DecisionSituationPolicy] = {}
+    for index, raw in enumerate(situations_payload):
+        if not isinstance(raw, Mapping):
+            raise ModelDecisionError(f"{source}:situations[{index}] must be an object")
+        task = parse_task_profile({"schemaVersion": 1, **raw}, source=f"{source}:situations[{index}]")
+        policy = _parse_situation_policy(raw, task.task_id, source=f"{source}:situations[{index}]")
+        situations.append(task)
+        policies[task.task_id] = policy
+
     _validate_unique_tasks(situations, source=source)
     return DecisionSuite(
         suite_id=suite_id,
-        situations=situations,
+        situations=tuple(situations),
         description=str(payload.get("description", "") or ""),
+        policies=policies,
     )
+
+
+def _parse_situation_policy(
+    payload: Mapping[str, Any],
+    task_id: str,
+    *,
+    source: str,
+) -> DecisionSituationPolicy:
+    return DecisionSituationPolicy(
+        task_id=task_id,
+        weight=_parse_positive_float(
+            payload.get("weight", payload.get("decisionWeight", 1.0)),
+            field_name="weight",
+            source=source,
+        ),
+        minimum_score=_parse_optional_non_negative_float(
+            payload.get("minimumScore", payload.get("minimum_score")),
+            field_name="minimumScore",
+            source=source,
+        ),
+    )
+
+
+def _parse_positive_float(raw_value: Any, *, field_name: str, source: str) -> float:
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise ModelDecisionError(f"{source}: {field_name} must be numeric") from exc
+    if value <= 0.0:
+        raise ModelDecisionError(f"{source}: {field_name} must be greater than 0")
+    return round(value, 4)
+
+
+def _parse_optional_non_negative_float(
+    raw_value: Any,
+    *,
+    field_name: str,
+    source: str,
+) -> float | None:
+    if raw_value is None:
+        return None
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise ModelDecisionError(f"{source}: {field_name} must be numeric") from exc
+    if value < 0.0:
+        raise ModelDecisionError(f"{source}: {field_name} must be 0 or greater")
+    return round(value, 4)
 
 
 def evaluate_model_decisions(
     models: Iterable[ModelEndpoint],
-    tasks: Iterable[TaskProfile] | None = None,
+    tasks: DecisionTaskInput = None,
     *,
     readiness: ReadinessEvidenceInput | None = None,
+    situation_weights: Mapping[str, float] | None = None,
+    minimum_scores: Mapping[str, float] | None = None,
 ) -> ModelDecisionReport:
     """Evaluate registered endpoints across multiple task/situation profiles.
 
@@ -355,14 +497,26 @@ def evaluate_model_decisions(
     """
 
     model_list = list(models)
-    task_list = list(default_decision_scenarios() if tasks is None else tasks)
+    task_list, weights_by_task, minimum_scores_by_task = _resolve_decision_inputs(
+        tasks,
+        situation_weights=situation_weights,
+        minimum_scores=minimum_scores,
+    )
     _validate_inputs(model_list, task_list)
     readiness_by_model = _normalize_readiness_evidence(readiness)
     _validate_readiness_evidence(readiness_by_model, model_list)
 
     situation_decisions: dict[str, SituationDecision] = {}
     for task in task_list:
-        ranked = tuple(_rank_models_with_readiness(model_list, task, readiness_by_model))
+        minimum_score = minimum_scores_by_task.get(task.task_id)
+        ranked = tuple(
+            _rank_models_with_readiness(
+                model_list,
+                task,
+                readiness_by_model,
+                minimum_score=minimum_score,
+            )
+        )
         selected = next((score for score in ranked if score.eligible), None)
         blockers = {
             score.model.model_id: score.blockers
@@ -374,13 +528,94 @@ def evaluate_model_decisions(
             ranked=ranked,
             selected=selected,
             blockers=blockers,
-            rationale=_situation_rationale(task, ranked, selected),
+            rationale=_situation_rationale(
+                task,
+                ranked,
+                selected,
+                weight=weights_by_task.get(task.task_id, 1.0),
+                minimum_score=minimum_score,
+            ),
+            weight=weights_by_task.get(task.task_id, 1.0),
+            minimum_score=minimum_score,
         )
 
     return ModelDecisionReport(
         situations=situation_decisions,
         aggregate=_build_aggregate(model_list, situation_decisions),
     )
+
+
+def _resolve_decision_inputs(
+    tasks: DecisionTaskInput,
+    *,
+    situation_weights: Mapping[str, float] | None,
+    minimum_scores: Mapping[str, float] | None,
+) -> tuple[list[TaskProfile], dict[str, float], dict[str, float]]:
+    if isinstance(tasks, DecisionSuite):
+        task_list = list(tasks.situations)
+        weights_by_task = {
+            task.task_id: tasks.weight_for(task.task_id)
+            for task in task_list
+        }
+        minimum_scores_by_task = {
+            task.task_id: minimum_score
+            for task in task_list
+            for minimum_score in [tasks.minimum_score_for(task.task_id)]
+            if minimum_score is not None
+        }
+    else:
+        task_list = list(default_decision_scenarios() if tasks is None else tasks)
+        weights_by_task = {task.task_id: 1.0 for task in task_list}
+        minimum_scores_by_task = {}
+
+    if situation_weights:
+        weights_by_task.update(
+            _normalize_policy_mapping(
+                situation_weights,
+                known_task_ids={task.task_id for task in task_list},
+                field_name="situation weight",
+                parser=_parse_external_positive_float,
+            )
+        )
+    if minimum_scores:
+        minimum_scores_by_task.update(
+            _normalize_policy_mapping(
+                minimum_scores,
+                known_task_ids={task.task_id for task in task_list},
+                field_name="minimum score",
+                parser=_parse_external_non_negative_float,
+            )
+        )
+    return task_list, weights_by_task, minimum_scores_by_task
+
+
+def _normalize_policy_mapping(
+    values: Mapping[str, float],
+    *,
+    known_task_ids: set[str],
+    field_name: str,
+    parser,
+) -> dict[str, float]:
+    normalized: dict[str, float] = {}
+    unknown_task_ids = sorted(set(values) - known_task_ids)
+    if unknown_task_ids:
+        raise ModelDecisionError(
+            f"{field_name.title()} references unknown task ids: {', '.join(unknown_task_ids)}"
+        )
+    for task_id, raw_value in values.items():
+        normalized[str(task_id)] = parser(raw_value, field_name=field_name)
+    return normalized
+
+
+def _parse_external_positive_float(raw_value: Any, *, field_name: str) -> float:
+    return _parse_positive_float(raw_value, field_name=field_name, source="<policy>")
+
+
+def _parse_external_non_negative_float(raw_value: Any, *, field_name: str) -> float:
+    parsed = _parse_optional_non_negative_float(raw_value, field_name=field_name, source="<policy>")
+    if parsed is None:
+        raise ModelDecisionError(f"<policy>: {field_name} must be numeric")
+    return parsed
 
 
 def _validate_inputs(models: list[ModelEndpoint], tasks: list[TaskProfile]) -> None:
@@ -523,9 +758,14 @@ def _rank_models_with_readiness(
     models: list[ModelEndpoint],
     task: TaskProfile,
     readiness_by_model: Mapping[str, ModelReadinessEvidence],
+    *,
+    minimum_score: float | None,
 ) -> list[ModelScore]:
     ranked = [
-        _apply_readiness_evidence(score, readiness_by_model.get(score.model.model_id))
+        _apply_minimum_score(
+            _apply_readiness_evidence(score, readiness_by_model.get(score.model.model_id)),
+            minimum_score,
+        )
         for score in rank_models(models, task)
     ]
     return sorted(ranked, key=lambda item: (item.eligible, item.score, item.model.model_id), reverse=True)
@@ -564,6 +804,27 @@ def _apply_readiness_evidence(
     )
 
 
+def _apply_minimum_score(score: ModelScore, minimum_score: float | None) -> ModelScore:
+    if minimum_score is None or not score.eligible or score.score >= minimum_score:
+        return score
+
+    return ModelScore(
+        model=score.model,
+        task=score.task,
+        score=score.score,
+        eligible=False,
+        reasons=score.reasons,
+        blockers=tuple(
+            _unique_in_order(
+                [
+                    *score.blockers,
+                    f"score {score.score:.2f} is below minimum score {minimum_score:.2f}",
+                ]
+            )
+        ),
+    )
+
+
 def _readiness_message(evidence: ModelReadinessEvidence) -> str:
     status = evidence.status or ("ready" if evidence.ready else "not-ready")
     message = f"provider readiness {status}"
@@ -578,11 +839,17 @@ def _situation_rationale(
     task: TaskProfile,
     ranked: tuple[ModelScore, ...],
     selected: ModelScore | None,
+    *,
+    weight: float,
+    minimum_score: float | None,
 ) -> tuple[str, ...]:
     eligible_count = sum(1 for score in ranked if score.eligible)
     rationale = [
         f"ranked {len(ranked)} models; {eligible_count} eligible for {task.task_id}",
+        f"situation weight {weight:.2f}",
     ]
+    if minimum_score is not None:
+        rationale.append(f"minimum score threshold {minimum_score:.2f}")
     if selected is None:
         rationale.append(f"no eligible model satisfied all blockers for {task.task_id}")
     else:
@@ -614,6 +881,11 @@ def _build_aggregate(
         for decision in situations.values()
         if decision.selected is not None
     )
+    total_weight = _round_weight(sum(decision.weight for decision in situations.values()))
+    selected_weight = _round_weight(
+        sum(decision.weight for decision in situations.values() if decision.selected is not None)
+    )
+    blocked_weight = _round_weight(total_weight - selected_weight)
 
     model_coverage = {
         model.model_id: _model_coverage(model, situations)
@@ -627,6 +899,7 @@ def _build_aggregate(
     rationale = [
         f"evaluated {len(models)} models across {len(situations)} situations",
         f"selected {len(selected_model_ids)} distinct models across {len(selected_providers)} providers",
+        f"covered decision weight {selected_weight:.2f} of {total_weight:.2f}",
     ]
     if uncovered_situations:
         rationale.append(f"uncovered situations: {', '.join(uncovered_situations)}")
@@ -636,6 +909,9 @@ def _build_aggregate(
     return ModelDecisionAggregate(
         model_count=len(models),
         situation_count=len(situations),
+        total_weight=total_weight,
+        selected_weight=selected_weight,
+        blocked_weight=blocked_weight,
         selected_model_ids=selected_model_ids,
         selected_providers=selected_providers,
         model_coverage=model_coverage,
@@ -653,6 +929,10 @@ def _model_coverage(
     selected_situations: list[str] = []
     blocked_situations: dict[str, tuple[str, ...]] = {}
     eligible_scores: list[float] = []
+    weighted_scores: list[tuple[float, float]] = []
+    eligible_weight = 0.0
+    selected_weight = 0.0
+    blocked_weight = 0.0
 
     for task_id, decision in situations.items():
         score = _score_for_model(decision, model.model_id)
@@ -661,18 +941,28 @@ def _model_coverage(
         if score.eligible:
             eligible_situations.append(task_id)
             eligible_scores.append(score.score)
+            eligible_weight += decision.weight
+            weighted_scores.append((score.score, decision.weight))
         elif score.blockers:
             blocked_situations[task_id] = score.blockers
+            blocked_weight += decision.weight
         if decision.selected and decision.selected.model.model_id == model.model_id:
             selected_situations.append(task_id)
+            selected_weight += decision.weight
 
     average_eligible_score = None
     if eligible_scores:
         average_eligible_score = round(sum(eligible_scores) / len(eligible_scores), 4)
+    weighted_average_score = None
+    if weighted_scores:
+        score_sum = sum(score * weight for score, weight in weighted_scores)
+        weight_sum = sum(weight for _, weight in weighted_scores)
+        weighted_average_score = round(score_sum / weight_sum, 4)
 
     rationale = [
         f"eligible for {len(eligible_situations)} of {len(situations)} situations",
         f"selected for {len(selected_situations)} situations",
+        f"selected decision weight {_round_weight(selected_weight):.2f}",
     ]
     if blocked_situations:
         rationale.append(f"blocked in {len(blocked_situations)} situations")
@@ -683,6 +973,10 @@ def _model_coverage(
         selected_situations=tuple(selected_situations),
         blocked_situations=blocked_situations,
         average_eligible_score=average_eligible_score,
+        weighted_average_score=weighted_average_score,
+        eligible_weight=_round_weight(eligible_weight),
+        selected_weight=_round_weight(selected_weight),
+        blocked_weight=_round_weight(blocked_weight),
         rationale=tuple(rationale),
     )
 
@@ -711,10 +1005,20 @@ def _provider_coverage(
             if decision.selected is not None and decision.selected.model.provider == provider
         )
         blocked_situations = _provider_blockers(provider, situations)
+        eligible_weight = _round_weight(
+            sum(situations[task_id].weight for task_id in eligible_situations)
+        )
+        selected_weight = _round_weight(
+            sum(situations[task_id].weight for task_id in selected_situations)
+        )
+        blocked_weight = _round_weight(
+            sum(situations[task_id].weight for task_id in blocked_situations)
+        )
         rationale = [
             f"{len(model_ids)} registered models",
             f"eligible for {len(eligible_situations)} situations",
             f"selected for {len(selected_situations)} situations",
+            f"selected decision weight {selected_weight:.2f}",
         ]
         if blocked_situations:
             rationale.append(f"provider has blockers in {len(blocked_situations)} situations")
@@ -725,6 +1029,9 @@ def _provider_coverage(
             eligible_situations=eligible_situations,
             selected_situations=selected_situations,
             blocked_situations=blocked_situations,
+            eligible_weight=eligible_weight,
+            selected_weight=selected_weight,
+            blocked_weight=blocked_weight,
             rationale=tuple(rationale),
         )
     return coverage
@@ -773,6 +1080,10 @@ def _unique_in_order(values: Iterable[str]) -> tuple[str, ...]:
             ordered.append(value)
             seen.add(value)
     return tuple(ordered)
+
+
+def _round_weight(value: float) -> float:
+    return round(float(value), 4)
 
 
 def _score_to_dict(score: ModelScore) -> dict:
