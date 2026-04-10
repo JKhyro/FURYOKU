@@ -203,7 +203,7 @@ class ModelOutcomeFeedbackSummary:
     manual_override_count: int
     average_score: float | None
     adjustment: float
-    weighted_record_count: float
+    weighted_record_count: float = 0.0
     rationale: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
