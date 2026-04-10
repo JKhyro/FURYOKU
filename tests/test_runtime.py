@@ -11,6 +11,7 @@ from furyoku import (
     RoutingScorePolicy,
     SubprocessProviderAdapter,
     TaskProfile,
+    compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
     execute_decision_situation,
@@ -534,6 +535,97 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.executed_count, 2)
         self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
         self.assertEqual(result.execution_attempts[1].selection.model.model_id, "cli-coder")
+
+    def test_compare_decision_suite_executions_runs_all_suite_situations(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "batch-suite",
+                "situations": [
+                    {
+                        "taskId": "fallback-chat",
+                        "privacyRequirement": "prefer_local",
+                        "requiredCapabilities": {"conversation": 0.8},
+                    },
+                    {
+                        "taskId": "tool-heavy-coding",
+                        "requireTools": True,
+                        "requiredCapabilities": {"coding": 0.9},
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            if invocation[0] == "local-chat":
+                return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="local failed")
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = compare_decision_suite_executions(
+            [local_endpoint(), cli_endpoint()],
+            suite,
+            {
+                "fallback-chat": "hello",
+                "tool-heavy-coding": ProviderExecutionRequest("write code", timeout_seconds=2),
+            },
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.suite_id, "batch-suite")
+        self.assertEqual(len(result.situation_results), 2)
+        self.assertEqual(result.successful_situation_count, 2)
+        self.assertEqual(result.blocked_situation_count, 0)
+        self.assertEqual(result.executed_candidate_count, 3)
+        self.assertEqual(result.successful_execution_count, 2)
+        self.assertEqual(result.failed_execution_count, 1)
+        self.assertEqual(result.situation_results[0].execution_attempts[0].selection.model.model_id, "local-chat")
+        self.assertEqual(result.situation_results[1].execution_attempts[0].selection.model.model_id, "cli-coder")
+
+    def test_compare_decision_suite_executions_surfaces_blocked_situations(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "blocked-batch-suite",
+                "situations": [
+                    {
+                        "taskId": "fallback-chat",
+                        "privacyRequirement": "prefer_local",
+                        "requiredCapabilities": {"conversation": 0.8},
+                    },
+                    {
+                        "taskId": "too-strict",
+                        "minimumScore": 120.0,
+                        "requiredCapabilities": {"conversation": 0.5},
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = compare_decision_suite_executions(
+            [local_endpoint(), cli_endpoint()],
+            suite,
+            {
+                "fallback-chat": "hello",
+                "too-strict": "blocked prompt",
+            },
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.blocked_situation_count, 1)
+        self.assertEqual(result.successful_situation_count, 1)
+        self.assertEqual(result.report.blocked_tasks, ("too-strict",))
+        self.assertEqual(result.situation_results[1].executed_count, 0)
 
     def test_execute_decision_situation_rejects_unknown_situation(self):
         suite = parse_decision_suite(
