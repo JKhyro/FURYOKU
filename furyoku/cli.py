@@ -8,6 +8,7 @@ from typing import Sequence
 
 from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
+from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest
 from .runtime import RoutedExecutionResult, route_and_execute
 from .task_profiles import load_task_profile
@@ -17,14 +18,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     models = load_model_registry(args.registry)
-    task = _task_from_args(args, parser)
 
     if args.command == "select":
+        task = _task_from_args(args, parser)
         selection = select_model(models, task)
         _write_json(_score_to_dict(selection))
         return 0
 
     if args.command == "run":
+        task = _task_from_args(args, parser)
         result = route_and_execute(
             models,
             task,
@@ -32,6 +34,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         _write_json(_routed_result_to_dict(result))
         return 0 if result.ok else 2
+
+    if args.command == "health":
+        results = check_provider_health_many(
+            models,
+            ProviderHealthCheckRequest(
+                probe=args.probe,
+                probe_prompt=args.probe_prompt,
+                timeout_seconds=args.timeout_seconds,
+            ),
+        )
+        _write_json({"ok": all(result.ready for result in results), "providers": [_health_to_dict(result) for result in results]})
+        return 0 if all(result.ready for result in results) else 2
 
     parser.error(f"unsupported command {args.command}")
     return 2
@@ -45,6 +59,11 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_common_task_args(run_parser)
     run_parser.add_argument("--prompt", required=True, help="Prompt text passed to the selected model.")
     run_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
+    health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
+    health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
+    health_parser.add_argument("--probe-prompt", default="", help="Prompt text used when --probe is set.")
+    health_parser.add_argument("--timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
     return parser
 
 
@@ -166,6 +185,28 @@ def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
             "timedOut": execution.timed_out,
         },
     }
+
+
+def _health_to_dict(result: ProviderHealthCheckResult) -> dict:
+    payload = {
+        "modelId": result.model_id,
+        "provider": result.provider,
+        "status": result.status,
+        "ready": result.ready,
+        "reason": result.reason,
+        "command": result.command,
+        "resolvedCommand": result.resolved_command,
+    }
+    if result.execution is not None:
+        payload["execution"] = {
+            "status": result.execution.status,
+            "elapsedMs": result.execution.elapsed_ms,
+            "exitCode": result.execution.exit_code,
+            "stderr": result.execution.stderr,
+            "error": result.execution.error,
+            "timedOut": result.execution.timed_out,
+        }
+    return payload
 
 
 def _write_json(payload: dict) -> None:
