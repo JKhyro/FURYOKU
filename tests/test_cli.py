@@ -185,6 +185,17 @@ def write_feedback_task_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_budget_latency_task_profile(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "taskId": "bounded-chat",
+        "requiredCapabilities": {"conversation": 0.8},
+        "maxLatencyMs": 20,
+        "maxTotalCostPer1k": 0.01,
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_feedback_log(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -458,6 +469,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["modelId"], "local-echo")
             self.assertEqual(payload["provider"], "local")
             self.assertTrue(payload["eligible"])
+            self.assertEqual(payload["averageLatencyMs"], 10)
+            self.assertEqual(payload["totalCostPer1k"], 0.006)
 
     def test_run_executes_selected_local_model(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1404,6 +1417,66 @@ class CliTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["modelId"], "local-echo")
+            self.assertEqual(payload["taskProfile"]["taskId"], "private-chat")
+
+    def test_select_output_surfaces_budget_and_latency_constraints(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "budget-task.json"
+            write_registry(registry_path)
+            write_budget_latency_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-echo")
+            self.assertEqual(payload["taskProfile"]["maxLatencyMs"], 20)
+            self.assertEqual(payload["taskProfile"]["maxTotalCostPer1k"], 0.01)
+
+    def test_decide_surfaces_budget_and_latency_constraint_blockers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "budget-task.json"
+            write_registry(registry_path)
+            write_budget_latency_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            decision = payload["decisions"][0]
+            remote_rank = next(
+                score for score in decision["rankedModels"] if score["modelId"] == "remote-coder"
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(decision["maxLatencyMs"], 20)
+            self.assertEqual(decision["maxTotalCostPer1k"], 0.01)
+            self.assertEqual(decision["selectedModel"]["modelId"], "local-echo")
+            self.assertFalse(remote_rank["eligible"])
+            self.assertTrue(
+                any("average latency 100ms exceeds task limit 20ms" in blocker for blocker in remote_rank["blockers"])
+            )
+            self.assertEqual(remote_rank["totalCostPer1k"], 0.016)
 
     def test_select_feedback_log_adjusts_single_task_ranking(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -39,8 +39,16 @@ def parse_task_profile(payload: Mapping[str, Any], *, source: str = "<memory>") 
         required_capabilities={str(key): float(value) for key, value in raw_capabilities.items()},
         min_context_tokens=int(payload.get("minContextTokens", payload.get("min_context_tokens", 0)) or 0),
         privacy_requirement=str(payload.get("privacyRequirement", payload.get("privacy_requirement", "allow_remote"))),
-        max_input_cost_per_1k=_optional_float(payload.get("maxInputCostPer1k", payload.get("max_input_cost_per_1k"))),
-        max_output_cost_per_1k=_optional_float(payload.get("maxOutputCostPer1k", payload.get("max_output_cost_per_1k"))),
+        max_latency_ms=_optional_int(payload.get("maxLatencyMs", payload.get("max_latency_ms"))),
+        max_input_cost_per_1k=_optional_float(
+            payload.get("maxInputCostPer1k", payload.get("max_input_cost_per_1k"))
+        ),
+        max_output_cost_per_1k=_optional_float(
+            payload.get("maxOutputCostPer1k", payload.get("max_output_cost_per_1k"))
+        ),
+        max_total_cost_per_1k=_optional_float(
+            payload.get("maxTotalCostPer1k", payload.get("max_total_cost_per_1k"))
+        ),
         require_tools=bool(payload.get("requireTools", payload.get("require_tools", False))),
         require_json=bool(payload.get("requireJson", payload.get("require_json", False))),
         preferred_providers=tuple(str(item) for item in payload.get("preferredProviders", payload.get("preferred_providers", ()))),
@@ -50,4 +58,16 @@ def parse_task_profile(payload: Mapping[str, Any], *, source: str = "<memory>") 
 def _optional_float(value: Any) -> float | None:
     if value in (None, ""):
         return None
-    return float(value)
+    parsed = float(value)
+    if parsed < 0.0:
+        raise TaskProfileError("optional float fields must be 0 or greater")
+    return round(parsed, 6)
+
+
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    parsed = int(value)
+    if parsed < 0:
+        raise TaskProfileError("optional integer fields must be 0 or greater")
+    return parsed

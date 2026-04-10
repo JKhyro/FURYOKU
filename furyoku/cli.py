@@ -878,13 +878,17 @@ def _score_to_dict(selection: ModelScore) -> dict:
         "provider": selection.model.provider,
         "score": selection.score,
         "eligible": selection.eligible,
+        "averageLatencyMs": selection.model.average_latency_ms,
         "reasons": list(selection.reasons),
         "blockers": list(selection.blockers),
     }
+    total_cost_per_1k = selection.model.input_cost_per_1k + selection.model.output_cost_per_1k
     if selection.model.input_cost_per_1k > 0.0:
         payload["inputCostPer1k"] = selection.model.input_cost_per_1k
     if selection.model.output_cost_per_1k > 0.0:
         payload["outputCostPer1k"] = selection.model.output_cost_per_1k
+    if total_cost_per_1k > 0.0:
+        payload["totalCostPer1k"] = round(total_cost_per_1k, 6)
     return payload
 
 
@@ -895,6 +899,7 @@ def _single_selection_to_dict(
     readiness=None,
 ) -> dict:
     payload = _score_to_dict(selection)
+    payload["taskProfile"] = selection.task.to_dict()
     if report is not None:
         _add_optional_feedback_metadata(payload, report)
         _add_routing_policy_metadata(payload, report)
@@ -907,6 +912,7 @@ def _routed_result_to_dict(result: RoutedExecutionResult, *, readiness=None) -> 
     payload = {
         "ok": result.ok,
         "selection": _score_to_dict(result.selection),
+        "taskProfile": result.selection.task.to_dict(),
         "execution": _execution_to_dict(result.execution),
     }
     _add_execution_attempts(payload, result.execution_attempts)
@@ -1019,8 +1025,7 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
         "blockedTasks": list(report.blocked_tasks),
         "decisions": [
             {
-                "taskId": decision.task.task_id,
-                "description": decision.task.description,
+                **decision.task.to_dict(),
                 "weight": decision.weight,
                 "minimumScore": decision.minimum_score,
                 "selectedModel": _score_to_dict(decision.selected) if decision.selected else None,

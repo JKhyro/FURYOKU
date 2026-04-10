@@ -196,6 +196,74 @@ class ModelRouterTests(unittest.TestCase):
         self.assertEqual(default_selected.model.model_id, "expensive-api")
         self.assertEqual(cheap_selected.model.model_id, "cheap-local")
 
+    def test_latency_ceiling_blocks_slow_models(self):
+        models = [
+            ModelEndpoint(
+                model_id="fast-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=100,
+                capabilities={"conversation": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="slow-remote",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=5000,
+                capabilities={"conversation": 0.95},
+            ),
+        ]
+        task = TaskProfile(
+            task_id="bounded-latency-chat",
+            required_capabilities={"conversation": 0.8},
+            max_latency_ms=1000,
+        )
+
+        ranked = rank_models(models, task)
+        slow_remote = next(score for score in ranked if score.model.model_id == "slow-remote")
+
+        self.assertEqual(select_model(models, task).model.model_id, "fast-local")
+        self.assertFalse(slow_remote.eligible)
+        self.assertTrue(any("average latency 5000ms exceeds task limit 1000ms" in blocker for blocker in slow_remote.blockers))
+
+    def test_total_cost_ceiling_blocks_expensive_models(self):
+        models = [
+            ModelEndpoint(
+                model_id="cheap-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=1200,
+                input_cost_per_1k=0.0,
+                output_cost_per_1k=0.0,
+                capabilities={"summarization": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="expensive-api",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=1200,
+                input_cost_per_1k=0.08,
+                output_cost_per_1k=0.12,
+                capabilities={"summarization": 0.95},
+            ),
+        ]
+        task = TaskProfile(
+            task_id="budget-summary",
+            required_capabilities={"summarization": 0.8},
+            max_total_cost_per_1k=0.1,
+        )
+
+        ranked = rank_models(models, task)
+        expensive_api = next(score for score in ranked if score.model.model_id == "expensive-api")
+
+        self.assertEqual(select_model(models, task).model.model_id, "cheap-local")
+        self.assertFalse(expensive_api.eligible)
+        self.assertTrue(any("total cost per 1k 0.2000 exceeds task limit 0.1000" in blocker for blocker in expensive_api.blockers))
+
     def test_score_policy_does_not_bypass_hard_blockers(self):
         task = TaskProfile(
             task_id="tool-coding",

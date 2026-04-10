@@ -32,6 +32,24 @@ class TaskProfileTests(unittest.TestCase):
 
         self.assertEqual(profile.task_id, "bom-task")
 
+    def test_parse_task_profile_accepts_budget_and_latency_constraints(self):
+        profile = parse_task_profile(
+            {
+                "schemaVersion": 1,
+                "taskId": "bounded-task",
+                "requiredCapabilities": {"conversation": 0.8},
+                "maxLatencyMs": 2500,
+                "maxInputCostPer1k": 0.01,
+                "maxOutputCostPer1k": 0.02,
+                "maxTotalCostPer1k": 0.025,
+            }
+        )
+
+        self.assertEqual(profile.max_latency_ms, 2500)
+        self.assertEqual(profile.max_input_cost_per_1k, 0.01)
+        self.assertEqual(profile.max_output_cost_per_1k, 0.02)
+        self.assertEqual(profile.max_total_cost_per_1k, 0.025)
+
     def test_missing_capabilities_are_rejected(self):
         with self.assertRaises(TaskProfileError) as error:
             parse_task_profile({"schemaVersion": 1, "taskId": "broken"})
