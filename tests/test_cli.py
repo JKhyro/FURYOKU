@@ -112,6 +112,48 @@ def write_executable_character_registry(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_fallback_registry(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "models": [
+            {
+                "modelId": "local-failing",
+                "provider": "local",
+                "privacyLevel": "local",
+                "contextWindowTokens": 4096,
+                "averageLatencyMs": 10,
+                "invocation": [
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.stderr.write('local failed'); sys.exit(3)",
+                ],
+                "capabilities": {
+                    "conversation": 0.95,
+                    "instruction_following": 0.9,
+                    "speed": 0.96,
+                },
+            },
+            {
+                "modelId": "cli-fallback",
+                "provider": "cli",
+                "privacyLevel": "remote",
+                "contextWindowTokens": 128000,
+                "averageLatencyMs": 20,
+                "invocation": [
+                    sys.executable,
+                    "-c",
+                    "import sys; print('fallback:' + sys.stdin.read())",
+                ],
+                "capabilities": {
+                    "conversation": 0.8,
+                    "instruction_following": 0.86,
+                },
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_task_profile(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -499,6 +541,98 @@ class CliTests(unittest.TestCase):
 
             self.assertEqual(error.exception.code, 2)
             self.assertIn("--capture-outcome-log requires --output", stderr.getvalue())
+
+    def test_run_fallback_executes_next_eligible_model_and_captures_outcome(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            output_path = Path(temp_dir) / "reports" / "fallback-run.json"
+            feedback_path = Path(temp_dir) / "feedback" / "outcomes.jsonl"
+            write_fallback_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "fallback-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--privacy",
+                        "prefer_local",
+                        "--prompt",
+                        "hello",
+                        "--fallback",
+                        "--output",
+                        str(output_path),
+                        "--capture-outcome-log",
+                        str(feedback_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            logged = [json.loads(line) for line in feedback_path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["selection"]["modelId"], "cli-fallback")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "fallback:hello")
+            self.assertEqual(payload["fallback"]["attemptCount"], 2)
+            self.assertEqual(payload["executionAttempts"][0]["selectedModel"]["modelId"], "local-failing")
+            self.assertEqual(payload["executionAttempts"][0]["execution"]["status"], "error")
+            self.assertEqual(payload["executionAttempts"][1]["selectedModel"]["modelId"], "cli-fallback")
+            self.assertEqual(persisted["selection"]["modelId"], "cli-fallback")
+            self.assertEqual(logged[0]["selectedModelId"], "cli-fallback")
+            self.assertEqual(logged[0]["executionStatus"], "ok")
+
+    def test_run_fallback_decision_suite_outputs_attempt_chain(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_fallback_registry(registry_path)
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "suiteId": "fallback-suite",
+                        "situations": [
+                            {
+                                "taskId": "fallback-chat",
+                                "privacyRequirement": "prefer_local",
+                                "requiredCapabilities": {"conversation": 0.8},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--situation-id",
+                        "fallback-chat",
+                        "--prompt",
+                        "hello",
+                        "--fallback",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["selectedModel"]["modelId"], "cli-fallback")
+            self.assertEqual(payload["fallback"]["attemptCount"], 2)
+            self.assertEqual(payload["executionAttempts"][0]["selectedModel"]["modelId"], "local-failing")
+            self.assertEqual(payload["executionAttempts"][1]["execution"]["status"], "ok")
 
     def test_run_decision_suite_executes_named_situation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
