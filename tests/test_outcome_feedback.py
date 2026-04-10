@@ -4,8 +4,10 @@ import unittest
 from pathlib import Path
 
 from furyoku import (
+    DecisionOutcomeRecord,
     OutcomeFeedbackError,
     append_decision_outcome,
+    build_model_feedback_summaries,
     create_decision_outcome_record,
     load_decision_outcomes,
 )
@@ -83,6 +85,37 @@ class OutcomeFeedbackTests(unittest.TestCase):
 
         self.assertIn("verdict", str(verdict_error.exception))
         self.assertIn("score", str(score_error.exception))
+
+    def test_build_feedback_summaries_bounds_model_adjustments(self):
+        records = [
+            DecisionOutcomeRecord(
+                record_id="1",
+                report_path="report.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="success",
+                score=1.0,
+            ),
+            DecisionOutcomeRecord(
+                record_id="2",
+                report_path="report.json",
+                report_sha256="1" * 64,
+                generated_at="2026-04-10T12:01:00+00:00",
+                selected_model_id="remote-model",
+                selected_provider="api",
+                override_model_id="local-model",
+                verdict="manual_override",
+            ),
+        ]
+
+        summaries = build_model_feedback_summaries(records, max_adjustment=12.0)
+
+        self.assertGreater(summaries["local-model"].adjustment, 0.0)
+        self.assertLess(summaries["remote-model"].adjustment, 0.0)
+        self.assertEqual(summaries["local-model"].manual_override_count, 1)
+        self.assertTrue(any("bounded feedback adjustment" in reason for reason in summaries["local-model"].rationale))
 
 
 if __name__ == "__main__":

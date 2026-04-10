@@ -20,6 +20,7 @@ from .outcome_feedback import (
     VALID_OUTCOME_VERDICTS,
     append_decision_outcome,
     create_decision_outcome_record,
+    load_decision_outcomes,
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
@@ -102,7 +103,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             load_task_profile(path) for path in args.task_profile
         )
         readiness = _readiness_from_args(args, models)
-        report = evaluate_model_decisions(models, decision_input or None, readiness=readiness)
+        feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
+        report = evaluate_model_decisions(
+            models,
+            decision_input or None,
+            readiness=readiness,
+            feedback=feedback,
+        )
         _write_json(_decision_report_to_dict(report, readiness=readiness), output_path=args.output)
         return 0 if not report.blocked_tasks else 2
 
@@ -192,6 +199,11 @@ def _build_parser() -> argparse.ArgumentParser:
     decide_parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
     decide_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
     decide_parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    decide_parser.add_argument(
+        "--feedback-log",
+        type=Path,
+        help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
+    )
     decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
     feedback_parser = subparsers.add_parser(
         "feedback",
@@ -432,6 +444,10 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
             for summary in report.summaries
         ],
         "aggregate": report.aggregate.to_dict(),
+        "feedbackAdjustments": {
+            model_id: summary.to_dict()
+            for model_id, summary in report.feedback_adjustments.items()
+        },
     }
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]

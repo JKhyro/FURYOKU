@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#121](https://github.com/JKhyro/FURYOKU/issues/121)
+- Current active lane: [#123](https://github.com/JKhyro/FURYOKU/issues/123)
 - Current downstream CHARACTER/MOA lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: make CHARACTER/MOA role assignment provider-readiness-aware.
+- Current follow-on focus: use persisted outcome feedback to adjust eligible model decisions.
 
 ## Product Direction
 
@@ -40,6 +40,7 @@ Scope guard:
 - Register multiple model endpoints: local models, command-line/CLI models, and remote API models.
 - Describe task requirements such as privacy, reasoning, coding, memory retrieval, context size, latency, tool support, and structured output.
 - Rank eligible models and explain why a model was selected or rejected.
+- Use persisted outcome feedback as bounded routing evidence so successful, failed, costly, slow, or manually overridden decisions can influence future model selection without bypassing hard blockers.
 - Support flexible CHARACTER compositions, from a one-role tertiary Symbiote to larger arrays such as a primary role plus multiple secondary roles with their own subagent capacity.
 - Use benchmark truth as evidence for routing decisions, not as the project goal by itself.
 
@@ -54,6 +55,7 @@ Current routing core:
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
 - [`furyoku/outcome_feedback.py`](furyoku/outcome_feedback.py) records operator or automated feedback linked to persisted decision/execution reports.
+- Outcome feedback records can be aggregated into bounded per-model score adjustments for future decision reports.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
@@ -78,6 +80,7 @@ python -m furyoku.cli select --registry .\examples\model_registry.example.json -
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --output .\decision-report.json
+python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
 python -m furyoku.cli feedback --report .\decision-report.json --feedback-log .\decision-outcomes.jsonl --verdict success --score 0.9 --reason "accepted response"
 python -m furyoku.cli health --registry .\examples\model_registry.example.json

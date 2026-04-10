@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from .model_router import ModelEndpoint, ModelScore, TaskProfile, rank_models
+from .outcome_feedback import (
+    FeedbackAdjustmentInput,
+    ModelOutcomeFeedbackSummary,
+    build_model_feedback_summaries,
+)
 from .provider_health import ProviderHealthCheckResult
 from .task_profiles import parse_task_profile
 
@@ -284,6 +289,7 @@ class ModelDecisionReport:
 
     situations: Mapping[str, SituationDecision]
     aggregate: ModelDecisionAggregate
+    feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary] = field(default_factory=dict)
 
     @property
     def decisions(self) -> tuple[SituationDecision, ...]:
@@ -343,6 +349,10 @@ class ModelDecisionReport:
             "decisions": [decision.to_dict() for decision in self.decisions],
             "summaries": [summary.to_dict() for summary in self.summaries],
             "aggregate": self.aggregate.to_dict(),
+            "feedbackAdjustments": {
+                model_id: summary.to_dict()
+                for model_id, summary in self.feedback_adjustments.items()
+            },
         }
 
 
@@ -485,6 +495,7 @@ def evaluate_model_decisions(
     tasks: DecisionTaskInput = None,
     *,
     readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
     situation_weights: Mapping[str, float] | None = None,
     minimum_scores: Mapping[str, float] | None = None,
 ) -> ModelDecisionReport:
@@ -505,6 +516,7 @@ def evaluate_model_decisions(
     _validate_inputs(model_list, task_list)
     readiness_by_model = _normalize_readiness_evidence(readiness)
     _validate_readiness_evidence(readiness_by_model, model_list)
+    feedback_by_model = _feedback_for_models(feedback, model_list)
 
     situation_decisions: dict[str, SituationDecision] = {}
     for task in task_list:
@@ -514,6 +526,7 @@ def evaluate_model_decisions(
                 model_list,
                 task,
                 readiness_by_model,
+                feedback_by_model,
                 minimum_score=minimum_score,
             )
         )
@@ -542,6 +555,7 @@ def evaluate_model_decisions(
     return ModelDecisionReport(
         situations=situation_decisions,
         aggregate=_build_aggregate(model_list, situation_decisions),
+        feedback_adjustments=feedback_by_model,
     )
 
 
@@ -643,6 +657,20 @@ def _validate_readiness_evidence(
     unknown_model_ids = sorted(set(readiness_by_model) - known_model_ids)
     if unknown_model_ids:
         raise ModelDecisionError(f"Readiness evidence references unknown model ids: {', '.join(unknown_model_ids)}")
+
+
+def _feedback_for_models(
+    feedback: FeedbackAdjustmentInput | None,
+    models: list[ModelEndpoint],
+) -> dict[str, ModelOutcomeFeedbackSummary]:
+    if feedback is None:
+        return {}
+    known_model_ids = {model.model_id for model in models}
+    return {
+        model_id: summary
+        for model_id, summary in build_model_feedback_summaries(feedback).items()
+        if model_id in known_model_ids
+    }
 
 
 def _validate_unique_tasks(tasks: Iterable[TaskProfile], *, source: str = "<memory>") -> None:
@@ -758,12 +786,19 @@ def _rank_models_with_readiness(
     models: list[ModelEndpoint],
     task: TaskProfile,
     readiness_by_model: Mapping[str, ModelReadinessEvidence],
+    feedback_by_model: Mapping[str, ModelOutcomeFeedbackSummary],
     *,
     minimum_score: float | None,
 ) -> list[ModelScore]:
     ranked = [
         _apply_minimum_score(
-            _apply_readiness_evidence(score, readiness_by_model.get(score.model.model_id)),
+            _apply_feedback_adjustment(
+                _apply_minimum_score(
+                    _apply_readiness_evidence(score, readiness_by_model.get(score.model.model_id)),
+                    minimum_score,
+                ),
+                feedback_by_model.get(score.model.model_id),
+            ),
             minimum_score,
         )
         for score in rank_models(models, task)
@@ -801,6 +836,30 @@ def _apply_readiness_evidence(
         eligible=False,
         reasons=score.reasons,
         blockers=tuple(_unique_in_order(blockers)),
+    )
+
+
+def _apply_feedback_adjustment(
+    score: ModelScore,
+    feedback_summary: ModelOutcomeFeedbackSummary | None,
+) -> ModelScore:
+    if feedback_summary is None or not score.eligible:
+        return score
+
+    reasons = [
+        *score.reasons,
+        (
+            f"outcome feedback adjustment {feedback_summary.adjustment:+.2f} "
+            f"from {feedback_summary.record_count} records"
+        ),
+    ]
+    return ModelScore(
+        model=score.model,
+        task=score.task,
+        score=round(score.score + feedback_summary.adjustment, 4),
+        eligible=True,
+        reasons=tuple(reasons),
+        blockers=score.blockers,
     )
 
 
