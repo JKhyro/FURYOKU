@@ -37,7 +37,10 @@ FURYOKU's primary job is to help the wider system choose the right LLM for the s
 Current routing core:
 
 - [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract.
+- [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
+- [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`tests/test_model_router.py`](tests/test_model_router.py) verifies local-only selection, CLI/API routing, blocker reporting, and three-role CHARACTER panel selection.
+- [`tests/test_model_registry.py`](tests/test_model_registry.py) verifies registry loading, validation, and routing from configuration.
 
 ## Benchmark Evidence Lane
 
