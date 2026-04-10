@@ -638,6 +638,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
             output_path = Path(temp_dir) / "reports" / "comparison.json"
+            feedback_path = Path(temp_dir) / "feedback" / "comparison-outcomes.jsonl"
             write_fallback_registry(registry_path)
             stdout = io.StringIO()
 
@@ -659,11 +660,23 @@ class CliTests(unittest.TestCase):
                         "2",
                         "--output",
                         str(output_path),
+                        "--capture-comparison-outcomes",
+                        str(feedback_path),
+                        "--comparison-success-score",
+                        "1.0",
+                        "--comparison-failure-score",
+                        "0.0",
+                        "--comparison-outcome-reason",
+                        "comparison accepted",
+                        "--comparison-outcome-tag",
+                        "compare-run",
                     ]
                 )
 
             payload = json.loads(stdout.getvalue())
             persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            report_bytes = output_path.read_bytes()
+            logged = [json.loads(line) for line in feedback_path.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(exit_code, 0)
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["taskId"], "fallback-chat")
@@ -677,11 +690,25 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["executions"][1]["selectedModel"]["modelId"], "cli-fallback")
             self.assertEqual(payload["executions"][1]["execution"]["responseText"].strip(), "fallback:hello")
             self.assertEqual(persisted["comparison"]["executedCount"], 2)
+            self.assertTrue(payload["comparisonOutcomeCapture"]["captured"])
+            self.assertEqual(payload["comparisonOutcomeCapture"]["recordCount"], 2)
+            self.assertEqual(len(logged), 2)
+            self.assertEqual(logged[0]["selectedModelId"], "local-failing")
+            self.assertEqual(logged[0]["verdict"], "failure")
+            self.assertEqual(logged[0]["score"], 0.0)
+            self.assertEqual(logged[0]["tags"], ["compare-run"])
+            self.assertEqual(logged[0]["metadata"]["captureSource"], "furyoku.cli.compare-run")
+            self.assertEqual(logged[0]["reportSha256"], hashlib.sha256(report_bytes).hexdigest())
+            self.assertEqual(logged[1]["selectedModelId"], "cli-fallback")
+            self.assertEqual(logged[1]["verdict"], "success")
+            self.assertEqual(logged[1]["score"], 1.0)
 
     def test_compare_run_decision_suite_outputs_candidate_executions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
             suite_path = Path(temp_dir) / "suite.json"
+            output_path = Path(temp_dir) / "reports" / "suite-comparison.json"
+            feedback_path = Path(temp_dir) / "feedback" / "suite-comparison-outcomes.jsonl"
             write_fallback_registry(registry_path)
             suite_path.write_text(
                 json.dumps(
@@ -713,16 +740,24 @@ class CliTests(unittest.TestCase):
                         "fallback-chat",
                         "--prompt",
                         "hello",
+                        "--output",
+                        str(output_path),
+                        "--capture-comparison-outcomes",
+                        str(feedback_path),
                     ]
                 )
 
             payload = json.loads(stdout.getvalue())
+            logged = [json.loads(line) for line in feedback_path.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(exit_code, 0)
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["situationId"], "fallback-chat")
             self.assertEqual(payload["comparison"]["executedCount"], 2)
             self.assertEqual(payload["executions"][0]["execution"]["status"], "error")
             self.assertEqual(payload["executions"][1]["execution"]["status"], "ok")
+            self.assertEqual(len(logged), 2)
+            self.assertEqual(logged[0]["situationId"], "fallback-chat")
+            self.assertEqual(logged[1]["verdict"], "success")
 
     def test_run_decision_suite_executes_named_situation(self):
         with tempfile.TemporaryDirectory() as temp_dir:

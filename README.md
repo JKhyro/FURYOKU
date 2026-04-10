@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#155](https://github.com/JKhyro/FURYOKU/issues/155)
+- Current active lane: [#157](https://github.com/JKhyro/FURYOKU/issues/157)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: add comparative evaluation runs so the same task and prompt can be executed across multiple eligible local, CLI, and API models.
+- Current follow-on focus: export comparative execution outcomes into reusable feedback evidence so future recommendations and routing decisions can learn from `compare-run` results.
 
 ## Product Direction
 
@@ -69,6 +69,7 @@ Current routing core:
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.
 - Comparative `compare-run` execution can run the same prompt across multiple eligible ranked local, CLI, and API models, preserving per-candidate success/failure evidence for best-fit review.
+- Comparative execution reports can append one feedback record per executed candidate so future recommendation and routing runs can learn from same-prompt comparison results.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, comparative execution, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/decision_suite.primary-routing.json`](examples/decision_suite.primary-routing.json) shows a reusable multi-situation decision suite.
@@ -103,6 +104,7 @@ python -m furyoku.cli recommend --registry .\examples\model_registry.example.jso
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --fallback --max-attempts 2
 python -m furyoku.cli compare-run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.structured-json --prompt "Hello" --max-candidates 2 --output .\comparison-report.json
+python -m furyoku.cli compare-run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.structured-json --prompt "Hello" --max-candidates 2 --output .\comparison-report.json --capture-comparison-outcomes .\decision-outcomes.jsonl --comparison-success-score 1.0 --comparison-failure-score 0.0 --comparison-outcome-tag compare-run
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json

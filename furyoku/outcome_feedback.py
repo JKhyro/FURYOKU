@@ -438,6 +438,88 @@ def capture_execution_outcome(
     return record
 
 
+def create_comparative_execution_outcome_records(
+    report_path: str | Path,
+    *,
+    success_score: float | None = None,
+    failure_score: float | None = None,
+    reason: str = "",
+    tags: Iterable[str] = (),
+    metadata: Mapping[str, Any] | None = None,
+) -> tuple[DecisionOutcomeRecord, ...]:
+    """Create one feedback record per candidate execution in a persisted comparison report."""
+
+    normalized_success_score = _optional_score(success_score, source="<comparison-outcome-capture:success-score>")
+    normalized_failure_score = _optional_score(failure_score, source="<comparison-outcome-capture:failure-score>")
+    path, report_bytes, report = _read_report_payload(report_path)
+    executions = _comparative_execution_attempts(report, source=str(path))
+    report_sha256 = hashlib.sha256(report_bytes).hexdigest()
+    report_generated_at = _report_generated_at(report)
+    situation_id = str(report.get("situationId", report.get("taskId", _first_decision_task_id(report))) or "")
+    generated_at = datetime.now(timezone.utc).isoformat()
+    records: list[DecisionOutcomeRecord] = []
+
+    for index, attempt in enumerate(executions, start=1):
+        selected = attempt.get("selectedModel")
+        if not isinstance(selected, Mapping):
+            raise OutcomeFeedbackError(f"{path}: executions[{index}].selectedModel must be an object")
+        execution = attempt.get("execution")
+        execution_status = _execution_status(execution)
+        if not execution_status:
+            raise OutcomeFeedbackError(f"{path}: executions[{index}].execution.status is required")
+        verdict = "success" if execution_status == "ok" else "failure"
+        records.append(
+            DecisionOutcomeRecord(
+                record_id=str(uuid4()),
+                report_path=str(path),
+                report_sha256=report_sha256,
+                report_generated_at=report_generated_at,
+                generated_at=generated_at,
+                situation_id=situation_id,
+                selected_model_id=str(selected.get("modelId", "") or ""),
+                selected_provider=str(selected.get("provider", "") or ""),
+                execution_status=execution_status,
+                verdict=verdict,
+                score=normalized_success_score if verdict == "success" else normalized_failure_score,
+                reason=reason,
+                tags=tuple(str(tag) for tag in tags),
+                metadata={
+                    "captureSource": "furyoku.comparative-execution",
+                    "comparisonAttemptNumber": _comparison_attempt_number(attempt, fallback=index),
+                    "comparisonExecutedCount": len(executions),
+                    "comparisonReportType": "compare-run",
+                    **dict(metadata or {}),
+                },
+            )
+        )
+    return tuple(records)
+
+
+def capture_comparative_execution_outcomes(
+    feedback_log_path: str | Path,
+    report_path: str | Path,
+    *,
+    success_score: float | None = None,
+    failure_score: float | None = None,
+    reason: str = "",
+    tags: Iterable[str] = (),
+    metadata: Mapping[str, Any] | None = None,
+) -> tuple[DecisionOutcomeRecord, ...]:
+    """Append one inferred comparison outcome record per executed candidate."""
+
+    records = create_comparative_execution_outcome_records(
+        report_path,
+        success_score=success_score,
+        failure_score=failure_score,
+        reason=reason,
+        tags=tags,
+        metadata=metadata,
+    )
+    for record in records:
+        append_decision_outcome(feedback_log_path, record)
+    return records
+
+
 def infer_execution_outcome_verdict(report: Mapping[str, Any], *, source: str = "<memory>") -> str:
     """Infer a feedback verdict from a persisted run report execution status."""
 
@@ -1034,6 +1116,29 @@ def _first_decision_task_id(report: Mapping[str, Any]) -> str:
     if isinstance(decision, Mapping):
         return str(decision.get("taskId", "") or "")
     return ""
+
+
+def _comparative_execution_attempts(report: Mapping[str, Any], *, source: str) -> tuple[Mapping[str, Any], ...]:
+    executions = report.get("executions")
+    if not isinstance(executions, list):
+        raise OutcomeFeedbackError(f"{source}: cannot capture comparative outcomes without an executions list")
+    attempts = []
+    for index, attempt in enumerate(executions, start=1):
+        if not isinstance(attempt, Mapping):
+            raise OutcomeFeedbackError(f"{source}: executions[{index}] must be an object")
+        attempts.append(attempt)
+    if not attempts:
+        raise OutcomeFeedbackError(f"{source}: cannot capture comparative outcomes without executed candidates")
+    return tuple(attempts)
+
+
+def _comparison_attempt_number(attempt: Mapping[str, Any], *, fallback: int) -> int:
+    raw_value = attempt.get("attemptNumber")
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return fallback
+    return value if value >= 1 else fallback
 
 
 def _execution_status(execution: Any) -> str:
