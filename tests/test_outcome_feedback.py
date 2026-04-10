@@ -5,11 +5,14 @@ from pathlib import Path
 
 from furyoku import (
     DecisionOutcomeRecord,
+    FeedbackAdjustmentPolicy,
     OutcomeFeedbackError,
     append_decision_outcome,
     build_model_feedback_summaries,
     create_decision_outcome_record,
     load_decision_outcomes,
+    load_feedback_adjustment_policy,
+    parse_feedback_adjustment_policy,
 )
 
 
@@ -116,6 +119,89 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertLess(summaries["remote-model"].adjustment, 0.0)
         self.assertEqual(summaries["local-model"].manual_override_count, 1)
         self.assertTrue(any("bounded feedback adjustment" in reason for reason in summaries["local-model"].rationale))
+
+    def test_custom_feedback_policy_changes_adjustment_size(self):
+        records = [
+            DecisionOutcomeRecord(
+                record_id="1",
+                report_path="report.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="success",
+                score=1.0,
+            )
+        ]
+        policy = FeedbackAdjustmentPolicy(
+            max_adjustment=5.0,
+            success_base=1.0,
+            success_score_multiplier=2.0,
+        )
+
+        summaries = build_model_feedback_summaries(records, policy=policy)
+
+        self.assertEqual(summaries["local-model"].adjustment, 3.0)
+        self.assertEqual(summaries["local-model"].weighted_record_count, 1.0)
+
+    def test_feedback_policy_supports_recency_half_life(self):
+        records = [
+            DecisionOutcomeRecord(
+                record_id="new",
+                report_path="report.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T00:00:00+00:00",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="success",
+                score=1.0,
+            ),
+            DecisionOutcomeRecord(
+                record_id="old",
+                report_path="report.json",
+                report_sha256="1" * 64,
+                generated_at="2026-04-09T00:00:00+00:00",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="failure",
+            ),
+        ]
+
+        summaries = build_model_feedback_summaries(
+            records,
+            policy=FeedbackAdjustmentPolicy(recency_half_life_days=1.0),
+            as_of="2026-04-10T00:00:00+00:00",
+        )
+
+        self.assertGreater(summaries["local-model"].adjustment, 0.0)
+        self.assertEqual(summaries["local-model"].weighted_record_count, 1.5)
+        self.assertTrue(any("recency half-life" in reason for reason in summaries["local-model"].rationale))
+
+    def test_load_feedback_adjustment_policy_parses_json_contract(self):
+        payload = {
+            "schemaVersion": 1,
+            "maxAdjustment": 4.0,
+            "successBase": 1.5,
+            "successScoreMultiplier": 2.5,
+            "failurePenalty": -3.0,
+            "recencyHalfLifeDays": 7.0,
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "policy.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            loaded = load_feedback_adjustment_policy(path)
+
+        parsed = parse_feedback_adjustment_policy(payload)
+        self.assertEqual(loaded, parsed)
+        self.assertEqual(loaded.max_adjustment, 4.0)
+        self.assertEqual(loaded.recency_half_life_days, 7.0)
+
+    def test_feedback_policy_rejects_invalid_values(self):
+        with self.assertRaises(OutcomeFeedbackError):
+            FeedbackAdjustmentPolicy(max_adjustment=-1.0)
+        with self.assertRaises(OutcomeFeedbackError):
+            parse_feedback_adjustment_policy({"schemaVersion": 1, "defaultSuccessScore": 1.5})
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -96,6 +96,102 @@ FeedbackAdjustmentInput = Iterable[DecisionOutcomeRecord | Mapping[str, Any]]
 
 
 @dataclass(frozen=True)
+class FeedbackAdjustmentPolicy:
+    """Configurable scoring policy for turning outcome records into routing evidence."""
+
+    max_adjustment: float = 12.0
+    success_base: float = 2.0
+    success_score_multiplier: float = 8.0
+    failure_penalty: float = -10.0
+    quality_concern_penalty: float = -7.0
+    latency_concern_penalty: float = -4.0
+    cost_concern_penalty: float = -4.0
+    manual_override_penalty: float = -8.0
+    manual_override_target_base: float = 6.0
+    manual_override_target_score_multiplier: float = 4.0
+    default_success_score: float = 1.0
+    default_failure_score: float = 0.0
+    default_concern_score: float = 0.35
+    default_manual_override_score: float = 0.25
+    default_override_target_score: float = 0.9
+    recency_half_life_days: float | None = None
+
+    def __post_init__(self) -> None:
+        _validate_non_negative_float(self.max_adjustment, "maxAdjustment", source="<feedback-policy>")
+        if self.recency_half_life_days is not None:
+            _validate_positive_float(
+                self.recency_half_life_days,
+                "recencyHalfLifeDays",
+                source="<feedback-policy>",
+            )
+        for field_name in (
+            "default_success_score",
+            "default_failure_score",
+            "default_concern_score",
+            "default_manual_override_score",
+            "default_override_target_score",
+        ):
+            _validate_score_range(getattr(self, field_name), _camel_name(field_name), source="<feedback-policy>")
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": 1,
+            "maxAdjustment": self.max_adjustment,
+            "successBase": self.success_base,
+            "successScoreMultiplier": self.success_score_multiplier,
+            "failurePenalty": self.failure_penalty,
+            "qualityConcernPenalty": self.quality_concern_penalty,
+            "latencyConcernPenalty": self.latency_concern_penalty,
+            "costConcernPenalty": self.cost_concern_penalty,
+            "manualOverridePenalty": self.manual_override_penalty,
+            "manualOverrideTargetBase": self.manual_override_target_base,
+            "manualOverrideTargetScoreMultiplier": self.manual_override_target_score_multiplier,
+            "defaultSuccessScore": self.default_success_score,
+            "defaultFailureScore": self.default_failure_score,
+            "defaultConcernScore": self.default_concern_score,
+            "defaultManualOverrideScore": self.default_manual_override_score,
+            "defaultOverrideTargetScore": self.default_override_target_score,
+            "recencyHalfLifeDays": self.recency_half_life_days,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any], *, source: str = "<memory>") -> "FeedbackAdjustmentPolicy":
+        if not isinstance(payload, Mapping):
+            raise OutcomeFeedbackError(f"{source}: feedback adjustment policy must be an object")
+        schema_version = payload.get("schemaVersion", payload.get("schema_version", 1))
+        if schema_version != 1:
+            raise OutcomeFeedbackError(f"{source}: unsupported feedback policy schemaVersion {schema_version!r}")
+        defaults = cls()
+        return cls(
+            max_adjustment=_policy_float(payload, "maxAdjustment", "max_adjustment", default=defaults.max_adjustment, source=source),
+            success_base=_policy_float(payload, "successBase", "success_base", default=defaults.success_base, source=source),
+            success_score_multiplier=_policy_float(payload, "successScoreMultiplier", "success_score_multiplier", default=defaults.success_score_multiplier, source=source),
+            failure_penalty=_policy_float(payload, "failurePenalty", "failure_penalty", default=defaults.failure_penalty, source=source),
+            quality_concern_penalty=_policy_float(payload, "qualityConcernPenalty", "quality_concern_penalty", default=defaults.quality_concern_penalty, source=source),
+            latency_concern_penalty=_policy_float(payload, "latencyConcernPenalty", "latency_concern_penalty", default=defaults.latency_concern_penalty, source=source),
+            cost_concern_penalty=_policy_float(payload, "costConcernPenalty", "cost_concern_penalty", default=defaults.cost_concern_penalty, source=source),
+            manual_override_penalty=_policy_float(payload, "manualOverridePenalty", "manual_override_penalty", default=defaults.manual_override_penalty, source=source),
+            manual_override_target_base=_policy_float(payload, "manualOverrideTargetBase", "manual_override_target_base", default=defaults.manual_override_target_base, source=source),
+            manual_override_target_score_multiplier=_policy_float(payload, "manualOverrideTargetScoreMultiplier", "manual_override_target_score_multiplier", default=defaults.manual_override_target_score_multiplier, source=source),
+            default_success_score=_policy_float(payload, "defaultSuccessScore", "default_success_score", default=defaults.default_success_score, source=source),
+            default_failure_score=_policy_float(payload, "defaultFailureScore", "default_failure_score", default=defaults.default_failure_score, source=source),
+            default_concern_score=_policy_float(payload, "defaultConcernScore", "default_concern_score", default=defaults.default_concern_score, source=source),
+            default_manual_override_score=_policy_float(payload, "defaultManualOverrideScore", "default_manual_override_score", default=defaults.default_manual_override_score, source=source),
+            default_override_target_score=_policy_float(payload, "defaultOverrideTargetScore", "default_override_target_score", default=defaults.default_override_target_score, source=source),
+            recency_half_life_days=_policy_optional_positive_float(
+                payload,
+                "recencyHalfLifeDays",
+                "recency_half_life_days",
+                default=defaults.recency_half_life_days,
+                source=source,
+            ),
+        )
+
+
+FeedbackAdjustmentPolicyInput = FeedbackAdjustmentPolicy | Mapping[str, Any]
+
+
+@dataclass(frozen=True)
 class ModelOutcomeFeedbackSummary:
     """Bounded per-model outcome evidence used to adjust eligible rankings."""
 
@@ -107,6 +203,7 @@ class ModelOutcomeFeedbackSummary:
     manual_override_count: int
     average_score: float | None
     adjustment: float
+    weighted_record_count: float
     rationale: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
@@ -119,6 +216,7 @@ class ModelOutcomeFeedbackSummary:
             "manualOverrideCount": self.manual_override_count,
             "averageScore": self.average_score,
             "adjustment": self.adjustment,
+            "weightedRecordCount": self.weighted_record_count,
             "rationale": list(self.rationale),
         }
 
@@ -128,6 +226,7 @@ class _FeedbackStats:
     model_id: str
     contributions: list[float] = field(default_factory=list)
     scores: list[float] = field(default_factory=list)
+    weights: list[float] = field(default_factory=list)
     success_count: int = 0
     concern_count: int = 0
     failure_count: int = 0
@@ -182,15 +281,20 @@ def create_decision_outcome_record(
 def build_model_feedback_summaries(
     records: FeedbackAdjustmentInput,
     *,
-    max_adjustment: float = 12.0,
+    max_adjustment: float | None = None,
+    policy: FeedbackAdjustmentPolicyInput | None = None,
+    as_of: datetime | str | None = None,
 ) -> dict[str, ModelOutcomeFeedbackSummary]:
     """Aggregate outcome records into bounded per-model score adjustments."""
 
+    resolved_policy = _resolve_feedback_policy(policy, max_adjustment=max_adjustment)
+    resolved_as_of = _parse_as_of(as_of)
     stats_by_model: dict[str, _FeedbackStats] = {}
     for index, raw_record in enumerate(records, start=1):
         record = _normalize_feedback_record(raw_record, source=f"<feedback:{index}>")
+        weight = _recency_weight(record, resolved_policy, as_of=resolved_as_of)
         if record.selected_model_id:
-            _add_selected_feedback(stats_by_model, record)
+            _add_selected_feedback(stats_by_model, record, resolved_policy, weight=weight)
         if (
             record.verdict == "manual_override"
             and record.override_model_id
@@ -199,17 +303,29 @@ def build_model_feedback_summaries(
             _add_feedback_contribution(
                 stats_by_model,
                 record.override_model_id,
-                contribution=_manual_override_target_contribution(record.score),
-                score=record.score if record.score is not None else 0.9,
+                contribution=_manual_override_target_contribution(record.score, resolved_policy),
+                score=record.score if record.score is not None else resolved_policy.default_override_target_score,
                 verdict=record.verdict,
                 override_target=True,
+                weight=weight,
             )
 
     return {
-        model_id: _summarize_feedback_stats(stats, max_adjustment=max_adjustment)
+        model_id: _summarize_feedback_stats(stats, policy=resolved_policy)
         for model_id, stats in sorted(stats_by_model.items())
         if stats.record_count
     }
+
+
+def load_feedback_adjustment_policy(path: str | Path) -> FeedbackAdjustmentPolicy:
+    policy_path = Path(path)
+    with policy_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    return parse_feedback_adjustment_policy(payload, source=str(policy_path))
+
+
+def parse_feedback_adjustment_policy(payload: Mapping[str, Any], *, source: str = "<memory>") -> FeedbackAdjustmentPolicy:
+    return FeedbackAdjustmentPolicy.from_dict(payload, source=source)
 
 
 def append_decision_outcome(
@@ -256,14 +372,18 @@ def _normalize_feedback_record(
 def _add_selected_feedback(
     stats_by_model: dict[str, _FeedbackStats],
     record: DecisionOutcomeRecord,
+    policy: FeedbackAdjustmentPolicy,
+    *,
+    weight: float,
 ) -> None:
     _add_feedback_contribution(
         stats_by_model,
         record.selected_model_id,
-        contribution=_selected_model_contribution(record),
-        score=_score_for_record(record),
+        contribution=_selected_model_contribution(record, policy),
+        score=_score_for_record(record, policy),
         verdict=record.verdict,
         override_target=False,
+        weight=weight,
     )
 
 
@@ -275,10 +395,12 @@ def _add_feedback_contribution(
     score: float,
     verdict: str,
     override_target: bool,
+    weight: float,
 ) -> None:
     stats = stats_by_model.setdefault(model_id, _FeedbackStats(model_id=model_id))
     stats.contributions.append(contribution)
     stats.scores.append(score)
+    stats.weights.append(weight)
     if verdict == "success":
         stats.success_count += 1
     elif verdict == "failure":
@@ -291,33 +413,38 @@ def _add_feedback_contribution(
             stats.success_count += 1
 
 
-def _selected_model_contribution(record: DecisionOutcomeRecord) -> float:
+def _selected_model_contribution(record: DecisionOutcomeRecord, policy: FeedbackAdjustmentPolicy) -> float:
     if record.verdict == "success":
-        return 2.0 + (_score_for_record(record) * 8.0)
+        return policy.success_base + (_score_for_record(record, policy) * policy.success_score_multiplier)
     if record.verdict == "failure":
-        return -10.0
+        return policy.failure_penalty
     if record.verdict == "quality_concern":
-        return -7.0
-    if record.verdict in ("latency_concern", "cost_concern"):
-        return -4.0
+        return policy.quality_concern_penalty
+    if record.verdict == "latency_concern":
+        return policy.latency_concern_penalty
+    if record.verdict == "cost_concern":
+        return policy.cost_concern_penalty
     if record.verdict == "manual_override":
-        return -8.0
+        return policy.manual_override_penalty
     return 0.0
 
 
-def _manual_override_target_contribution(score: float | None) -> float:
-    return 6.0 + (_normalize_outcome_score(score, default=0.9) * 4.0)
+def _manual_override_target_contribution(score: float | None, policy: FeedbackAdjustmentPolicy) -> float:
+    return policy.manual_override_target_base + (
+        _normalize_outcome_score(score, default=policy.default_override_target_score)
+        * policy.manual_override_target_score_multiplier
+    )
 
 
-def _score_for_record(record: DecisionOutcomeRecord) -> float:
+def _score_for_record(record: DecisionOutcomeRecord, policy: FeedbackAdjustmentPolicy) -> float:
     if record.verdict == "success":
-        return _normalize_outcome_score(record.score, default=1.0)
+        return _normalize_outcome_score(record.score, default=policy.default_success_score)
     if record.verdict == "failure":
-        return _normalize_outcome_score(record.score, default=0.0)
+        return _normalize_outcome_score(record.score, default=policy.default_failure_score)
     if record.verdict in ("latency_concern", "quality_concern", "cost_concern"):
-        return _normalize_outcome_score(record.score, default=0.35)
+        return _normalize_outcome_score(record.score, default=policy.default_concern_score)
     if record.verdict == "manual_override":
-        return _normalize_outcome_score(record.score, default=0.25)
+        return _normalize_outcome_score(record.score, default=policy.default_manual_override_score)
     return _normalize_outcome_score(record.score, default=0.5)
 
 
@@ -328,15 +455,30 @@ def _normalize_outcome_score(score: float | None, *, default: float) -> float:
 def _summarize_feedback_stats(
     stats: _FeedbackStats,
     *,
-    max_adjustment: float,
+    policy: FeedbackAdjustmentPolicy,
 ) -> ModelOutcomeFeedbackSummary:
-    raw_adjustment = sum(stats.contributions) / len(stats.contributions)
-    adjustment = round(max(-max_adjustment, min(max_adjustment, raw_adjustment)), 4)
-    average_score = round(sum(stats.scores) / len(stats.scores), 4) if stats.scores else None
+    weighted_count = sum(stats.weights) if stats.weights else float(len(stats.contributions))
+    if weighted_count <= 0.0:
+        raw_adjustment = 0.0
+        average_score = None
+    else:
+        raw_adjustment = sum(
+            contribution * weight
+            for contribution, weight in zip(stats.contributions, stats.weights)
+        ) / weighted_count
+        average_score = round(
+            sum(score * weight for score, weight in zip(stats.scores, stats.weights)) / weighted_count,
+            4,
+        ) if stats.scores else None
+    adjustment = round(max(-policy.max_adjustment, min(policy.max_adjustment, raw_adjustment)), 4)
     rationale = [
         f"{stats.record_count} outcome feedback records",
         f"bounded feedback adjustment {adjustment:+.2f}",
     ]
+    if policy.recency_half_life_days is not None:
+        rationale.append(
+            f"recency half-life {policy.recency_half_life_days:.2f} days; weighted records {weighted_count:.2f}"
+        )
     if average_score is not None:
         rationale.append(f"average outcome score {average_score:.2f}")
     if stats.success_count:
@@ -356,8 +498,138 @@ def _summarize_feedback_stats(
         manual_override_count=stats.manual_override_count,
         average_score=average_score,
         adjustment=adjustment,
+        weighted_record_count=round(weighted_count, 4),
         rationale=tuple(rationale),
     )
+
+
+def _resolve_feedback_policy(
+    policy: FeedbackAdjustmentPolicyInput | None,
+    *,
+    max_adjustment: float | None,
+) -> FeedbackAdjustmentPolicy:
+    if policy is None:
+        resolved = DEFAULT_FEEDBACK_ADJUSTMENT_POLICY
+    elif isinstance(policy, FeedbackAdjustmentPolicy):
+        resolved = policy
+    elif isinstance(policy, Mapping):
+        resolved = parse_feedback_adjustment_policy(policy, source="<feedback-policy>")
+    else:
+        raise OutcomeFeedbackError(f"Unsupported feedback policy type: {type(policy).__name__}")
+
+    if max_adjustment is None:
+        return resolved
+    return replace(
+        resolved,
+        max_adjustment=_validate_non_negative_float(
+            max_adjustment,
+            "maxAdjustment",
+            source="<feedback-policy>",
+        ),
+    )
+
+
+def _parse_as_of(as_of: datetime | str | None) -> datetime | None:
+    if as_of is None:
+        return None
+    if isinstance(as_of, datetime):
+        return _ensure_aware_utc(as_of)
+    if isinstance(as_of, str):
+        return _parse_feedback_datetime(as_of, source="<feedback-policy>:asOf")
+    raise OutcomeFeedbackError(f"<feedback-policy>: as_of must be a datetime or ISO timestamp")
+
+
+def _recency_weight(
+    record: DecisionOutcomeRecord,
+    policy: FeedbackAdjustmentPolicy,
+    *,
+    as_of: datetime | None,
+) -> float:
+    if policy.recency_half_life_days is None:
+        return 1.0
+
+    record_time = _parse_feedback_datetime(record.generated_at, source=f"<feedback:{record.record_id}>")
+    comparison_time = as_of or datetime.now(timezone.utc)
+    age_seconds = max(0.0, (_ensure_aware_utc(comparison_time) - record_time).total_seconds())
+    age_days = age_seconds / 86400.0
+    return 0.5 ** (age_days / policy.recency_half_life_days)
+
+
+def _parse_feedback_datetime(value: str, *, source: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise OutcomeFeedbackError(f"{source}: generatedAt must be an ISO timestamp") from exc
+    return _ensure_aware_utc(parsed)
+
+
+def _ensure_aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _policy_float(
+    payload: Mapping[str, Any],
+    *keys: str,
+    default: float,
+    source: str,
+) -> float:
+    for key in keys:
+        if key in payload:
+            return _parse_float(payload[key], field_name=key, source=source)
+    return float(default)
+
+
+def _policy_optional_positive_float(
+    payload: Mapping[str, Any],
+    *keys: str,
+    default: float | None,
+    source: str,
+) -> float | None:
+    for key in keys:
+        if key in payload:
+            value = payload[key]
+            if value in (None, ""):
+                return None
+            return _validate_positive_float(value, key, source=source)
+    return default
+
+
+def _parse_float(value: Any, *, field_name: str, source: str) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise OutcomeFeedbackError(f"{source}: {field_name} must be numeric") from exc
+
+
+def _validate_non_negative_float(value: float, field_name: str, *, source: str) -> float:
+    parsed = _parse_float(value, field_name=field_name, source=source)
+    if parsed < 0.0:
+        raise OutcomeFeedbackError(f"{source}: {field_name} must be 0 or greater")
+    return parsed
+
+
+def _validate_positive_float(value: float, field_name: str, *, source: str) -> float:
+    parsed = _parse_float(value, field_name=field_name, source=source)
+    if parsed <= 0.0:
+        raise OutcomeFeedbackError(f"{source}: {field_name} must be greater than 0")
+    return parsed
+
+
+def _validate_score_range(value: float, field_name: str, *, source: str) -> float:
+    parsed = _parse_float(value, field_name=field_name, source=source)
+    if parsed < 0.0 or parsed > 1.0:
+        raise OutcomeFeedbackError(f"{source}: {field_name} must be between 0.0 and 1.0")
+    return parsed
+
+
+def _camel_name(value: str) -> str:
+    head, *tail = value.split("_")
+    return head + "".join(part.title() for part in tail)
+
+
+DEFAULT_FEEDBACK_ADJUSTMENT_POLICY = FeedbackAdjustmentPolicy()
 
 
 def _extract_selected_model(report: Mapping[str, Any]) -> Mapping[str, Any]:

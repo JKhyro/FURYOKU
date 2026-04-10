@@ -62,6 +62,8 @@ from .provider_health import (
 from .outcome_feedback import (
     DecisionOutcomeRecord,
     FeedbackAdjustmentInput,
+    FeedbackAdjustmentPolicy,
+    FeedbackAdjustmentPolicyInput,
     ModelOutcomeFeedbackSummary,
     OutcomeFeedbackError,
     VALID_OUTCOME_VERDICTS,
@@ -69,6 +71,8 @@ from .outcome_feedback import (
     build_model_feedback_summaries,
     create_decision_outcome_record,
     load_decision_outcomes,
+    load_feedback_adjustment_policy,
+    parse_feedback_adjustment_policy,
 )
 from .runtime import (
     CharacterRoleExecutionResult,
@@ -96,6 +100,8 @@ __all__ = [
     "DecisionSituationExecutionResult",
     "DecisionOutcomeRecord",
     "FeedbackAdjustmentInput",
+    "FeedbackAdjustmentPolicy",
+    "FeedbackAdjustmentPolicyInput",
     "ModelCoverage",
     "ModelDecisionAggregate",
     "ModelDecisionError",
@@ -138,7 +144,9 @@ __all__ = [
     "load_character_profile",
     "load_decision_suite",
     "load_decision_outcomes",
+    "load_feedback_adjustment_policy",
     "load_task_profile",
+    "parse_feedback_adjustment_policy",
     "parse_model_registry",
     "parse_character_profile",
     "parse_decision_suite",

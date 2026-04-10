@@ -20,6 +20,7 @@ from .outcome_feedback import (
     VALID_OUTCOME_VERDICTS,
     append_decision_outcome,
     create_decision_outcome_record,
+    load_feedback_adjustment_policy,
     load_decision_outcomes,
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
@@ -56,8 +57,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "select":
         task = _task_from_args(args, parser)
-        feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
-        selection, report = _select_with_optional_feedback(models, task, feedback)
+        feedback, feedback_policy = _feedback_from_args(args, parser)
+        selection, report = _select_with_optional_feedback(models, task, feedback, feedback_policy=feedback_policy)
         _write_json(_single_selection_to_dict(selection, report=report))
         return 0
 
@@ -66,7 +67,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if not args.situation_id:
                 parser.error("--situation-id is required when --decision-suite is provided")
             readiness = _readiness_from_args(args, models)
-            feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
+            feedback, feedback_policy = _feedback_from_args(args, parser)
             result = execute_decision_situation(
                 models,
                 load_decision_suite(args.decision_suite),
@@ -74,17 +75,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
                 readiness=readiness,
                 feedback=feedback,
+                feedback_policy=feedback_policy,
             )
             _write_json(_decision_execution_result_to_dict(result, readiness=readiness), output_path=args.output)
             return 0 if result.ok else 2
 
         task = _task_from_args(args, parser)
-        feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
+        feedback, feedback_policy = _feedback_from_args(args, parser)
         result = route_and_execute(
             models,
             task,
             ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
             feedback=feedback,
+            feedback_policy=feedback_policy,
         )
         _write_json(_routed_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
@@ -108,12 +111,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             load_task_profile(path) for path in args.task_profile
         )
         readiness = _readiness_from_args(args, models)
-        feedback = load_decision_outcomes(args.feedback_log) if args.feedback_log else None
+        feedback, feedback_policy = _feedback_from_args(args, parser)
         report = evaluate_model_decisions(
             models,
             decision_input or None,
             readiness=readiness,
             feedback=feedback,
+            feedback_policy=feedback_policy,
         )
         _write_json(_decision_report_to_dict(report, readiness=readiness), output_path=args.output)
         return 0 if not report.blocked_tasks else 2
@@ -158,6 +162,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
     )
+    _add_feedback_policy_arg(select_parser)
     run_parser = subparsers.add_parser("run", help="Select and execute the best eligible model for a task.")
     _add_common_task_args(run_parser)
     run_parser.add_argument(
@@ -185,6 +190,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional JSONL outcome feedback log used to adjust decision-suite execution selection.",
     )
+    _add_feedback_policy_arg(run_parser)
     health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
     health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
@@ -220,6 +226,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
     )
+    _add_feedback_policy_arg(decide_parser)
     decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
     feedback_parser = subparsers.add_parser(
         "feedback",
@@ -292,6 +299,14 @@ def _add_health_decision_args(parser: argparse.ArgumentParser, help_text: str) -
     parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
     parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
     parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+
+
+def _add_feedback_policy_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--feedback-policy",
+        type=Path,
+        help="Optional JSON feedback adjustment policy used with --feedback-log.",
+    )
 
 
 def _add_common_task_args(parser: argparse.ArgumentParser) -> None:
@@ -384,10 +399,10 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
     return capabilities
 
 
-def _select_with_optional_feedback(models, task: TaskProfile, feedback):
+def _select_with_optional_feedback(models, task: TaskProfile, feedback, *, feedback_policy=None):
     if feedback is None:
         return select_model(models, task), None
-    report = evaluate_model_decisions(models, [task], feedback=feedback)
+    report = evaluate_model_decisions(models, [task], feedback=feedback, feedback_policy=feedback_policy)
     selection = report.selected_for(task.task_id)
     if selection is None:
         decision = report.situations[task.task_id]
@@ -397,6 +412,19 @@ def _select_with_optional_feedback(models, task: TaskProfile, feedback):
         )
         raise RouterError(f"No eligible model for task '{task.task_id}'. {blocker_summary}")
     return selection, report
+
+
+def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser):
+    feedback_log = getattr(args, "feedback_log", None)
+    feedback_policy_path = getattr(args, "feedback_policy", None)
+    if not feedback_log:
+        if feedback_policy_path:
+            parser.error("--feedback-policy requires --feedback-log")
+        return None, None
+    return (
+        load_decision_outcomes(feedback_log),
+        load_feedback_adjustment_policy(feedback_policy_path) if feedback_policy_path else None,
+    )
 
 
 def _readiness_from_args(args: argparse.Namespace, models):

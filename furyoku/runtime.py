@@ -13,7 +13,7 @@ from .model_decisions import (
     evaluate_model_decisions,
 )
 from .model_router import ModelEndpoint, ModelScore, RouterError, TaskProfile, select_model
-from .outcome_feedback import FeedbackAdjustmentInput
+from .outcome_feedback import FeedbackAdjustmentInput, FeedbackAdjustmentPolicyInput
 from .provider_adapters import (
     ProviderAdapter,
     ProviderExecutionRequest,
@@ -98,6 +98,7 @@ def route_and_execute(
     request: ProviderExecutionRequest | str,
     *,
     feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> RoutedExecutionResult:
     """Select the best eligible model for a task, then execute it."""
@@ -106,7 +107,7 @@ def route_and_execute(
     if feedback is None:
         selection = select_model(models, task)
     else:
-        report = evaluate_model_decisions(models, [task], feedback=feedback)
+        report = evaluate_model_decisions(models, [task], feedback=feedback, feedback_policy=feedback_policy)
         selection = report.selected_for(task.task_id)
         if selection is None:
             decision = report.situations[task.task_id]
@@ -127,11 +128,18 @@ def execute_decision_situation(
     *,
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> DecisionSituationExecutionResult:
     """Run one calibrated decision situation using the same selection evidence as `decide`."""
 
-    report = evaluate_model_decisions(models, decision_input, readiness=readiness, feedback=feedback)
+    report = evaluate_model_decisions(
+        models,
+        decision_input,
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+    )
     try:
         decision = report.situations[situation_id]
     except KeyError as exc:

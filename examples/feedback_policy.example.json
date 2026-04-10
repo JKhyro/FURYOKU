@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "maxAdjustment": 12.0,
+  "successBase": 2.0,
+  "successScoreMultiplier": 8.0,
+  "failurePenalty": -10.0,
+  "qualityConcernPenalty": -7.0,
+  "latencyConcernPenalty": -4.0,
+  "costConcernPenalty": -4.0,
+  "manualOverridePenalty": -8.0,
+  "manualOverrideTargetBase": 6.0,
+  "manualOverrideTargetScoreMultiplier": 4.0,
+  "defaultSuccessScore": 1.0,
+  "defaultFailureScore": 0.0,
+  "defaultConcernScore": 0.35,
+  "defaultManualOverrideScore": 0.25,
+  "defaultOverrideTargetScore": 0.9,
+  "recencyHalfLifeDays": null
+}
