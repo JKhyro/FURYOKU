@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current primary lane: [#74](https://github.com/JKhyro/FURYOKU/issues/74)
+- Current primary lane: [#78](https://github.com/JKhyro/FURYOKU/issues/78)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
 ## Current Baseline
@@ -22,24 +22,24 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: build a multi-model router that can choose the best local, CLI, or API LLM for a task and later feed CHARACTER/MOA-style agent arrays.
+- Current follow-on focus: add provider adapters so the router can execute local, CLI, and API LLMs through one interface.
 
 ## Product Direction
 
-FURYOKU's primary job is to help the wider system choose the right LLM for the situation.
+FURYOKU's currently known job is to help the wider system choose and use the right LLM for the situation. This is the current implementation horizon, not the final long-term definition of the project.
 
 - Register multiple model endpoints: local models, command-line/CLI models, and remote API models.
 - Describe task requirements such as privacy, reasoning, coding, memory retrieval, context size, latency, tool support, and structured output.
 - Rank eligible models and explain why a model was selected or rejected.
-- Support three-role CHARACTER panels where one model can act as the interactive face, one as memory/retrieval support, and one as reasoning/coding/rationality support.
+- Support flexible CHARACTER compositions, from a one-role tertiary Symbiote to larger arrays such as a primary role plus multiple secondary roles with their own subagent capacity.
 - Use benchmark truth as evidence for routing decisions, not as the project goal by itself.
 
 Current routing core:
 
-- [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract.
+- [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract and flexible CHARACTER composition selection.
 - [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
-- [`tests/test_model_router.py`](tests/test_model_router.py) verifies local-only selection, CLI/API routing, blocker reporting, and three-role CHARACTER panel selection.
+- [`tests/test_model_router.py`](tests/test_model_router.py) verifies local-only selection, CLI/API routing, blocker reporting, flexible CHARACTER composition, and the three-role compatibility helper.
 - [`tests/test_model_registry.py`](tests/test_model_registry.py) verifies registry loading, validation, and routing from configuration.
 
 ## Benchmark Evidence Lane
