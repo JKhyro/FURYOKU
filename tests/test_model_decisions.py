@@ -233,6 +233,56 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(decision.selected.model.model_id, "api-primary")
         self.assertTrue(any("provider readiness ready" in reason for reason in decision.selected.reasons))
 
+    def test_decision_output_preserves_latency_and_budget_constraints(self):
+        task = TaskProfile(
+            task_id="bounded-chat",
+            required_capabilities={"conversation": 0.8},
+            max_latency_ms=2000,
+            max_total_cost_per_1k=0.03,
+        )
+
+        report = evaluate_model_decisions(sample_models(), [task])
+        payload = report.to_dict()
+        decision = payload["decisions"][0]
+        blocked = next(score for score in decision["ranked"] if score["modelId"] == "cli-codex-high")
+
+        self.assertEqual(decision["taskId"], "bounded-chat")
+        self.assertEqual(decision["maxLatencyMs"], 2000)
+        self.assertEqual(decision["maxTotalCostPer1k"], 0.03)
+        self.assertEqual(decision["selectedModelId"], "local-gemma3-heretic")
+        self.assertFalse(blocked["eligible"])
+        self.assertTrue(
+            any("average latency 6000ms exceeds task limit 2000ms" in blocker for blocker in blocked["blockers"])
+        )
+        self.assertEqual(blocked["averageLatencyMs"], 6000)
+        self.assertEqual(blocked["totalCostPer1k"], 0.1)
+
+    def test_decision_suite_to_dict_includes_task_constraint_fields(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "constraint-suite",
+                "situations": [
+                    {
+                        "taskId": "bounded-chat",
+                        "requiredCapabilities": {"conversation": 0.8},
+                        "maxLatencyMs": 2000,
+                        "maxTotalCostPer1k": 0.03,
+                        "weight": 2.0,
+                        "minimumScore": 40.0,
+                    }
+                ],
+            }
+        )
+
+        situation = suite.to_dict()["situations"][0]
+
+        self.assertEqual(situation["taskId"], "bounded-chat")
+        self.assertEqual(situation["maxLatencyMs"], 2000)
+        self.assertEqual(situation["maxTotalCostPer1k"], 0.03)
+        self.assertEqual(situation["weight"], 2.0)
+        self.assertEqual(situation["minimumScore"], 40.0)
+
     def test_feedback_adjustment_can_promote_eligible_model(self):
         task = TaskProfile(
             task_id="feedback-chat",

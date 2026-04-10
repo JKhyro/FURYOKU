@@ -195,11 +195,29 @@ class TaskProfile:
     description: str = ""
     min_context_tokens: int = 0
     privacy_requirement: PrivacyRequirement = "allow_remote"
+    max_latency_ms: int | None = None
     max_input_cost_per_1k: float | None = None
     max_output_cost_per_1k: float | None = None
+    max_total_cost_per_1k: float | None = None
     require_tools: bool = False
     require_json: bool = False
     preferred_providers: tuple[ProviderKind, ...] = ()
+
+    def to_dict(self) -> dict:
+        return {
+            "taskId": self.task_id,
+            "description": self.description,
+            "requiredCapabilities": dict(self.required_capabilities),
+            "minContextTokens": self.min_context_tokens,
+            "privacyRequirement": self.privacy_requirement,
+            "maxLatencyMs": self.max_latency_ms,
+            "maxInputCostPer1k": self.max_input_cost_per_1k,
+            "maxOutputCostPer1k": self.max_output_cost_per_1k,
+            "maxTotalCostPer1k": self.max_total_cost_per_1k,
+            "requireTools": self.require_tools,
+            "requireJson": self.require_json,
+            "preferredProviders": list(self.preferred_providers),
+        }
 
 
 @dataclass(frozen=True)
@@ -303,6 +321,7 @@ def score_model(
     resolved_policy = resolve_routing_score_policy(policy)
     blockers: list[str] = []
     reasons: list[str] = []
+    total_cost_per_1k = model.input_cost_per_1k + model.output_cost_per_1k
 
     if not model.available:
         blockers.append("model is not currently available")
@@ -312,10 +331,28 @@ def score_model(
         )
     if task.privacy_requirement == "local_only" and not model.is_local:
         blockers.append("task requires a local model")
+    if task.max_latency_ms is not None:
+        if model.average_latency_ms > task.max_latency_ms:
+            blockers.append(
+                f"average latency {model.average_latency_ms}ms exceeds task limit {task.max_latency_ms}ms"
+            )
+        else:
+            reasons.append(
+                f"average latency {model.average_latency_ms}ms within task limit {task.max_latency_ms}ms"
+            )
     if task.max_input_cost_per_1k is not None and model.input_cost_per_1k > task.max_input_cost_per_1k:
         blockers.append("input cost exceeds task limit")
     if task.max_output_cost_per_1k is not None and model.output_cost_per_1k > task.max_output_cost_per_1k:
         blockers.append("output cost exceeds task limit")
+    if task.max_total_cost_per_1k is not None:
+        if total_cost_per_1k > task.max_total_cost_per_1k:
+            blockers.append(
+                f"total cost per 1k {total_cost_per_1k:.4f} exceeds task limit {task.max_total_cost_per_1k:.4f}"
+            )
+        else:
+            reasons.append(
+                f"total cost per 1k {total_cost_per_1k:.4f} within task limit {task.max_total_cost_per_1k:.4f}"
+            )
     if task.require_tools and not model.supports_tools:
         blockers.append("task requires tool support")
     if task.require_json and not model.supports_json:
@@ -351,10 +388,7 @@ def score_model(
         score += resolved_policy.preferred_provider_bonus
         reasons.append(f"preferred provider bonus for {model.provider}")
 
-    cost_penalty = min(
-        (model.input_cost_per_1k + model.output_cost_per_1k) * resolved_policy.cost_penalty_multiplier,
-        resolved_policy.max_cost_penalty,
-    )
+    cost_penalty = min(total_cost_per_1k * resolved_policy.cost_penalty_multiplier, resolved_policy.max_cost_penalty)
     if cost_penalty:
         score -= cost_penalty
         reasons.append(f"cost penalty {cost_penalty:.2f}")

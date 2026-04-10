@@ -72,7 +72,7 @@ class DecisionSuite:
             "description": self.description,
             "situations": [
                 {
-                    "taskId": task.task_id,
+                    **task.to_dict(),
                     "weight": self.weight_for(task.task_id),
                     "minimumScore": self.minimum_score_for(task.task_id),
                 }
@@ -134,8 +134,7 @@ class SituationDecision:
 
     def to_dict(self) -> dict:
         return {
-            "taskId": self.task.task_id,
-            "description": self.task.description,
+            **self.task.to_dict(),
             "eligible": self.eligible,
             "selectedModelId": self.selected.model.model_id if self.selected else None,
             "selectedProvider": self.selected.model.provider if self.selected else None,
@@ -1574,11 +1573,20 @@ def _round_weight(value: float) -> float:
 
 
 def _score_to_dict(score: ModelScore) -> dict:
-    return {
+    payload = {
         "modelId": score.model.model_id,
         "provider": score.model.provider,
         "score": score.score,
         "eligible": score.eligible,
+        "averageLatencyMs": score.model.average_latency_ms,
         "reasons": list(score.reasons),
         "blockers": list(score.blockers),
     }
+    if score.model.input_cost_per_1k > 0.0:
+        payload["inputCostPer1k"] = score.model.input_cost_per_1k
+    if score.model.output_cost_per_1k > 0.0:
+        payload["outputCostPer1k"] = score.model.output_cost_per_1k
+    total_cost_per_1k = score.model.input_cost_per_1k + score.model.output_cost_per_1k
+    if total_cost_per_1k > 0.0:
+        payload["totalCostPer1k"] = round(total_cost_per_1k, 6)
+    return payload
