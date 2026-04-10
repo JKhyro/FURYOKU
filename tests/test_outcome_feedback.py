@@ -85,6 +85,97 @@ def write_comparison_report(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_comparison_batch_report(path: Path) -> None:
+    payload = {
+        "reportMetadata": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-04-10T13:00:00+00:00",
+        },
+        "ok": False,
+        "suiteId": "comparison-batch-suite",
+        "comparison": {
+            "situationCount": 3,
+            "successfulSituationCount": 2,
+            "failedSituationCount": 1,
+            "blockedSituationCount": 1,
+            "executedCandidateCount": 3,
+            "successfulExecutionCount": 2,
+            "failedExecutionCount": 1,
+        },
+        "situations": [
+            {
+                "ok": True,
+                "situationId": "fallback-chat",
+                "taskId": "fallback-chat",
+                "comparison": {
+                    "executedCount": 2,
+                    "successfulCount": 1,
+                    "failedCount": 1,
+                },
+                "executions": [
+                    {
+                        "attemptNumber": 1,
+                        "selectedModel": {
+                            "modelId": "local-failing",
+                            "provider": "local",
+                        },
+                        "execution": {
+                            "status": "error",
+                            "stderr": "local failed",
+                        },
+                    },
+                    {
+                        "attemptNumber": 2,
+                        "selectedModel": {
+                            "modelId": "cli-fallback",
+                            "provider": "cli",
+                        },
+                        "execution": {
+                            "status": "ok",
+                            "responseText": "fallback:hello",
+                        },
+                    },
+                ],
+            },
+            {
+                "ok": True,
+                "situationId": "tool-heavy-coding",
+                "taskId": "tool-heavy-coding",
+                "comparison": {
+                    "executedCount": 1,
+                    "successfulCount": 1,
+                    "failedCount": 0,
+                },
+                "executions": [
+                    {
+                        "attemptNumber": 1,
+                        "selectedModel": {
+                            "modelId": "cli-coder",
+                            "provider": "cli",
+                        },
+                        "execution": {
+                            "status": "ok",
+                            "responseText": "code:write code",
+                        },
+                    }
+                ],
+            },
+            {
+                "ok": False,
+                "situationId": "blocked-situation",
+                "taskId": "blocked-situation",
+                "comparison": {
+                    "executedCount": 0,
+                    "successfulCount": 0,
+                    "failedCount": 0,
+                },
+                "executions": [],
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 class OutcomeFeedbackTests(unittest.TestCase):
     def test_create_feedback_record_links_to_persisted_execution_report(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -212,6 +303,54 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(loaded[0].verdict, "failure")
         self.assertEqual(loaded[1].selected_model_id, "cli-fallback")
         self.assertEqual(loaded[1].verdict, "success")
+
+    def test_create_comparative_execution_outcome_records_supports_batch_reports(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "comparison-batch.json"
+            write_comparison_batch_report(report_path)
+
+            records = create_comparative_execution_outcome_records(
+                report_path,
+                success_score=1.0,
+                failure_score=0.0,
+                reason="batch comparison capture",
+                tags=("compare-batch",),
+                metadata={"operator": "test"},
+            )
+
+        self.assertEqual(len(records), 3)
+        self.assertEqual(records[0].situation_id, "fallback-chat")
+        self.assertEqual(records[0].selected_model_id, "local-failing")
+        self.assertEqual(records[0].verdict, "failure")
+        self.assertEqual(records[0].score, 0.0)
+        self.assertEqual(records[0].metadata["comparisonReportType"], "compare-batch")
+        self.assertEqual(records[0].metadata["comparisonSuiteId"], "comparison-batch-suite")
+        self.assertEqual(records[0].metadata["comparisonSituationIndex"], 1)
+        self.assertEqual(records[0].metadata["comparisonSituationCount"], 3)
+        self.assertEqual(records[0].metadata["comparisonBatchExecutedCandidateCount"], 3)
+        self.assertEqual(records[0].metadata["operator"], "test")
+        self.assertEqual(records[2].situation_id, "tool-heavy-coding")
+        self.assertEqual(records[2].selected_model_id, "cli-coder")
+        self.assertEqual(records[2].verdict, "success")
+        self.assertEqual(records[2].score, 1.0)
+
+    def test_capture_comparative_execution_outcomes_skips_blocked_batch_situations(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "comparison-batch.json"
+            feedback_path = Path(temp_dir) / "feedback" / "comparison-batch-outcomes.jsonl"
+            write_comparison_batch_report(report_path)
+
+            records = capture_comparative_execution_outcomes(
+                feedback_path,
+                report_path,
+                reason="batch operator comparison",
+            )
+            loaded = load_decision_outcomes(feedback_path)
+
+        self.assertEqual(len(records), 3)
+        self.assertEqual(len(loaded), 3)
+        self.assertEqual({record.situation_id for record in loaded}, {"fallback-chat", "tool-heavy-coding"})
+        self.assertTrue(all(record.metadata["comparisonReportType"] == "compare-batch" for record in loaded))
 
     def test_infer_execution_outcome_rejects_reports_without_execution_status(self):
         with self.assertRaises(OutcomeFeedbackError) as error:
