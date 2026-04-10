@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "characterId": "kira",
+  "class": "Symbiote",
+  "rank": "Prototype",
+  "description": "Example larger CHARACTER composition with one primary role and seven secondary role agents.",
+  "roles": [
+    {
+      "roleId": "primary",
+      "primary": true,
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.primary",
+        "requiredCapabilities": {
+          "conversation": 0.9,
+          "instruction_following": 0.85,
+          "safety": 0.8
+        }
+      }
+    },
+    {
+      "roleId": "memory",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.memory",
+        "privacyRequirement": "prefer_local",
+        "requireJson": true,
+        "minContextTokens": 16000,
+        "requiredCapabilities": {
+          "retrieval": 0.85,
+          "summarization": 0.8
+        }
+      }
+    },
+    {
+      "roleId": "reasoning",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.reasoning",
+        "requiredCapabilities": {
+          "reasoning": 0.9,
+          "instruction_following": 0.85
+        }
+      }
+    },
+    {
+      "roleId": "coding",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.coding",
+        "requireTools": true,
+        "requiredCapabilities": {
+          "coding": 0.85,
+          "reasoning": 0.8
+        }
+      }
+    },
+    {
+      "roleId": "safety",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.safety",
+        "requiredCapabilities": {
+          "safety": 0.9,
+          "instruction_following": 0.8
+        }
+      }
+    },
+    {
+      "roleId": "planning",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.planning",
+        "requiredCapabilities": {
+          "reasoning": 0.85,
+          "summarization": 0.75
+        }
+      }
+    },
+    {
+      "roleId": "research",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.research",
+        "minContextTokens": 32000,
+        "requiredCapabilities": {
+          "retrieval": 0.8,
+          "summarization": 0.8
+        }
+      }
+    },
+    {
+      "roleId": "reflection",
+      "maxSubagents": 12,
+      "task": {
+        "taskId": "character.kira.reflection",
+        "requiredCapabilities": {
+          "reasoning": 0.8,
+          "conversation": 0.75
+        }
+      }
+    }
+  ]
+}
