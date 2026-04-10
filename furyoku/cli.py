@@ -30,8 +30,11 @@ from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResu
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .runtime import (
     CharacterRoleExecutionResult,
+    ComparativeEvaluationResult,
     DecisionSituationExecutionResult,
     RoutedExecutionResult,
+    compare_decision_situation_executions,
+    compare_model_executions,
     execute_character_role,
     execute_decision_situation,
     execute_decision_situation_with_fallback,
@@ -143,6 +146,41 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_path=args.output,
             capture_args=args,
         )
+        return 0 if result.ok else 2
+
+    if args.command == "compare-run":
+        if args.max_candidates is not None and args.max_candidates < 1:
+            parser.error("--max-candidates must be at least 1")
+        readiness = _readiness_from_args(args, models)
+        feedback, feedback_policy = _feedback_from_args(args, parser)
+        routing_policy = _routing_policy_from_args(args)
+        request = ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds)
+        if args.decision_suite:
+            if not args.situation_id:
+                parser.error("--situation-id is required when --decision-suite is provided")
+            result = compare_decision_situation_executions(
+                models,
+                load_decision_suite(args.decision_suite),
+                args.situation_id,
+                request,
+                readiness=readiness,
+                feedback=feedback,
+                feedback_policy=feedback_policy,
+                routing_policy=routing_policy,
+                max_candidates=args.max_candidates,
+            )
+        else:
+            result = compare_model_executions(
+                models,
+                _task_from_args(args, parser),
+                request,
+                readiness=readiness,
+                feedback=feedback,
+                feedback_policy=feedback_policy,
+                routing_policy=routing_policy,
+                max_candidates=args.max_candidates,
+            )
+        _write_json(_comparative_evaluation_result_to_dict(result, readiness=readiness), output_path=args.output)
         return 0 if result.ok else 2
 
     if args.command == "health":
@@ -280,6 +318,36 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_feedback_policy_arg(run_parser)
     _add_routing_policy_arg(run_parser)
+    compare_parser = subparsers.add_parser(
+        "compare-run",
+        help="Execute the same prompt across eligible ranked models for direct comparison.",
+    )
+    _add_common_task_args(compare_parser)
+    compare_parser.add_argument(
+        "--decision-suite",
+        type=Path,
+        help="Compare a named situation from a reusable FURYOKU decision suite.",
+    )
+    compare_parser.add_argument(
+        "--situation-id",
+        help="Situation/task id inside --decision-suite to compare.",
+    )
+    compare_parser.add_argument("--prompt", required=True, help="Prompt text passed to every eligible model.")
+    compare_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
+    compare_parser.add_argument(
+        "--max-candidates",
+        type=int,
+        help="Maximum eligible ranked models to execute. Defaults to all eligible models.",
+    )
+    compare_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON comparison report.")
+    _add_health_decision_args(compare_parser, "Run provider readiness checks before comparative execution.")
+    compare_parser.add_argument(
+        "--feedback-log",
+        type=Path,
+        help="Optional JSONL outcome feedback log used to adjust comparative model rankings.",
+    )
+    _add_feedback_policy_arg(compare_parser)
+    _add_routing_policy_arg(compare_parser)
     health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
     health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
@@ -690,6 +758,34 @@ def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult,
         "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
     }
     _add_execution_attempts(payload, result.execution_attempts)
+    _add_feedback_policy_metadata(payload, result.report)
+    _add_routing_policy_metadata(payload, result.report)
+    if readiness is not None:
+        payload["readiness"] = [_health_to_dict(result) for result in readiness]
+    return payload
+
+
+def _comparative_evaluation_result_to_dict(result: ComparativeEvaluationResult, *, readiness=None) -> dict:
+    payload = {
+        "ok": result.ok,
+        "taskId": result.task_id,
+        "selectedModel": _score_to_dict(result.decision.selected) if result.decision.selected else None,
+        "decision": result.decision.to_dict(),
+        "aggregate": result.report.aggregate.to_dict(),
+        "comparison": {
+            "executedCount": result.executed_count,
+            "successfulCount": result.successful_count,
+            "failedCount": result.failed_count,
+            "maxCandidates": result.max_candidates,
+        },
+        "executions": [
+            _execution_attempt_to_dict(attempt)
+            for attempt in result.execution_attempts
+        ],
+        "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
+    }
+    if result.situation_id:
+        payload["situationId"] = result.situation_id
     _add_feedback_policy_metadata(payload, result.report)
     _add_routing_policy_metadata(payload, result.report)
     if readiness is not None:

@@ -11,6 +11,8 @@ from furyoku import (
     RoutingScorePolicy,
     SubprocessProviderAdapter,
     TaskProfile,
+    compare_decision_situation_executions,
+    compare_model_executions,
     execute_decision_situation,
     execute_decision_situation_with_fallback,
     execute_character_role,
@@ -280,6 +282,83 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.model_id, "local-chat")
         self.assertEqual(len(result.execution_attempts), 1)
 
+    def test_compare_model_executions_runs_all_eligible_models(self):
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = compare_model_executions(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(
+                task_id="compare-chat",
+                privacy_requirement="prefer_local",
+                required_capabilities={"conversation": 0.8},
+            ),
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.executed_count, 2)
+        self.assertEqual(result.successful_count, 2)
+        self.assertEqual(result.failed_count, 0)
+        self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
+        self.assertEqual(result.execution_attempts[1].selection.model.model_id, "cli-coder")
+        self.assertEqual(result.execution_attempts[1].execution.response_text, "cli-coder:hello")
+
+    def test_compare_model_executions_preserves_partial_failure(self):
+        def runner(invocation, prompt, timeout):
+            if invocation[0] == "local-chat":
+                return subprocess.CompletedProcess(invocation, 3, stdout="", stderr="local failed")
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = compare_model_executions(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(
+                task_id="compare-chat",
+                privacy_requirement="prefer_local",
+                required_capabilities={"conversation": 0.8},
+            ),
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.executed_count, 2)
+        self.assertEqual(result.successful_count, 1)
+        self.assertEqual(result.failed_count, 1)
+        self.assertEqual(result.execution_attempts[0].execution.status, "error")
+        self.assertEqual(result.execution_attempts[1].execution.status, "ok")
+
+    def test_compare_model_executions_respects_max_candidates(self):
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = compare_model_executions(
+            [local_endpoint(), cli_endpoint()],
+            TaskProfile(
+                task_id="compare-chat",
+                privacy_requirement="prefer_local",
+                required_capabilities={"conversation": 0.8},
+            ),
+            "hello",
+            max_candidates=1,
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.max_candidates, 1)
+        self.assertEqual(result.executed_count, 1)
+        self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
+
     def test_execute_decision_situation_runs_named_suite_task(self):
         suite = parse_decision_suite(
             {
@@ -418,6 +497,41 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.model_id, "cli-coder")
         self.assertEqual(result.situation_id, "fallback-chat")
         self.assertEqual(len(result.execution_attempts), 2)
+        self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
+        self.assertEqual(result.execution_attempts[1].selection.model.model_id, "cli-coder")
+
+    def test_compare_decision_situation_executions_runs_suite_candidates(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "compare-suite",
+                "situations": [
+                    {
+                        "taskId": "compare-chat",
+                        "privacyRequirement": "prefer_local",
+                        "requiredCapabilities": {"conversation": 0.8},
+                    }
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = compare_decision_situation_executions(
+            [local_endpoint(), cli_endpoint()],
+            suite,
+            "compare-chat",
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.situation_id, "compare-chat")
+        self.assertEqual(result.executed_count, 2)
         self.assertEqual(result.execution_attempts[0].selection.model.model_id, "local-chat")
         self.assertEqual(result.execution_attempts[1].selection.model.model_id, "cli-coder")
 
