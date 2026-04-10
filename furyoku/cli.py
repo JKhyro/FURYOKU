@@ -18,8 +18,10 @@ from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResu
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .runtime import (
     CharacterRoleExecutionResult,
+    DecisionSituationExecutionResult,
     RoutedExecutionResult,
     execute_character_role,
+    execute_decision_situation,
     route_and_execute,
 )
 from .task_profiles import load_task_profile
@@ -37,6 +39,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
+        if args.decision_suite:
+            if not args.situation_id:
+                parser.error("--situation-id is required when --decision-suite is provided")
+            readiness = _readiness_from_args(args, models)
+            result = execute_decision_situation(
+                models,
+                load_decision_suite(args.decision_suite),
+                args.situation_id,
+                ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
+                readiness=readiness,
+            )
+            _write_json(_decision_execution_result_to_dict(result, readiness=readiness))
+            return 0 if result.ok else 2
+
         task = _task_from_args(args, parser)
         result = route_and_execute(
             models,
@@ -64,16 +80,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         decision_input = load_decision_suite(args.decision_suite) if args.decision_suite else tuple(
             load_task_profile(path) for path in args.task_profile
         )
-        readiness = None
-        if args.check_health:
-            readiness = check_provider_health_many(
-                models,
-                ProviderHealthCheckRequest(
-                    probe=args.health_probe,
-                    probe_prompt=args.health_probe_prompt,
-                    timeout_seconds=args.health_timeout_seconds,
-                ),
-            )
+        readiness = _readiness_from_args(args, models)
         report = evaluate_model_decisions(models, decision_input or None, readiness=readiness)
         _write_json(_decision_report_to_dict(report, readiness=readiness))
         return 0 if not report.blocked_tasks else 2
@@ -106,8 +113,25 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_common_task_args(subparsers.add_parser("select", help="Select the best eligible model for a task."))
     run_parser = subparsers.add_parser("run", help="Select and execute the best eligible model for a task.")
     _add_common_task_args(run_parser)
+    run_parser.add_argument(
+        "--decision-suite",
+        type=Path,
+        help="Run a named situation from a reusable FURYOKU decision suite.",
+    )
+    run_parser.add_argument(
+        "--situation-id",
+        help="Situation/task id inside --decision-suite to execute.",
+    )
     run_parser.add_argument("--prompt", required=True, help="Prompt text passed to the selected model.")
     run_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
+    run_parser.add_argument(
+        "--check-health",
+        action="store_true",
+        help="Run provider readiness checks before decision-suite execution.",
+    )
+    run_parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
+    run_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
+    run_parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
     health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
     health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
@@ -269,6 +293,19 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
     return capabilities
 
 
+def _readiness_from_args(args: argparse.Namespace, models):
+    if not getattr(args, "check_health", False):
+        return None
+    return check_provider_health_many(
+        models,
+        ProviderHealthCheckRequest(
+            probe=args.health_probe,
+            probe_prompt=args.health_probe_prompt,
+            timeout_seconds=args.health_timeout_seconds,
+        ),
+    )
+
+
 def _score_to_dict(selection: ModelScore) -> dict:
     return {
         "modelId": selection.model.model_id,
@@ -286,6 +323,20 @@ def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
         "selection": _score_to_dict(result.selection),
         "execution": _execution_to_dict(result.execution),
     }
+
+
+def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult, *, readiness=None) -> dict:
+    payload = {
+        "ok": result.ok,
+        "situationId": result.situation_id,
+        "selectedModel": _score_to_dict(result.selection) if result.selection else None,
+        "decision": result.decision.to_dict(),
+        "execution": _execution_to_dict(result.execution) if result.execution else None,
+        "aggregate": result.report.aggregate.to_dict(),
+    }
+    if readiness is not None:
+        payload["readiness"] = [_health_to_dict(result) for result in readiness]
+    return payload
 
 
 def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> dict:

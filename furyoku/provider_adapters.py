@@ -197,6 +197,8 @@ def _run_subprocess(
         list(invocation),
         input=prompt,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=timeout_seconds,
         check=False,

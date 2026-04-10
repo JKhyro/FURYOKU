@@ -254,6 +254,87 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["selection"]["modelId"], "local-echo")
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
 
+    def test_run_decision_suite_executes_named_situation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_executable_character_registry(registry_path)
+            write_decision_suite(suite_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--situation-id",
+                        "private-chat",
+                        "--prompt",
+                        "hello",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["situationId"], "private-chat")
+            self.assertEqual(payload["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["decision"]["weight"], 3.0)
+            self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+
+    def test_run_decision_suite_returns_blockers_without_execution_when_threshold_blocks(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_registry(registry_path)
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "suiteId": "threshold-suite",
+                        "situations": [
+                            {
+                                "taskId": "too-strict",
+                                "minimumScore": 120.0,
+                                "requiredCapabilities": {"conversation": 0.5},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--situation-id",
+                        "too-strict",
+                        "--prompt",
+                        "hello",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 2)
+            self.assertFalse(payload["ok"])
+            self.assertIsNone(payload["selectedModel"])
+            self.assertIsNone(payload["execution"])
+            self.assertTrue(
+                any(
+                    "below minimum score 120.00" in blocker
+                    for blocker in payload["decision"]["blockers"]["local-echo"]
+                )
+            )
+
     def test_select_accepts_task_profile_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"

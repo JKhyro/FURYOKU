@@ -2,12 +2,15 @@ import subprocess
 import unittest
 
 from furyoku import (
+    ModelDecisionError,
     ModelEndpoint,
     ProviderExecutionRequest,
     RouterError,
     SubprocessProviderAdapter,
     TaskProfile,
+    execute_decision_situation,
     execute_character_role,
+    parse_decision_suite,
     parse_character_profile,
     route_and_execute,
 )
@@ -75,6 +78,77 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(result.selection.eligible)
         self.assertEqual(result.execution.status, "error")
         self.assertEqual(result.execution.stderr, "bad runtime")
+
+    def test_execute_decision_situation_runs_named_suite_task(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "runtime-suite",
+                "situations": [
+                    {
+                        "taskId": "private-chat",
+                        "privacyRequirement": "local_only",
+                        "weight": 3.0,
+                        "minimumScore": 90.0,
+                        "requiredCapabilities": {"conversation": 0.9},
+                    }
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_decision_situation(
+            [local_endpoint(), cli_endpoint()],
+            suite,
+            "private-chat",
+            "hello",
+            adapters={"local": SubprocessProviderAdapter(runner)},
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertEqual(result.decision.weight, 3.0)
+        self.assertEqual(result.execution.response_text, "local-chat:hello")
+
+    def test_execute_decision_situation_does_not_execute_threshold_blocked_task(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "blocked-suite",
+                "situations": [
+                    {
+                        "taskId": "too-strict",
+                        "minimumScore": 120.0,
+                        "requiredCapabilities": {"conversation": 0.5},
+                    }
+                ],
+            }
+        )
+
+        result = execute_decision_situation([local_endpoint()], suite, "too-strict", "hello")
+
+        self.assertFalse(result.ok)
+        self.assertIsNone(result.selection)
+        self.assertIsNone(result.execution)
+        self.assertTrue(
+            any("below minimum score 120.00" in blocker for blocker in result.decision.blockers["local-chat"])
+        )
+
+    def test_execute_decision_situation_rejects_unknown_situation(self):
+        suite = parse_decision_suite(
+            {
+                "schemaVersion": 1,
+                "suiteId": "runtime-suite",
+                "situations": [{"taskId": "known", "requiredCapabilities": {"conversation": 0.5}}],
+            }
+        )
+
+        with self.assertRaises(ModelDecisionError) as error:
+            execute_decision_situation([local_endpoint()], suite, "missing", "hello")
+
+        self.assertIn("Unknown decision situation", str(error.exception))
 
     def test_execute_character_role_defaults_to_primary_role(self):
         profile = parse_character_profile(

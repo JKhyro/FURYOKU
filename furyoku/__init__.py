@@ -57,7 +57,9 @@ from .provider_health import (
 )
 from .runtime import (
     CharacterRoleExecutionResult,
+    DecisionSituationExecutionResult,
     RoutedExecutionResult,
+    execute_decision_situation,
     execute_character_role,
     route_and_execute,
 )
@@ -74,6 +76,7 @@ __all__ = [
     "CharacterRoleSpec",
     "DecisionSuite",
     "DecisionSituationPolicy",
+    "DecisionSituationExecutionResult",
     "ModelCoverage",
     "ModelDecisionAggregate",
     "ModelDecisionError",
@@ -101,6 +104,7 @@ __all__ = [
     "evaluate_model_decisions",
     "execute_model",
     "execute_character_role",
+    "execute_decision_situation",
     "execute_selected_model",
     "check_provider_health",
     "check_provider_health_many",
