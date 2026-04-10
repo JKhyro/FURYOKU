@@ -98,10 +98,12 @@ from .outcome_feedback import (
 )
 from .runtime import (
     CharacterRoleExecutionResult,
+    ComparativeExecutionBatchResult,
     ComparativeEvaluationResult,
     DecisionSituationExecutionResult,
     ProviderExecutionAttempt,
     RoutedExecutionResult,
+    compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
     execute_decision_situation,
@@ -123,6 +125,7 @@ __all__ = [
     "CharacterRoleExecutionResult",
     "CharacterRoleAssignment",
     "CharacterRoleSpec",
+    "ComparativeExecutionBatchResult",
     "ComparativeEvaluationResult",
     "DecisionSuite",
     "DecisionSituationPolicy",
@@ -171,6 +174,7 @@ __all__ = [
     "build_model_feedback_summaries",
     "build_model_recommendation_report",
     "build_routing_score_policy_metadata",
+    "compare_decision_suite_executions",
     "capture_comparative_execution_outcomes",
     "capture_execution_outcome",
     "default_character_role_tasks",

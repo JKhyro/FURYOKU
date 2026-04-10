@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "primary-routing",
+  "prompts": {
+    "decision.private-chat": "Say hello in one concise sentence.",
+    "decision.tool-heavy-coding": "Write a Python function that returns the nth Fibonacci number.",
+    "decision.long-context-memory": "Summarize the key facts from a long meeting transcript into JSON fields.",
+    "decision.low-latency-local": "Respond with a short local-friendly status message.",
+    "decision.structured-json": {
+      "prompt": "Return a JSON object with keys message and severity.",
+      "timeoutSeconds": 45.0
+    },
+    "decision.cost-sensitive-remote": "Summarize this support ticket in two short bullet points."
+  }
+}

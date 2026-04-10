@@ -139,6 +139,44 @@ class ComparativeEvaluationResult:
         return len(self.execution_attempts) - self.successful_count
 
 
+@dataclass(frozen=True)
+class ComparativeExecutionBatchResult:
+    """Aggregate comparative execution report across multiple decision-suite situations."""
+
+    report: ModelDecisionReport
+    situation_results: tuple[ComparativeEvaluationResult, ...]
+    suite_id: str = ""
+    max_candidates: int | None = None
+
+    @property
+    def ok(self) -> bool:
+        return not self.report.blocked_tasks and all(result.ok for result in self.situation_results)
+
+    @property
+    def successful_situation_count(self) -> int:
+        return sum(1 for result in self.situation_results if result.ok)
+
+    @property
+    def failed_situation_count(self) -> int:
+        return sum(1 for result in self.situation_results if result.decision.selected is not None and not result.ok)
+
+    @property
+    def blocked_situation_count(self) -> int:
+        return sum(1 for result in self.situation_results if result.decision.selected is None)
+
+    @property
+    def executed_candidate_count(self) -> int:
+        return sum(result.executed_count for result in self.situation_results)
+
+    @property
+    def successful_execution_count(self) -> int:
+        return sum(result.successful_count for result in self.situation_results)
+
+    @property
+    def failed_execution_count(self) -> int:
+        return sum(result.failed_count for result in self.situation_results)
+
+
 def route_and_execute(
     models: list[ModelEndpoint],
     task: TaskProfile,
@@ -419,6 +457,57 @@ def compare_decision_situation_executions(
     )
 
 
+def compare_decision_suite_executions(
+    models: list[ModelEndpoint],
+    decision_input: DecisionSuite | Iterable[TaskProfile] | None,
+    requests_by_situation: Mapping[str, ProviderExecutionRequest | str],
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    max_candidates: int | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> ComparativeExecutionBatchResult:
+    """Compare eligible ranked candidates across every situation in a decision suite."""
+
+    _validate_positive_limit(max_candidates, "max_candidates")
+    report = evaluate_model_decisions(
+        models,
+        decision_input,
+        readiness=readiness,
+        feedback=feedback,
+        feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
+    )
+    _validate_suite_batch_requests(report, requests_by_situation)
+    situation_results = tuple(
+        ComparativeEvaluationResult(
+            report=report,
+            decision=decision,
+            situation_id=decision.task.task_id,
+            max_candidates=max_candidates,
+            execution_attempts=(
+                _execute_comparative_attempts(
+                    decision.ranked,
+                    requests_by_situation[decision.task.task_id],
+                    max_candidates=max_candidates,
+                    adapters=adapters,
+                )
+                if decision.selected is not None
+                else ()
+            ),
+        )
+        for decision in report.decisions
+    )
+    return ComparativeExecutionBatchResult(
+        report=report,
+        suite_id=decision_input.suite_id if isinstance(decision_input, DecisionSuite) else "",
+        situation_results=situation_results,
+        max_candidates=max_candidates,
+    )
+
+
 def execute_character_role(
     models: list[ModelEndpoint],
     profile: CharacterProfile,
@@ -528,6 +617,24 @@ def _execute_selected_model_safely(
 
 def _validate_max_attempts(max_attempts: int | None) -> None:
     _validate_positive_limit(max_attempts, "max_attempts")
+
+
+def _validate_suite_batch_requests(
+    report: ModelDecisionReport,
+    requests_by_situation: Mapping[str, ProviderExecutionRequest | str],
+) -> None:
+    expected = {decision.task.task_id for decision in report.decisions}
+    provided = set(requests_by_situation)
+    missing = sorted(expected - provided)
+    if missing:
+        raise ModelDecisionError(
+            f"Missing comparative batch requests for situations: {', '.join(missing)}"
+        )
+    unknown = sorted(provided - expected)
+    if unknown:
+        raise ModelDecisionError(
+            f"Unknown comparative batch request situations: {', '.join(unknown)}"
+        )
 
 
 def _validate_positive_limit(limit: int | None, name: str) -> None:

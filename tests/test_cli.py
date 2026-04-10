@@ -284,6 +284,21 @@ def write_decision_suite(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_comparison_prompt_map(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "suiteId": "batch-suite",
+        "prompts": {
+            "fallback-chat": "hello",
+            "tool-heavy-coding": {
+                "prompt": "write code",
+                "timeoutSeconds": 2.0,
+            },
+        },
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_character_profile(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -758,6 +773,128 @@ class CliTests(unittest.TestCase):
             self.assertEqual(len(logged), 2)
             self.assertEqual(logged[0]["situationId"], "fallback-chat")
             self.assertEqual(logged[1]["verdict"], "success")
+
+    def test_compare_batch_executes_suite_and_persists_aggregate_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            prompt_map_path = Path(temp_dir) / "prompt-map.json"
+            output_path = Path(temp_dir) / "reports" / "batch-comparison.json"
+            write_executable_character_registry(registry_path)
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "suiteId": "batch-suite",
+                        "situations": [
+                            {
+                                "taskId": "fallback-chat",
+                                "privacyRequirement": "local_only",
+                                "requiredCapabilities": {"conversation": 0.9},
+                            },
+                            {
+                                "taskId": "tool-heavy-coding",
+                                "requireTools": True,
+                                "requiredCapabilities": {"coding": 0.9},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            write_comparison_prompt_map(prompt_map_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "compare-batch",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--prompt-map",
+                        str(prompt_map_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["suiteId"], "batch-suite")
+            self.assertEqual(payload["comparison"]["situationCount"], 2)
+            self.assertEqual(payload["comparison"]["successfulSituationCount"], 2)
+            self.assertEqual(payload["comparison"]["blockedSituationCount"], 0)
+            self.assertEqual(payload["comparison"]["executedCandidateCount"], 2)
+            self.assertEqual(payload["situations"][0]["situationId"], "fallback-chat")
+            self.assertEqual(payload["situations"][0]["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["situations"][1]["selectedModel"]["modelId"], "cli-coder")
+            self.assertEqual(persisted["comparison"]["successfulSituationCount"], 2)
+
+    def test_compare_batch_returns_blocked_suite_summary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            prompt_map_path = Path(temp_dir) / "prompt-map.json"
+            write_fallback_registry(registry_path)
+            suite_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "suiteId": "blocked-batch-suite",
+                        "situations": [
+                            {
+                                "taskId": "fallback-chat",
+                                "privacyRequirement": "prefer_local",
+                                "requiredCapabilities": {"conversation": 0.8},
+                            },
+                            {
+                                "taskId": "too-strict",
+                                "minimumScore": 120.0,
+                                "requiredCapabilities": {"conversation": 0.5},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            prompt_map_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "prompts": {
+                            "fallback-chat": "hello",
+                            "too-strict": "blocked prompt",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "compare-batch",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--prompt-map",
+                        str(prompt_map_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["blockedTasks"], ["too-strict"])
+            self.assertEqual(payload["comparison"]["successfulSituationCount"], 1)
+            self.assertEqual(payload["comparison"]["blockedSituationCount"], 1)
+            self.assertEqual(payload["situations"][1]["comparison"]["executedCount"], 0)
 
     def test_run_decision_suite_executes_named_situation(self):
         with tempfile.TemporaryDirectory() as temp_dir:

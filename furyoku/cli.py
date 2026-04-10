@@ -31,9 +31,11 @@ from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResu
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .runtime import (
     CharacterRoleExecutionResult,
+    ComparativeExecutionBatchResult,
     ComparativeEvaluationResult,
     DecisionSituationExecutionResult,
     RoutedExecutionResult,
+    compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
     execute_character_role,
@@ -189,6 +191,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             capture_args=args,
             can_capture=result.executed_count > 0,
         )
+        return 0 if result.ok else 2
+
+    if args.command == "compare-batch":
+        if args.max_candidates is not None and args.max_candidates < 1:
+            parser.error("--max-candidates must be at least 1")
+        readiness = _readiness_from_args(args, models)
+        feedback, feedback_policy = _feedback_from_args(args, parser)
+        routing_policy = _routing_policy_from_args(args)
+        try:
+            prompt_map = _load_comparison_prompt_map(args.prompt_map)
+        except argparse.ArgumentTypeError as exc:
+            parser.error(str(exc))
+        result = compare_decision_suite_executions(
+            models,
+            load_decision_suite(args.decision_suite),
+            prompt_map,
+            readiness=readiness,
+            feedback=feedback,
+            feedback_policy=feedback_policy,
+            routing_policy=routing_policy,
+            max_candidates=args.max_candidates,
+        )
+        _write_json(_comparative_execution_batch_result_to_dict(result, readiness=readiness), output_path=args.output)
         return 0 if result.ok else 2
 
     if args.command == "health":
@@ -384,6 +409,37 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_feedback_policy_arg(compare_parser)
     _add_routing_policy_arg(compare_parser)
+    compare_batch_parser = subparsers.add_parser(
+        "compare-batch",
+        help="Execute comparative runs across every situation in a decision suite batch.",
+    )
+    compare_batch_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    compare_batch_parser.add_argument(
+        "--decision-suite",
+        required=True,
+        type=Path,
+        help="Decision suite whose situations should be executed as one comparison batch.",
+    )
+    compare_batch_parser.add_argument(
+        "--prompt-map",
+        required=True,
+        type=Path,
+        help="JSON file mapping situation ids to prompts and optional timeoutSeconds values.",
+    )
+    compare_batch_parser.add_argument(
+        "--max-candidates",
+        type=int,
+        help="Maximum eligible ranked models to execute per situation. Defaults to all eligible models.",
+    )
+    compare_batch_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON batch comparison report.")
+    _add_health_decision_args(compare_batch_parser, "Run provider readiness checks before comparative batch execution.")
+    compare_batch_parser.add_argument(
+        "--feedback-log",
+        type=Path,
+        help="Optional JSONL outcome feedback log used to adjust comparative batch rankings.",
+    )
+    _add_feedback_policy_arg(compare_batch_parser)
+    _add_routing_policy_arg(compare_batch_parser)
     health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
     health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
@@ -729,6 +785,40 @@ def _routing_policy_from_args(args: argparse.Namespace):
     return load_routing_score_policy(routing_policy_path)
 
 
+def _load_comparison_prompt_map(path: Path) -> dict[str, ProviderExecutionRequest]:
+    with path.open("r", encoding="utf-8-sig") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise argparse.ArgumentTypeError(f"{path}: prompt map must be a JSON object")
+    entries = payload.get("prompts", payload)
+    if not isinstance(entries, dict) or not entries:
+        raise argparse.ArgumentTypeError(f"{path}: prompt map must contain a non-empty prompts object")
+
+    requests: dict[str, ProviderExecutionRequest] = {}
+    for situation_id, raw_entry in entries.items():
+        if not isinstance(situation_id, str) or not situation_id.strip():
+            raise argparse.ArgumentTypeError(f"{path}: prompt map keys must be non-empty strings")
+        if isinstance(raw_entry, str):
+            prompt = raw_entry
+            timeout_seconds = 60.0
+        elif isinstance(raw_entry, dict):
+            prompt_value = raw_entry.get("prompt")
+            if not isinstance(prompt_value, str) or not prompt_value:
+                raise argparse.ArgumentTypeError(f"{path}: prompt entry for {situation_id!r} must include a non-empty prompt")
+            prompt = prompt_value
+            timeout_value = raw_entry.get("timeoutSeconds", 60.0)
+            try:
+                timeout_seconds = float(timeout_value)
+            except (TypeError, ValueError) as exc:
+                raise argparse.ArgumentTypeError(f"{path}: timeoutSeconds for {situation_id!r} must be numeric") from exc
+            if timeout_seconds <= 0:
+                raise argparse.ArgumentTypeError(f"{path}: timeoutSeconds for {situation_id!r} must be greater than 0")
+        else:
+            raise argparse.ArgumentTypeError(f"{path}: prompt entry for {situation_id!r} must be a string or object")
+        requests[situation_id] = ProviderExecutionRequest(prompt, timeout_seconds=timeout_seconds)
+    return requests
+
+
 def _readiness_from_args(args: argparse.Namespace, models):
     if not getattr(args, "check_health", False):
         return None
@@ -827,6 +917,55 @@ def _comparative_evaluation_result_to_dict(result: ComparativeEvaluationResult, 
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
+
+
+def _comparative_execution_batch_result_to_dict(result: ComparativeExecutionBatchResult, *, readiness=None) -> dict:
+    payload = {
+        "ok": result.ok,
+        "suiteId": result.suite_id,
+        "blockedTasks": list(result.report.blocked_tasks),
+        "aggregate": result.report.aggregate.to_dict(),
+        "comparison": {
+            "situationCount": len(result.situation_results),
+            "successfulSituationCount": result.successful_situation_count,
+            "failedSituationCount": result.failed_situation_count,
+            "blockedSituationCount": result.blocked_situation_count,
+            "executedCandidateCount": result.executed_candidate_count,
+            "successfulExecutionCount": result.successful_execution_count,
+            "failedExecutionCount": result.failed_execution_count,
+            "maxCandidates": result.max_candidates,
+        },
+        "situations": [
+            _comparative_batch_situation_to_dict(situation_result)
+            for situation_result in result.situation_results
+        ],
+        "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
+    }
+    _add_feedback_policy_metadata(payload, result.report)
+    _add_routing_policy_metadata(payload, result.report)
+    if readiness is not None:
+        payload["readiness"] = [_health_to_dict(result) for result in readiness]
+    return payload
+
+
+def _comparative_batch_situation_to_dict(result: ComparativeEvaluationResult) -> dict:
+    return {
+        "ok": result.ok,
+        "situationId": result.situation_id or result.task_id,
+        "taskId": result.task_id,
+        "selectedModel": _score_to_dict(result.decision.selected) if result.decision.selected else None,
+        "decision": result.decision.to_dict(),
+        "comparison": {
+            "executedCount": result.executed_count,
+            "successfulCount": result.successful_count,
+            "failedCount": result.failed_count,
+            "maxCandidates": result.max_candidates,
+        },
+        "executions": [
+            _execution_attempt_to_dict(attempt)
+            for attempt in result.execution_attempts
+        ],
+    }
 
 
 def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> dict:
