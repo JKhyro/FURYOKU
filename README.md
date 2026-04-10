@@ -47,6 +47,7 @@ Scope guard:
 Current routing core:
 
 - [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract and flexible CHARACTER composition selection.
+- Routing score policy profiles can tune soft scoring weights for capability fit, context, speed, privacy preference, provider preference, and cost without bypassing hard blockers.
 - [`furyoku/model_decisions.py`](furyoku/model_decisions.py) evaluates multiple local, CLI, and API models across representative decision situations.
 - [`furyoku/character_profiles.py`](furyoku/character_profiles.py) loads flexible JSON CHARACTER role compositions for Symbiote/Curator/Synth/Agent-style arrays and serializes selected role assignments into CHARACTER orchestration envelopes.
 - [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
@@ -58,6 +59,7 @@ Current routing core:
 - [`furyoku/outcome_feedback.py`](furyoku/outcome_feedback.py) records operator or automated feedback linked to persisted decision/execution reports.
 - Outcome feedback records can be aggregated into bounded per-model score adjustments for future decision reports.
 - [`examples/feedback_policy.example.json`](examples/feedback_policy.example.json) shows the configurable feedback adjustment policy contract for tuning max adjustment, verdict weights, default outcome scores, and optional recency decay.
+- [`examples/routing_score_policy.speed-first.json`](examples/routing_score_policy.speed-first.json) shows a speed-heavy routing score policy profile.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, CHARACTER role selection, and selected role execution.
@@ -81,6 +83,7 @@ CLI example:
 ```powershell
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --check-health
+python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --routing-policy .\examples\routing_score_policy.speed-first.json
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json
@@ -88,11 +91,13 @@ python -m furyoku.cli decide --registry .\examples\model_registry.example.json -
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --output .\decision-report.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json
+python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --routing-policy .\examples\routing_score_policy.speed-first.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --check-health
+python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --routing-policy .\examples\routing_score_policy.speed-first.json
 python -m furyoku.cli feedback --report .\decision-report.json --feedback-log .\decision-outcomes.jsonl --verdict success --score 0.9 --reason "accepted response"
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json

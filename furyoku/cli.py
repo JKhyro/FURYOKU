@@ -14,7 +14,7 @@ from .character_profiles import (
     select_character_profile_models,
 )
 from .model_registry import load_model_registry
-from .model_router import ModelScore, RouterError, TaskProfile, select_model
+from .model_router import ModelScore, RouterError, TaskProfile, load_routing_score_policy, select_model
 from .model_decisions import ModelDecisionReport, evaluate_model_decisions, load_decision_suite
 from .outcome_feedback import (
     VALID_OUTCOME_VERDICTS,
@@ -59,12 +59,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         task = _task_from_args(args, parser)
         readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
+        routing_policy = _routing_policy_from_args(args)
         selection, report = _select_with_optional_feedback(
             models,
             task,
             feedback,
             feedback_policy=feedback_policy,
             readiness=readiness,
+            routing_policy=routing_policy,
         )
         _write_json(_single_selection_to_dict(selection, report=report, readiness=readiness))
         return 0
@@ -75,6 +77,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 parser.error("--situation-id is required when --decision-suite is provided")
             readiness = _readiness_from_args(args, models)
             feedback, feedback_policy = _feedback_from_args(args, parser)
+            routing_policy = _routing_policy_from_args(args)
             result = execute_decision_situation(
                 models,
                 load_decision_suite(args.decision_suite),
@@ -83,6 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 readiness=readiness,
                 feedback=feedback,
                 feedback_policy=feedback_policy,
+                routing_policy=routing_policy,
             )
             _write_json(_decision_execution_result_to_dict(result, readiness=readiness), output_path=args.output)
             return 0 if result.ok else 2
@@ -90,6 +94,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         task = _task_from_args(args, parser)
         readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
+        routing_policy = _routing_policy_from_args(args)
         result = route_and_execute(
             models,
             task,
@@ -97,6 +102,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
+            routing_policy=routing_policy,
         )
         _write_json(_routed_result_to_dict(result, readiness=readiness), output_path=args.output)
         return 0 if result.ok else 2
@@ -121,12 +127,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
+        routing_policy = _routing_policy_from_args(args)
         report = evaluate_model_decisions(
             models,
             decision_input or None,
             readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
+            routing_policy=routing_policy,
         )
         _write_json(_decision_report_to_dict(report, readiness=readiness), output_path=args.output)
         return 0 if not report.blocked_tasks else 2
@@ -167,6 +175,7 @@ def _build_parser() -> argparse.ArgumentParser:
     select_parser = subparsers.add_parser("select", help="Select the best eligible model for a task.")
     _add_common_task_args(select_parser)
     _add_health_decision_args(select_parser, "Run provider readiness checks before selecting a model.")
+    _add_routing_policy_arg(select_parser)
     select_parser.add_argument(
         "--feedback-log",
         type=Path,
@@ -201,6 +210,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional JSONL outcome feedback log used to adjust decision-suite execution selection.",
     )
     _add_feedback_policy_arg(run_parser)
+    _add_routing_policy_arg(run_parser)
     health_parser = subparsers.add_parser("health", help="Check provider endpoint readiness for a registry.")
     health_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
@@ -237,6 +247,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
     )
     _add_feedback_policy_arg(decide_parser)
+    _add_routing_policy_arg(decide_parser)
     decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
     feedback_parser = subparsers.add_parser(
         "feedback",
@@ -316,6 +327,14 @@ def _add_feedback_policy_arg(parser: argparse.ArgumentParser) -> None:
         "--feedback-policy",
         type=Path,
         help="Optional JSON feedback adjustment policy used with --feedback-log.",
+    )
+
+
+def _add_routing_policy_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--routing-policy",
+        type=Path,
+        help="Optional JSON routing score policy profile for baseline model selection.",
     )
 
 
@@ -409,8 +428,16 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
     return capabilities
 
 
-def _select_with_optional_feedback(models, task: TaskProfile, feedback, *, feedback_policy=None, readiness=None):
-    if feedback is None and readiness is None:
+def _select_with_optional_feedback(
+    models,
+    task: TaskProfile,
+    feedback,
+    *,
+    feedback_policy=None,
+    readiness=None,
+    routing_policy=None,
+):
+    if feedback is None and readiness is None and routing_policy is None:
         return select_model(models, task), None
     report = evaluate_model_decisions(
         models,
@@ -418,6 +445,7 @@ def _select_with_optional_feedback(models, task: TaskProfile, feedback, *, feedb
         readiness=readiness,
         feedback=feedback,
         feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
     )
     selection = report.selected_for(task.task_id)
     if selection is None:
@@ -441,6 +469,13 @@ def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParse
         load_decision_outcomes(feedback_log),
         load_feedback_adjustment_policy(feedback_policy_path) if feedback_policy_path else None,
     )
+
+
+def _routing_policy_from_args(args: argparse.Namespace):
+    routing_policy_path = getattr(args, "routing_policy", None)
+    if not routing_policy_path:
+        return None
+    return load_routing_score_policy(routing_policy_path)
 
 
 def _readiness_from_args(args: argparse.Namespace, models):
@@ -476,6 +511,7 @@ def _single_selection_to_dict(
     payload = _score_to_dict(selection)
     if report is not None:
         _add_optional_feedback_metadata(payload, report)
+        _add_routing_policy_metadata(payload, report)
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
@@ -489,6 +525,7 @@ def _routed_result_to_dict(result: RoutedExecutionResult, *, readiness=None) -> 
     }
     if result.report is not None:
         _add_optional_feedback_metadata(payload, result.report)
+        _add_routing_policy_metadata(payload, result.report)
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
@@ -505,6 +542,7 @@ def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult,
         "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
     }
     _add_feedback_policy_metadata(payload, result.report)
+    _add_routing_policy_metadata(payload, result.report)
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
@@ -543,6 +581,7 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
         "feedbackAdjustments": _feedback_adjustments_to_dict(report),
     }
     _add_feedback_policy_metadata(payload, report)
+    _add_routing_policy_metadata(payload, report)
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
@@ -593,6 +632,11 @@ def _add_optional_feedback_metadata(payload: dict, report: ModelDecisionReport) 
 def _add_feedback_policy_metadata(payload: dict, report: ModelDecisionReport) -> None:
     if report.feedback_policy_metadata is not None:
         payload["feedbackPolicy"] = report.feedback_policy_metadata.to_dict()
+
+
+def _add_routing_policy_metadata(payload: dict, report: ModelDecisionReport) -> None:
+    if report.routing_policy_metadata is not None:
+        payload["routingPolicy"] = report.routing_policy_metadata.to_dict()
 
 
 def _health_to_dict(result: ProviderHealthCheckResult) -> dict:

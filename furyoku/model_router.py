@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import math
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 
@@ -10,6 +13,150 @@ PrivacyRequirement = str
 
 class RouterError(ValueError):
     """Raised when no registered model can satisfy a task profile."""
+
+
+@dataclass(frozen=True)
+class RoutingScorePolicy:
+    """Configurable soft scoring weights for eligible model routing."""
+
+    capability_weight: float = 100.0
+    context_bonus_weight: float = 8.0
+    context_reference_tokens: int = 128000
+    speed_bonus_weight: float = 8.0
+    speed_reference_ms: int = 30000
+    local_preference_bonus: float = 12.0
+    remote_privacy_penalty: float = 8.0
+    preferred_provider_bonus: float = 8.0
+    cost_penalty_multiplier: float = 2.0
+    max_cost_penalty: float = 15.0
+
+    def __post_init__(self) -> None:
+        _validate_non_negative(self.capability_weight, field_name="capabilityWeight")
+        _validate_non_negative(self.context_bonus_weight, field_name="contextBonusWeight")
+        _validate_positive_int(self.context_reference_tokens, field_name="contextReferenceTokens")
+        _validate_non_negative(self.speed_bonus_weight, field_name="speedBonusWeight")
+        _validate_positive_int(self.speed_reference_ms, field_name="speedReferenceMs")
+        _validate_non_negative(self.local_preference_bonus, field_name="localPreferenceBonus")
+        _validate_non_negative(self.remote_privacy_penalty, field_name="remotePrivacyPenalty")
+        _validate_non_negative(self.preferred_provider_bonus, field_name="preferredProviderBonus")
+        _validate_non_negative(self.cost_penalty_multiplier, field_name="costPenaltyMultiplier")
+        _validate_non_negative(self.max_cost_penalty, field_name="maxCostPenalty")
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": 1,
+            "capabilityWeight": self.capability_weight,
+            "contextBonusWeight": self.context_bonus_weight,
+            "contextReferenceTokens": self.context_reference_tokens,
+            "speedBonusWeight": self.speed_bonus_weight,
+            "speedReferenceMs": self.speed_reference_ms,
+            "localPreferenceBonus": self.local_preference_bonus,
+            "remotePrivacyPenalty": self.remote_privacy_penalty,
+            "preferredProviderBonus": self.preferred_provider_bonus,
+            "costPenaltyMultiplier": self.cost_penalty_multiplier,
+            "maxCostPenalty": self.max_cost_penalty,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any], *, source: str = "<memory>") -> "RoutingScorePolicy":
+        if not isinstance(payload, Mapping):
+            raise RouterError(f"{source}: routing score policy must be an object")
+        schema_version = payload.get("schemaVersion", payload.get("schema_version", 1))
+        if schema_version != 1:
+            raise RouterError(f"{source}: unsupported routing score policy schemaVersion {schema_version!r}")
+        defaults = cls()
+        return cls(
+            capability_weight=_policy_non_negative_float(
+                payload,
+                "capabilityWeight",
+                "capability_weight",
+                default=defaults.capability_weight,
+                source=source,
+            ),
+            context_bonus_weight=_policy_non_negative_float(
+                payload,
+                "contextBonusWeight",
+                "context_bonus_weight",
+                default=defaults.context_bonus_weight,
+                source=source,
+            ),
+            context_reference_tokens=_policy_positive_int(
+                payload,
+                "contextReferenceTokens",
+                "context_reference_tokens",
+                default=defaults.context_reference_tokens,
+                source=source,
+            ),
+            speed_bonus_weight=_policy_non_negative_float(
+                payload,
+                "speedBonusWeight",
+                "speed_bonus_weight",
+                default=defaults.speed_bonus_weight,
+                source=source,
+            ),
+            speed_reference_ms=_policy_positive_int(
+                payload,
+                "speedReferenceMs",
+                "speed_reference_ms",
+                default=defaults.speed_reference_ms,
+                source=source,
+            ),
+            local_preference_bonus=_policy_non_negative_float(
+                payload,
+                "localPreferenceBonus",
+                "local_preference_bonus",
+                default=defaults.local_preference_bonus,
+                source=source,
+            ),
+            remote_privacy_penalty=_policy_non_negative_float(
+                payload,
+                "remotePrivacyPenalty",
+                "remote_privacy_penalty",
+                default=defaults.remote_privacy_penalty,
+                source=source,
+            ),
+            preferred_provider_bonus=_policy_non_negative_float(
+                payload,
+                "preferredProviderBonus",
+                "preferred_provider_bonus",
+                default=defaults.preferred_provider_bonus,
+                source=source,
+            ),
+            cost_penalty_multiplier=_policy_non_negative_float(
+                payload,
+                "costPenaltyMultiplier",
+                "cost_penalty_multiplier",
+                default=defaults.cost_penalty_multiplier,
+                source=source,
+            ),
+            max_cost_penalty=_policy_non_negative_float(
+                payload,
+                "maxCostPenalty",
+                "max_cost_penalty",
+                default=defaults.max_cost_penalty,
+                source=source,
+            ),
+        )
+
+
+RoutingScorePolicyInput = RoutingScorePolicy | Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class RoutingScorePolicyMetadata:
+    """Stable report metadata for the routing score policy that shaped selection."""
+
+    source: str
+    policy: RoutingScorePolicy
+    customized_fields: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": 1,
+            "source": self.source,
+            "customizedFields": list(self.customized_fields),
+            "policy": self.policy.to_dict(),
+        }
 
 
 @dataclass(frozen=True)
@@ -147,7 +294,13 @@ def default_character_role_tasks() -> dict[str, TaskProfile]:
     }
 
 
-def score_model(model: ModelEndpoint, task: TaskProfile) -> ModelScore:
+def score_model(
+    model: ModelEndpoint,
+    task: TaskProfile,
+    *,
+    policy: RoutingScorePolicyInput | None = None,
+) -> ModelScore:
+    resolved_policy = resolve_routing_score_policy(policy)
     blockers: list[str] = []
     reasons: list[str] = []
 
@@ -169,30 +322,39 @@ def score_model(model: ModelEndpoint, task: TaskProfile) -> ModelScore:
         blockers.append("task requires JSON output support")
 
     capability_score = _weighted_capability_score(model, task)
-    score = capability_score * 100.0
+    score = capability_score * resolved_policy.capability_weight
     reasons.append(f"capability fit {capability_score:.3f}")
 
     if model.context_window_tokens >= task.min_context_tokens:
-        context_bonus = min(model.context_window_tokens / 128000.0, 1.0) * 8.0
+        context_bonus = (
+            min(model.context_window_tokens / resolved_policy.context_reference_tokens, 1.0)
+            * resolved_policy.context_bonus_weight
+        )
         score += context_bonus
         reasons.append(f"context bonus {context_bonus:.2f}")
 
-    speed_bonus = max(0.0, min(1.0, 1.0 - (model.average_latency_ms / 30000.0))) * 8.0
+    speed_bonus = (
+        max(0.0, min(1.0, 1.0 - (model.average_latency_ms / resolved_policy.speed_reference_ms)))
+        * resolved_policy.speed_bonus_weight
+    )
     score += speed_bonus
     reasons.append(f"speed bonus {speed_bonus:.2f}")
 
     if task.privacy_requirement == "prefer_local" and model.is_local:
-        score += 12.0
-        reasons.append("local privacy preference bonus 12.00")
+        score += resolved_policy.local_preference_bonus
+        reasons.append(f"local privacy preference bonus {resolved_policy.local_preference_bonus:.2f}")
     elif task.privacy_requirement == "prefer_local":
-        score -= 8.0
-        reasons.append("remote privacy penalty 8.00")
+        score -= resolved_policy.remote_privacy_penalty
+        reasons.append(f"remote privacy penalty {resolved_policy.remote_privacy_penalty:.2f}")
 
     if task.preferred_providers and model.provider in task.preferred_providers:
-        score += 8.0
+        score += resolved_policy.preferred_provider_bonus
         reasons.append(f"preferred provider bonus for {model.provider}")
 
-    cost_penalty = min((model.input_cost_per_1k + model.output_cost_per_1k) * 2.0, 15.0)
+    cost_penalty = min(
+        (model.input_cost_per_1k + model.output_cost_per_1k) * resolved_policy.cost_penalty_multiplier,
+        resolved_policy.max_cost_penalty,
+    )
     if cost_penalty:
         score -= cost_penalty
         reasons.append(f"cost penalty {cost_penalty:.2f}")
@@ -218,13 +380,23 @@ def score_model(model: ModelEndpoint, task: TaskProfile) -> ModelScore:
     )
 
 
-def rank_models(models: Iterable[ModelEndpoint], task: TaskProfile) -> list[ModelScore]:
-    ranked = [score_model(model, task) for model in models]
+def rank_models(
+    models: Iterable[ModelEndpoint],
+    task: TaskProfile,
+    *,
+    policy: RoutingScorePolicyInput | None = None,
+) -> list[ModelScore]:
+    ranked = [score_model(model, task, policy=policy) for model in models]
     return sorted(ranked, key=lambda item: (item.eligible, item.score, item.model.model_id), reverse=True)
 
 
-def select_model(models: Iterable[ModelEndpoint], task: TaskProfile) -> ModelScore:
-    ranked = rank_models(models, task)
+def select_model(
+    models: Iterable[ModelEndpoint],
+    task: TaskProfile,
+    *,
+    policy: RoutingScorePolicyInput | None = None,
+) -> ModelScore:
+    ranked = rank_models(models, task, policy=policy)
     for score in ranked:
         if score.eligible:
             return score
@@ -239,13 +411,14 @@ def select_character_composition(
     roles: Iterable[CharacterRoleSpec] | Mapping[str, TaskProfile],
     *,
     allow_reuse: bool = True,
+    policy: RoutingScorePolicyInput | None = None,
 ) -> CharacterCompositionSelection:
     role_specs = _normalize_character_role_specs(roles)
     remaining_models = list(models)
     selections: dict[str, ModelScore] = {}
 
     for spec in _selection_order(role_specs):
-        selected = select_model(remaining_models, spec.task)
+        selected = select_model(remaining_models, spec.task, policy=policy)
         selections[spec.role_id] = selected
         if not allow_reuse:
             remaining_models = [
@@ -266,6 +439,7 @@ def select_character_panel(
     role_tasks: Mapping[str, TaskProfile] | None = None,
     *,
     allow_reuse: bool = True,
+    policy: RoutingScorePolicyInput | None = None,
 ) -> CharacterPanelSelection:
     tasks = dict(role_tasks or default_character_role_tasks())
     missing_roles = {"face", "memory", "reasoning"} - set(tasks)
@@ -280,6 +454,7 @@ def select_character_panel(
             CharacterRoleSpec("reasoning", tasks["reasoning"], max_subagents=12),
         ],
         allow_reuse=allow_reuse,
+        policy=policy,
     )
 
     return CharacterPanelSelection(
@@ -338,3 +513,93 @@ def _weighted_capability_score(model: ModelEndpoint, task: TaskProfile) -> float
         total_weight += weight
         weighted_score += min(model.capability(capability_name) / weight, 1.0) * weight
     return weighted_score / total_weight
+
+
+def load_routing_score_policy(path: str | Path) -> RoutingScorePolicy:
+    policy_path = Path(path)
+    with policy_path.open("r", encoding="utf-8-sig") as handle:
+        payload = json.load(handle)
+    return parse_routing_score_policy(payload, source=str(policy_path))
+
+
+def parse_routing_score_policy(payload: Mapping[str, Any], *, source: str = "<memory>") -> RoutingScorePolicy:
+    return RoutingScorePolicy.from_dict(payload, source=source)
+
+
+def resolve_routing_score_policy(policy: RoutingScorePolicyInput | None = None) -> RoutingScorePolicy:
+    if policy is None:
+        return DEFAULT_ROUTING_SCORE_POLICY
+    if isinstance(policy, RoutingScorePolicy):
+        return policy
+    if isinstance(policy, Mapping):
+        return parse_routing_score_policy(policy, source="<routing-policy>")
+    raise RouterError(f"Unsupported routing score policy type: {type(policy).__name__}")
+
+
+def build_routing_score_policy_metadata(
+    policy: RoutingScorePolicyInput | None = None,
+    *,
+    source: str | None = None,
+) -> RoutingScorePolicyMetadata:
+    resolved_policy = resolve_routing_score_policy(policy)
+    default_payload = DEFAULT_ROUTING_SCORE_POLICY.to_dict()
+    policy_payload = resolved_policy.to_dict()
+    customized_fields = tuple(
+        key
+        for key in sorted(policy_payload)
+        if key != "schemaVersion" and policy_payload[key] != default_payload.get(key)
+    )
+    return RoutingScorePolicyMetadata(
+        source=source or ("default" if not customized_fields else "custom"),
+        policy=resolved_policy,
+        customized_fields=customized_fields,
+    )
+
+
+def _policy_non_negative_float(
+    payload: Mapping[str, Any],
+    camel_key: str,
+    snake_key: str,
+    *,
+    default: float,
+    source: str,
+) -> float:
+    raw_value = payload.get(camel_key, payload.get(snake_key, default))
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise RouterError(f"{source}: {camel_key} must be numeric") from exc
+    _validate_non_negative(value, field_name=camel_key, source=source)
+    return value
+
+
+def _policy_positive_int(
+    payload: Mapping[str, Any],
+    camel_key: str,
+    snake_key: str,
+    *,
+    default: int,
+    source: str,
+) -> int:
+    raw_value = payload.get(camel_key, payload.get(snake_key, default))
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise RouterError(f"{source}: {camel_key} must be an integer") from exc
+    _validate_positive_int(value, field_name=camel_key, source=source)
+    return value
+
+
+def _validate_non_negative(value: float, *, field_name: str, source: str = "<policy>") -> None:
+    if not math.isfinite(value):
+        raise RouterError(f"{source}: {field_name} must be finite")
+    if value < 0.0:
+        raise RouterError(f"{source}: {field_name} must be 0 or greater")
+
+
+def _validate_positive_int(value: int, *, field_name: str, source: str = "<policy>") -> None:
+    if value <= 0:
+        raise RouterError(f"{source}: {field_name} must be greater than 0")
+
+
+DEFAULT_ROUTING_SCORE_POLICY = RoutingScorePolicy()
