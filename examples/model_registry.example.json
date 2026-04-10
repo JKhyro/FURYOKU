@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "models": [
+    {
+      "modelId": "local-gemma3-heretic-q4",
+      "provider": "local",
+      "privacyLevel": "local",
+      "contextWindowTokens": 8192,
+      "averageLatencyMs": 1800,
+      "supportsJson": true,
+      "invocation": ["ollama", "run", "gemma3-heretic:4b-q4km"],
+      "capabilities": {
+        "conversation": 0.84,
+        "instruction_following": 0.84,
+        "safety": 0.74,
+        "speed": 0.95,
+        "retrieval": 0.64,
+        "summarization": 0.72,
+        "reasoning": 0.91,
+        "coding": 0.82
+      },
+      "tags": ["local", "private", "baseline"]
+    },
+    {
+      "modelId": "cli-codex-high",
+      "provider": "cli",
+      "privacyLevel": "remote",
+      "contextWindowTokens": 128000,
+      "averageLatencyMs": 7000,
+      "inputCostPer1k": 0.02,
+      "outputCostPer1k": 0.08,
+      "supportsJson": true,
+      "supportsTools": true,
+      "invocation": ["codex", "--model", "gpt-5.4"],
+      "capabilities": {
+        "conversation": 0.88,
+        "instruction_following": 0.94,
+        "safety": 0.86,
+        "speed": 0.72,
+        "retrieval": 0.82,
+        "summarization": 0.9,
+        "reasoning": 0.96,
+        "coding": 0.95
+      },
+      "tags": ["cli", "coding", "reasoning"]
+    },
+    {
+      "modelId": "api-long-context-memory",
+      "provider": "api",
+      "privacyLevel": "remote",
+      "contextWindowTokens": 200000,
+      "averageLatencyMs": 5000,
+      "inputCostPer1k": 0.004,
+      "outputCostPer1k": 0.012,
+      "supportsJson": true,
+      "capabilities": {
+        "conversation": 0.84,
+        "instruction_following": 0.86,
+        "safety": 0.83,
+        "speed": 0.78,
+        "retrieval": 0.95,
+        "summarization": 0.93,
+        "reasoning": 0.84,
+        "coding": 0.72
+      },
+      "tags": ["api", "memory", "long-context"]
+    }
+  ]
+}
