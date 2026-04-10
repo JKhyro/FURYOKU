@@ -6,6 +6,11 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+from .character_profiles import (
+    CharacterProfileSelection,
+    load_character_profile,
+    select_character_profile_models,
+)
 from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
@@ -47,6 +52,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         _write_json({"ok": all(result.ready for result in results), "providers": [_health_to_dict(result) for result in results]})
         return 0 if all(result.ready for result in results) else 2
 
+    if args.command == "character-select":
+        profile = load_character_profile(args.character_profile)
+        selection = select_character_profile_models(models, profile, allow_reuse=not args.no_reuse)
+        _write_json(_character_profile_selection_to_dict(selection))
+        return 0
+
     parser.error(f"unsupported command {args.command}")
     return 2
 
@@ -64,6 +75,22 @@ def _build_parser() -> argparse.ArgumentParser:
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
     health_parser.add_argument("--probe-prompt", default="", help="Prompt text used when --probe is set.")
     health_parser.add_argument("--timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    character_parser = subparsers.add_parser(
+        "character-select",
+        help="Select concrete model endpoints for every role in a CHARACTER profile.",
+    )
+    character_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    character_parser.add_argument(
+        "--character-profile",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU CHARACTER composition profile JSON file.",
+    )
+    character_parser.add_argument(
+        "--no-reuse",
+        action="store_true",
+        help="Require each CHARACTER role to use a distinct registered model.",
+    )
     return parser
 
 
@@ -184,6 +211,27 @@ def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
             "error": execution.error,
             "timedOut": execution.timed_out,
         },
+    }
+
+
+def _character_profile_selection_to_dict(selection: CharacterProfileSelection) -> dict:
+    profile = selection.profile
+    return {
+        "characterId": profile.character_id,
+        "class": profile.character_class,
+        "rank": profile.rank,
+        "description": profile.description,
+        "primaryRole": selection.primary_role,
+        "roles": [
+            {
+                "roleId": role_spec.role_id,
+                "primary": role_spec.role_id == selection.primary_role,
+                "maxSubagents": role_spec.max_subagents,
+                "taskId": role_spec.task.task_id,
+                "selection": _score_to_dict(selection.roles[role_spec.role_id]),
+            }
+            for role_spec in profile.role_specs
+        ],
     }
 
 

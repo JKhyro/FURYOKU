@@ -33,9 +33,9 @@
       "supportsTools": true,
       "invocation": ["codex", "--model", "gpt-5.4"],
       "capabilities": {
-        "conversation": 0.88,
+        "conversation": 0.92,
         "instruction_following": 0.94,
-        "safety": 0.86,
+        "safety": 0.91,
         "speed": 0.72,
         "retrieval": 0.82,
         "summarization": 0.9,

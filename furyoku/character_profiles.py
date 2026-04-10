@@ -3,9 +3,16 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
-from .model_router import CharacterRoleSpec
+from .model_router import (
+    CharacterCompositionSelection,
+    CharacterRoleSpec,
+    ModelEndpoint,
+    ModelScore,
+    RouterError,
+    select_character_composition,
+)
 from .task_profiles import parse_task_profile
 
 
@@ -27,11 +34,48 @@ class CharacterProfile:
         return primary_roles[0] if primary_roles else self.role_specs[0].role_id
 
 
+@dataclass(frozen=True)
+class CharacterProfileSelection:
+    """Registry-backed model selections for one flexible CHARACTER profile."""
+
+    profile: CharacterProfile
+    composition: CharacterCompositionSelection
+
+    @property
+    def character_id(self) -> str:
+        return self.profile.character_id
+
+    @property
+    def primary_role(self) -> str:
+        return self.composition.primary_role or self.profile.primary_role_id
+
+    @property
+    def roles(self) -> Mapping[str, ModelScore]:
+        return self.composition.roles
+
+    def max_subagents_for(self, role_id: str) -> int:
+        return self.composition.max_subagents_for(role_id)
+
+
 def load_character_profile(path: str | Path) -> CharacterProfile:
     profile_path = Path(path)
     with profile_path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     return parse_character_profile(payload, source=str(profile_path))
+
+
+def select_character_profile_models(
+    models: Iterable[ModelEndpoint],
+    profile: CharacterProfile,
+    *,
+    allow_reuse: bool = True,
+) -> CharacterProfileSelection:
+    """Select concrete model endpoints for every role in a CHARACTER profile."""
+
+    if not isinstance(profile, CharacterProfile):
+        raise RouterError("CHARACTER profile selection requires a parsed CharacterProfile")
+    composition = select_character_composition(models, profile.role_specs, allow_reuse=allow_reuse)
+    return CharacterProfileSelection(profile=profile, composition=composition)
 
 
 def parse_character_profile(payload: Mapping[str, Any], *, source: str = "<memory>") -> CharacterProfile:
