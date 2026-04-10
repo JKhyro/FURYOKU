@@ -73,7 +73,9 @@ from .outcome_feedback import (
     FeedbackAdjustmentPolicyInput,
     FeedbackPolicyMetadata,
     ModelOutcomeFeedbackSummary,
+    OutcomeFeedbackGroupSummary,
     OutcomeFeedbackError,
+    OutcomeFeedbackSummaryReport,
     VALID_OUTCOME_VERDICTS,
     append_decision_outcome,
     build_feedback_policy_metadata,
@@ -86,6 +88,7 @@ from .outcome_feedback import (
     load_feedback_adjustment_policy,
     parse_feedback_adjustment_policy,
     resolve_feedback_adjustment_policy,
+    summarize_outcome_feedback,
 )
 from .runtime import (
     CharacterRoleExecutionResult,
@@ -123,9 +126,11 @@ __all__ = [
     "ModelDecisionReport",
     "ModelDecisionSummary",
     "ModelOutcomeFeedbackSummary",
+    "OutcomeFeedbackGroupSummary",
     "ModelReadinessEvidence",
     "ModelScore",
     "OutcomeFeedbackError",
+    "OutcomeFeedbackSummaryReport",
     "ProviderAdapterError",
     "ProviderCoverage",
     "ProviderExecutionRequest",
@@ -184,4 +189,5 @@ __all__ = [
     "select_character_profile_models",
     "select_character_panel",
     "select_model",
+    "summarize_outcome_feedback",
 ]

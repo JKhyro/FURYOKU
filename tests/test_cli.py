@@ -582,6 +582,76 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["tags"], ["operator-accepted"])
             self.assertEqual(logged[0]["recordId"], payload["recordId"])
 
+    def test_feedback_summary_merges_logs_and_persists_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            feedback_a = Path(temp_dir) / "feedback-a.jsonl"
+            feedback_b = Path(temp_dir) / "feedback-b.jsonl"
+            output_path = Path(temp_dir) / "reports" / "feedback-summary.json"
+            feedback_a.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "recordId": "feedback-1",
+                        "reportPath": "run-1.json",
+                        "reportSha256": "0" * 64,
+                        "generatedAt": "2026-04-10T12:00:00+00:00",
+                        "situationId": "private-chat",
+                        "selectedModelId": "local-echo",
+                        "selectedProvider": "local",
+                        "executionStatus": "ok",
+                        "verdict": "success",
+                        "score": 0.95,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            feedback_b.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "recordId": "feedback-2",
+                        "reportPath": "run-2.json",
+                        "reportSha256": "1" * 64,
+                        "generatedAt": "2026-04-10T12:01:00+00:00",
+                        "situationId": "coding",
+                        "selectedModelId": "remote-coder",
+                        "selectedProvider": "api",
+                        "executionStatus": "error",
+                        "verdict": "failure",
+                        "score": 0.1,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "feedback-summary",
+                        "--feedback-log",
+                        str(feedback_a),
+                        "--feedback-log",
+                        str(feedback_b),
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["recordCount"], 2)
+            self.assertEqual(payload["total"]["successCount"], 1)
+            self.assertEqual(payload["total"]["failureCount"], 1)
+            self.assertEqual(payload["models"][0]["key"], "local-echo")
+            self.assertIn("rankScore", payload["models"][0])
+            self.assertEqual({provider["key"] for provider in payload["providers"]}, {"local", "api"})
+            self.assertIn("reportMetadata", persisted)
+            self.assertEqual(persisted["recordCount"], 2)
+
     def test_run_decision_suite_returns_blockers_without_execution_when_threshold_blocks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"

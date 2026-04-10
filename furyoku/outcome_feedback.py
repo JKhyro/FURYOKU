@@ -238,6 +238,77 @@ class ModelOutcomeFeedbackSummary:
         }
 
 
+@dataclass(frozen=True)
+class OutcomeFeedbackGroupSummary:
+    """Human/operator summary for one outcome-feedback grouping."""
+
+    group_type: str
+    key: str
+    record_count: int
+    success_count: int
+    concern_count: int
+    failure_count: int
+    manual_override_count: int
+    average_score: float | None
+    success_rate: float
+    concern_rate: float
+    failure_rate: float
+    manual_override_rate: float
+    net_outcome_count: int
+    rank_score: float
+    latest_generated_at: str = ""
+    adjustment: float | None = None
+    weighted_record_count: float | None = None
+
+    def to_dict(self) -> dict:
+        payload = {
+            "groupType": self.group_type,
+            "key": self.key,
+            "recordCount": self.record_count,
+            "successCount": self.success_count,
+            "concernCount": self.concern_count,
+            "failureCount": self.failure_count,
+            "manualOverrideCount": self.manual_override_count,
+            "averageScore": self.average_score,
+            "successRate": self.success_rate,
+            "concernRate": self.concern_rate,
+            "failureRate": self.failure_rate,
+            "manualOverrideRate": self.manual_override_rate,
+            "netOutcomeCount": self.net_outcome_count,
+            "rankScore": self.rank_score,
+            "latestGeneratedAt": self.latest_generated_at,
+        }
+        if self.adjustment is not None:
+            payload["adjustment"] = self.adjustment
+        if self.weighted_record_count is not None:
+            payload["weightedRecordCount"] = self.weighted_record_count
+        return payload
+
+
+@dataclass(frozen=True)
+class OutcomeFeedbackSummaryReport:
+    """Report for comparing captured outcome feedback by model, provider, and task."""
+
+    generated_at: str
+    total: OutcomeFeedbackGroupSummary
+    models: tuple[OutcomeFeedbackGroupSummary, ...]
+    providers: tuple[OutcomeFeedbackGroupSummary, ...]
+    situations: tuple[OutcomeFeedbackGroupSummary, ...]
+    feedback_policy_metadata: FeedbackPolicyMetadata
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": 1,
+            "generatedAt": self.generated_at,
+            "recordCount": self.total.record_count,
+            "total": self.total.to_dict(),
+            "models": [summary.to_dict() for summary in self.models],
+            "providers": [summary.to_dict() for summary in self.providers],
+            "situations": [summary.to_dict() for summary in self.situations],
+            "feedbackPolicy": self.feedback_policy_metadata.to_dict(),
+        }
+
+
 @dataclass
 class _FeedbackStats:
     model_id: str
@@ -252,6 +323,36 @@ class _FeedbackStats:
     @property
     def record_count(self) -> int:
         return len(self.contributions)
+
+
+@dataclass
+class _OutcomeSummaryStats:
+    group_type: str
+    key: str
+    scores: list[float] = field(default_factory=list)
+    generated_at_values: list[str] = field(default_factory=list)
+    success_count: int = 0
+    concern_count: int = 0
+    failure_count: int = 0
+    manual_override_count: int = 0
+
+    @property
+    def record_count(self) -> int:
+        return self.success_count + self.concern_count + self.failure_count + self.manual_override_count
+
+    def add(self, record: DecisionOutcomeRecord) -> None:
+        if record.score is not None:
+            self.scores.append(record.score)
+        if record.generated_at:
+            self.generated_at_values.append(record.generated_at)
+        if record.verdict == "success":
+            self.success_count += 1
+        elif record.verdict == "failure":
+            self.failure_count += 1
+        elif record.verdict in ("latency_concern", "quality_concern", "cost_concern"):
+            self.concern_count += 1
+        elif record.verdict == "manual_override":
+            self.manual_override_count += 1
 
 
 def create_decision_outcome_record(
@@ -385,6 +486,71 @@ def build_model_feedback_summaries(
         for model_id, stats in sorted(stats_by_model.items())
         if stats.record_count
     }
+
+
+def summarize_outcome_feedback(
+    records: FeedbackAdjustmentInput,
+    *,
+    policy: FeedbackAdjustmentPolicyInput | None = None,
+    max_adjustment: float | None = None,
+    as_of: datetime | str | None = None,
+    generated_at: datetime | str | None = None,
+) -> OutcomeFeedbackSummaryReport:
+    """Summarize captured outcome feedback for model/provider/task comparison."""
+
+    normalized_records = tuple(
+        _normalize_feedback_record(raw_record, source=f"<feedback:{index}>")
+        for index, raw_record in enumerate(records, start=1)
+    )
+    feedback_adjustments = build_model_feedback_summaries(
+        normalized_records,
+        policy=policy,
+        max_adjustment=max_adjustment,
+        as_of=as_of,
+    )
+    total_stats = _OutcomeSummaryStats(group_type="total", key="all")
+    model_stats: dict[str, _OutcomeSummaryStats] = {}
+    provider_stats: dict[str, _OutcomeSummaryStats] = {}
+    situation_stats: dict[str, _OutcomeSummaryStats] = {}
+
+    for record in normalized_records:
+        total_stats.add(record)
+        _summary_stats_for(model_stats, "model", record.selected_model_id or "<unknown>").add(record)
+        _summary_stats_for(provider_stats, "provider", record.selected_provider or "<unknown>").add(record)
+        _summary_stats_for(situation_stats, "situation", record.situation_id or "<unknown>").add(record)
+
+    return OutcomeFeedbackSummaryReport(
+        generated_at=_summary_generated_at(generated_at),
+        total=_summarize_outcome_stats(total_stats),
+        models=tuple(
+            sorted(
+                (
+                    _summarize_outcome_stats(
+                        stats,
+                        model_feedback=feedback_adjustments.get(model_id),
+                    )
+                    for model_id, stats in model_stats.items()
+                ),
+                key=_outcome_group_sort_key,
+            )
+        ),
+        providers=tuple(
+            sorted(
+                (_summarize_outcome_stats(stats) for stats in provider_stats.values()),
+                key=_outcome_group_sort_key,
+            )
+        ),
+        situations=tuple(
+            sorted(
+                (_summarize_outcome_stats(stats) for stats in situation_stats.values()),
+                key=lambda summary: summary.key,
+            )
+        ),
+        feedback_policy_metadata=build_feedback_policy_metadata(
+            policy,
+            max_adjustment=max_adjustment,
+        ),
+    )
 
 
 def build_feedback_policy_metadata(
@@ -634,6 +800,78 @@ def _summarize_feedback_stats(
         weighted_record_count=round(weighted_count, 4),
         rationale=tuple(rationale),
     )
+
+
+def _summary_stats_for(
+    summaries: dict[str, _OutcomeSummaryStats],
+    group_type: str,
+    key: str,
+) -> _OutcomeSummaryStats:
+    return summaries.setdefault(key, _OutcomeSummaryStats(group_type=group_type, key=key))
+
+
+def _summarize_outcome_stats(
+    stats: _OutcomeSummaryStats,
+    *,
+    model_feedback: ModelOutcomeFeedbackSummary | None = None,
+) -> OutcomeFeedbackGroupSummary:
+    record_count = stats.record_count
+    average_score = round(sum(stats.scores) / len(stats.scores), 4) if stats.scores else None
+    return OutcomeFeedbackGroupSummary(
+        group_type=stats.group_type,
+        key=stats.key,
+        record_count=record_count,
+        success_count=stats.success_count,
+        concern_count=stats.concern_count,
+        failure_count=stats.failure_count,
+        manual_override_count=stats.manual_override_count,
+        average_score=average_score,
+        success_rate=_outcome_rate(stats.success_count, record_count),
+        concern_rate=_outcome_rate(stats.concern_count, record_count),
+        failure_rate=_outcome_rate(stats.failure_count, record_count),
+        manual_override_rate=_outcome_rate(stats.manual_override_count, record_count),
+        net_outcome_count=stats.success_count - stats.failure_count - stats.concern_count - stats.manual_override_count,
+        rank_score=_outcome_rank_score(stats, record_count, model_feedback=model_feedback),
+        latest_generated_at=max(stats.generated_at_values) if stats.generated_at_values else "",
+        adjustment=model_feedback.adjustment if model_feedback is not None else None,
+        weighted_record_count=model_feedback.weighted_record_count if model_feedback is not None else None,
+    )
+
+
+def _outcome_rate(count: int, total: int) -> float:
+    if total <= 0:
+        return 0.0
+    return round(count / total, 4)
+
+
+def _outcome_rank_score(
+    stats: _OutcomeSummaryStats,
+    total: int,
+    *,
+    model_feedback: ModelOutcomeFeedbackSummary | None,
+) -> float:
+    success_rate = _outcome_rate(stats.success_count, total)
+    failure_rate = _outcome_rate(stats.failure_count, total)
+    concern_rate = _outcome_rate(stats.concern_count, total)
+    manual_override_rate = _outcome_rate(stats.manual_override_count, total)
+    net_outcome_count = stats.success_count - stats.failure_count - stats.concern_count - stats.manual_override_count
+    adjustment = model_feedback.adjustment if model_feedback is not None else float(net_outcome_count)
+    return round((success_rate * 100.0) + adjustment - (failure_rate * 25.0) - (concern_rate * 10.0) - (manual_override_rate * 25.0), 4)
+
+
+def _outcome_group_sort_key(summary: OutcomeFeedbackGroupSummary) -> tuple[float, float, int, str]:
+    average_score = summary.average_score if summary.average_score is not None else -1.0
+    return (-summary.rank_score, -summary.success_rate, -average_score, -summary.record_count, summary.key)
+
+
+def _summary_generated_at(value: datetime | str | None) -> str:
+    if value is None:
+        return datetime.now(timezone.utc).isoformat()
+    if isinstance(value, datetime):
+        return _ensure_aware_utc(value).isoformat()
+    if isinstance(value, str):
+        return _parse_feedback_datetime(value, source="<summary>:generatedAt").isoformat()
+    raise OutcomeFeedbackError("<summary>: generated_at must be a datetime or ISO timestamp")
 
 
 def _resolve_feedback_policy(
