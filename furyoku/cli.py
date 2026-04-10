@@ -10,13 +10,14 @@ from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
 from .provider_adapters import ProviderExecutionRequest
 from .runtime import RoutedExecutionResult, route_and_execute
+from .task_profiles import load_task_profile
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     models = load_model_registry(args.registry)
-    task = _task_from_args(args)
+    task = _task_from_args(args, parser)
 
     if args.command == "select":
         selection = select_model(models, task)
@@ -49,11 +50,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _add_common_task_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
-    parser.add_argument("--task-id", required=True, help="Task identifier for routing evidence.")
+    parser.add_argument("--task-profile", type=Path, help="Path to a reusable FURYOKU task profile JSON file.")
+    parser.add_argument("--task-id", help="Task identifier for routing evidence.")
     parser.add_argument(
         "--capability",
         action="append",
-        required=True,
         default=[],
         metavar="NAME=SCORE",
         help="Required capability score from 0.0 to 1.0. Repeat for multiple capabilities.",
@@ -78,7 +79,32 @@ def _add_common_task_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-output-cost-per-1k", type=float, default=None, help="Maximum output cost per 1k tokens.")
 
 
-def _task_from_args(args: argparse.Namespace) -> TaskProfile:
+def _task_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> TaskProfile:
+    if args.task_profile:
+        profile = load_task_profile(args.task_profile)
+        if not args.capability and not args.task_id:
+            return profile
+        return TaskProfile(
+            task_id=args.task_id or profile.task_id,
+            description=args.description or profile.description,
+            required_capabilities=_parse_capabilities(args.capability) if args.capability else profile.required_capabilities,
+            min_context_tokens=args.min_context_tokens or profile.min_context_tokens,
+            privacy_requirement=args.privacy if args.privacy != "allow_remote" else profile.privacy_requirement,
+            max_input_cost_per_1k=args.max_input_cost_per_1k
+            if args.max_input_cost_per_1k is not None
+            else profile.max_input_cost_per_1k,
+            max_output_cost_per_1k=args.max_output_cost_per_1k
+            if args.max_output_cost_per_1k is not None
+            else profile.max_output_cost_per_1k,
+            require_tools=args.require_tools or profile.require_tools,
+            require_json=args.require_json or profile.require_json,
+            preferred_providers=tuple(args.preferred_provider) or profile.preferred_providers,
+        )
+
+    if not args.task_id:
+        parser.error("--task-id is required unless --task-profile is provided")
+    if not args.capability:
+        parser.error("--capability is required unless --task-profile is provided")
     return TaskProfile(
         task_id=args.task_id,
         description=args.description,
