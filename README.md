@@ -13,7 +13,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current primary lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
+- Current primary lane: [#99](https://github.com/JKhyro/FURYOKU/issues/99)
+- Current downstream CHARACTER/MOA lane: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
 ## Current Baseline
@@ -22,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: add a CHARACTER orchestration envelope for selected role assignments.
+- Current follow-on focus: strengthen the multi-model local/CLI/API decision evaluator across situations before advancing downstream CHARACTER/MOA orchestration.
 
 ## Product Direction
 
@@ -31,7 +32,8 @@ FURYOKU's currently known job is to help the wider system choose and use the rig
 Scope guard:
 
 - Do not treat benchmark truth or CI support as the project purpose.
-- Keep the primary execution lane on the multi-model local/CLI/API runtime and flexible CHARACTER/MOA foundation unless the user explicitly redirects.
+- Keep the primary execution lane on the multi-model local/CLI/API decision system unless the user explicitly redirects.
+- Treat flexible CHARACTER/MOA support as a downstream consumer of the decision layer until the primary evaluator is stronger.
 - Treat benchmark and CI work as supporting evidence and safety infrastructure.
 
 - Register multiple model endpoints: local models, command-line/CLI models, and remote API models.
