@@ -33,7 +33,8 @@ Scope guard:
 
 - Do not treat benchmark truth or CI support as the project purpose.
 - Keep the primary execution lane on the multi-model local/CLI/API decision system unless the user explicitly redirects.
-- Treat flexible CHARACTER/MOA support as a downstream consumer of the decision layer until the primary evaluator is stronger.
+- Treat flexible CHARACTER/MOA support as important downstream product work, not discarded scope.
+- Sequence the work deliberately: make the multi-model decision/runtime layer functional first, then use it to power flexible CHARACTER/MOA arrays such as one-role tertiary Symbiotes and larger primary-plus-secondary role compositions.
 - Treat benchmark and CI work as supporting evidence and safety infrastructure.
 
 - Register multiple model endpoints: local models, command-line/CLI models, and remote API models.
@@ -52,6 +53,7 @@ Current routing core:
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
+- [`furyoku/outcome_feedback.py`](furyoku/outcome_feedback.py) records operator or automated feedback linked to persisted decision/execution reports.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
@@ -77,6 +79,7 @@ python -m furyoku.cli decide --registry .\examples\model_registry.example.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --output .\decision-report.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
+python -m furyoku.cli feedback --report .\decision-report.json --feedback-log .\decision-outcomes.jsonl --verdict success --score 0.9 --reason "accepted response"
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json
 python -m furyoku.cli character-run --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.tertiary-symbiote.json --prompt "Hello"
