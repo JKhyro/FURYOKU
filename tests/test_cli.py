@@ -47,6 +47,49 @@ def write_registry(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_executable_character_registry(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "models": [
+            {
+                "modelId": "local-echo",
+                "provider": "local",
+                "privacyLevel": "local",
+                "contextWindowTokens": 4096,
+                "averageLatencyMs": 10,
+                "invocation": [
+                    sys.executable,
+                    "-c",
+                    "import sys; print('echo:' + sys.stdin.read())",
+                ],
+                "capabilities": {
+                    "conversation": 0.95,
+                    "instruction_following": 0.9,
+                },
+            },
+            {
+                "modelId": "cli-coder",
+                "provider": "cli",
+                "privacyLevel": "remote",
+                "contextWindowTokens": 128000,
+                "averageLatencyMs": 20,
+                "invocation": [
+                    sys.executable,
+                    "-c",
+                    "import sys; print('code:' + sys.stdin.read())",
+                ],
+                "supportsTools": True,
+                "capabilities": {
+                    "conversation": 0.8,
+                    "instruction_following": 0.9,
+                    "coding": 0.98,
+                },
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_task_profile(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -229,6 +272,103 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["roles"][1]["roleId"], "coding")
             self.assertEqual(payload["roles"][1]["maxSubagents"], 4)
             self.assertEqual(payload["roles"][1]["selection"]["modelId"], "remote-coder")
+
+    def test_character_run_executes_effective_primary_role(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            write_executable_character_registry(registry_path)
+            write_character_profile(character_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-run",
+                        "--registry",
+                        str(registry_path),
+                        "--character-profile",
+                        str(character_path),
+                        "--prompt",
+                        "hello",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["characterId"], "test-character")
+            self.assertEqual(payload["executedRoleId"], "primary")
+            self.assertEqual(payload["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            self.assertEqual(payload["roleAssignments"]["primaryRole"], "primary")
+            self.assertEqual(payload["roleAssignments"]["roles"][1]["roleId"], "coding")
+            self.assertEqual(payload["roleAssignments"]["roles"][1]["maxSubagents"], 4)
+
+    def test_character_run_executes_named_secondary_role(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            write_executable_character_registry(registry_path)
+            write_character_profile(character_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-run",
+                        "--registry",
+                        str(registry_path),
+                        "--character-profile",
+                        str(character_path),
+                        "--role-id",
+                        "coding",
+                        "--prompt",
+                        "write code",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["characterId"], "test-character")
+            self.assertEqual(payload["executedRoleId"], "coding")
+            self.assertEqual(payload["selectedModel"]["modelId"], "cli-coder")
+            self.assertEqual(payload["selectedModel"]["provider"], "cli")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "code:write code")
+            self.assertEqual(payload["roleAssignments"]["roles"][0]["selection"]["modelId"], "local-echo")
+
+    def test_character_run_returns_stable_json_for_execution_failure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            write_registry(registry_path)
+            write_character_profile(character_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-run",
+                        "--registry",
+                        str(registry_path),
+                        "--character-profile",
+                        str(character_path),
+                        "--role-id",
+                        "coding",
+                        "--prompt",
+                        "write code",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["executedRoleId"], "coding")
+            self.assertEqual(payload["selectedModel"]["modelId"], "remote-coder")
+            self.assertEqual(payload["execution"]["status"], "error")
+            self.assertIn("api transport", payload["execution"]["error"])
+            self.assertEqual(payload["roleAssignments"]["roles"][1]["selection"]["modelId"], "remote-coder")
 
 
 if __name__ == "__main__":

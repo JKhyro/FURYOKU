@@ -14,8 +14,13 @@ from .character_profiles import (
 from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
-from .provider_adapters import ProviderExecutionRequest
-from .runtime import RoutedExecutionResult, route_and_execute
+from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
+from .runtime import (
+    CharacterRoleExecutionResult,
+    RoutedExecutionResult,
+    execute_character_role,
+    route_and_execute,
+)
 from .task_profiles import load_task_profile
 
 
@@ -58,6 +63,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         _write_json(_character_profile_selection_to_dict(selection))
         return 0
 
+    if args.command == "character-run":
+        profile = load_character_profile(args.character_profile)
+        result = execute_character_role(
+            models,
+            profile,
+            ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
+            role_id=args.role_id,
+            allow_reuse=not args.no_reuse,
+        )
+        _write_json(_character_role_result_to_dict(result))
+        return 0 if result.ok else 2
+
     parser.error(f"unsupported command {args.command}")
     return 2
 
@@ -87,6 +104,28 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to a FURYOKU CHARACTER composition profile JSON file.",
     )
     character_parser.add_argument(
+        "--no-reuse",
+        action="store_true",
+        help="Require each CHARACTER role to use a distinct registered model.",
+    )
+    character_run_parser = subparsers.add_parser(
+        "character-run",
+        help="Select CHARACTER role assignments and execute one role.",
+    )
+    character_run_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    character_run_parser.add_argument(
+        "--character-profile",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU CHARACTER composition profile JSON file.",
+    )
+    character_run_parser.add_argument("--prompt", required=True, help="Prompt text passed to the selected CHARACTER role model.")
+    character_run_parser.add_argument(
+        "--role-id",
+        help="CHARACTER role id to execute. Defaults to the profile's effective primary role.",
+    )
+    character_run_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
+    character_run_parser.add_argument(
         "--no-reuse",
         action="store_true",
         help="Require each CHARACTER role to use a distinct registered model.",
@@ -196,21 +235,35 @@ def _score_to_dict(selection: ModelScore) -> dict:
 
 
 def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
-    execution = result.execution
     return {
         "ok": result.ok,
         "selection": _score_to_dict(result.selection),
-        "execution": {
-            "modelId": execution.model_id,
-            "provider": execution.provider,
-            "status": execution.status,
-            "responseText": execution.response_text,
-            "elapsedMs": execution.elapsed_ms,
-            "exitCode": execution.exit_code,
-            "stderr": execution.stderr,
-            "error": execution.error,
-            "timedOut": execution.timed_out,
-        },
+        "execution": _execution_to_dict(result.execution),
+    }
+
+
+def _character_role_result_to_dict(result: CharacterRoleExecutionResult) -> dict:
+    return {
+        "ok": result.ok,
+        "characterId": result.character_id,
+        "executedRoleId": result.role_id,
+        "selectedModel": _score_to_dict(result.selection),
+        "execution": _execution_to_dict(result.execution),
+        "roleAssignments": _character_profile_selection_to_dict(result.character_selection),
+    }
+
+
+def _execution_to_dict(execution: ProviderExecutionResult) -> dict:
+    return {
+        "modelId": execution.model_id,
+        "provider": execution.provider,
+        "status": execution.status,
+        "responseText": execution.response_text,
+        "elapsedMs": execution.elapsed_ms,
+        "exitCode": execution.exit_code,
+        "stderr": execution.stderr,
+        "error": execution.error,
+        "timedOut": execution.timed_out,
     }
 
 
