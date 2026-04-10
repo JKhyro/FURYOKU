@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#163](https://github.com/JKhyro/FURYOKU/issues/163)
+- Current active lane: [#165](https://github.com/JKhyro/FURYOKU/issues/165)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: add aggregate feedback-backed model scorecards and per-situation leaderboards on top of the shared outcome evidence log.
+- Current follow-on focus: add observed latency plus available cost telemetry to the shared outcome evidence log, scorecards, and leaderboards.
 
 ## Product Direction
 
@@ -61,6 +61,7 @@ Current routing core:
 - Routed `run` executions can append inferred success/failure outcome records to JSONL feedback logs with `--output` plus `--capture-outcome-log`, allowing real execution results to become future routing evidence without hand-authored feedback entries.
 - Captured outcome feedback logs can be summarized by model, provider, and situation with diagnostic `rankScore` and feedback-adjustment signals for operator review.
 - `feedback-summary` also emits aggregate model scorecards and per-situation model leaderboards so operators can review long-run winners and failures across accumulated routed and comparative evidence.
+- Outcome feedback records preserve observed execution latency and any available model-rate or estimated cost telemetry already present in persisted run/comparison reports, so scorecards can surface speed and cost trends without changing routing blockers.
 - Feedback-backed recommendation reports reuse the current decision engine and explain the recommended model/provider per situation without changing routing policy.
 - Recommendation reports include additive confidence and evidence-quality metadata so operators can distinguish strong, sparse, mixed, and blocked recommendations.
 - [`examples/decision_outcomes.example.jsonl`](examples/decision_outcomes.example.jsonl) is a runnable outcome fixture for the summary and recommendation workflow.

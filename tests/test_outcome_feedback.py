@@ -35,10 +35,17 @@ def write_execution_report(path: Path) -> None:
         "selectedModel": {
             "modelId": "local-gemma3-heretic-q4",
             "provider": "local",
+            "inputCostPer1k": 0.0015,
+            "outputCostPer1k": 0.0045,
         },
         "execution": {
             "status": "ok",
             "elapsedMs": 1200,
+            "usage": {
+                "estimatedInputCost": 0.0009,
+                "estimatedOutputCost": 0.0027,
+                "estimatedTotalCost": 0.0036,
+            },
         },
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
@@ -63,10 +70,18 @@ def write_comparison_report(path: Path) -> None:
                 "selectedModel": {
                     "modelId": "local-failing",
                     "provider": "local",
+                    "inputCostPer1k": 0.002,
+                    "outputCostPer1k": 0.006,
                 },
                 "execution": {
                     "status": "error",
+                    "elapsedMs": 1500,
                     "stderr": "local failed",
+                    "usage": {
+                        "estimatedInputCost": 0.0016,
+                        "estimatedOutputCost": 0.0,
+                        "estimatedTotalCost": 0.0016,
+                    },
                 },
             },
             {
@@ -74,10 +89,18 @@ def write_comparison_report(path: Path) -> None:
                 "selectedModel": {
                     "modelId": "cli-fallback",
                     "provider": "cli",
+                    "inputCostPer1k": 0.003,
+                    "outputCostPer1k": 0.009,
                 },
                 "execution": {
                     "status": "ok",
+                    "elapsedMs": 900,
                     "responseText": "fallback:hello",
+                    "usage": {
+                        "estimatedInputCost": 0.0024,
+                        "estimatedOutputCost": 0.0048,
+                        "estimatedTotalCost": 0.0072,
+                    },
                 },
             },
         ],
@@ -118,10 +141,18 @@ def write_comparison_batch_report(path: Path) -> None:
                         "selectedModel": {
                             "modelId": "local-failing",
                             "provider": "local",
+                            "inputCostPer1k": 0.002,
+                            "outputCostPer1k": 0.006,
                         },
                         "execution": {
                             "status": "error",
+                            "elapsedMs": 1400,
                             "stderr": "local failed",
+                            "usage": {
+                                "estimatedInputCost": 0.0014,
+                                "estimatedOutputCost": 0.0,
+                                "estimatedTotalCost": 0.0014,
+                            },
                         },
                     },
                     {
@@ -129,10 +160,18 @@ def write_comparison_batch_report(path: Path) -> None:
                         "selectedModel": {
                             "modelId": "cli-fallback",
                             "provider": "cli",
+                            "inputCostPer1k": 0.003,
+                            "outputCostPer1k": 0.009,
                         },
                         "execution": {
                             "status": "ok",
+                            "elapsedMs": 850,
                             "responseText": "fallback:hello",
+                            "usage": {
+                                "estimatedInputCost": 0.0021,
+                                "estimatedOutputCost": 0.0042,
+                                "estimatedTotalCost": 0.0063,
+                            },
                         },
                     },
                 ],
@@ -152,10 +191,18 @@ def write_comparison_batch_report(path: Path) -> None:
                         "selectedModel": {
                             "modelId": "cli-coder",
                             "provider": "cli",
+                            "inputCostPer1k": 0.004,
+                            "outputCostPer1k": 0.012,
                         },
                         "execution": {
                             "status": "ok",
+                            "elapsedMs": 650,
                             "responseText": "code:write code",
+                            "usage": {
+                                "estimatedInputCost": 0.0032,
+                                "estimatedOutputCost": 0.0064,
+                                "estimatedTotalCost": 0.0096,
+                            },
                         },
                     }
                 ],
@@ -196,6 +243,12 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(payload["selectedModelId"], "local-gemma3-heretic-q4")
         self.assertEqual(payload["selectedProvider"], "local")
         self.assertEqual(payload["executionStatus"], "ok")
+        self.assertEqual(payload["latencyMs"], 1200.0)
+        self.assertEqual(payload["inputCostPer1k"], 0.0015)
+        self.assertEqual(payload["outputCostPer1k"], 0.0045)
+        self.assertEqual(payload["estimatedInputCost"], 0.0009)
+        self.assertEqual(payload["estimatedOutputCost"], 0.0027)
+        self.assertEqual(payload["estimatedTotalCost"], 0.0036)
         self.assertEqual(payload["verdict"], "success")
         self.assertEqual(payload["score"], 0.92)
         self.assertEqual(payload["tags"], ["local", "private-chat"])
@@ -215,6 +268,8 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(loaded[0].record_id, record.record_id)
         self.assertEqual(loaded[0].verdict, "quality_concern")
         self.assertEqual(loaded[0].reason, "too terse")
+        self.assertEqual(loaded[0].latency_ms, 1200.0)
+        self.assertEqual(loaded[0].estimated_total_cost, 0.0036)
 
     def test_create_execution_outcome_record_infers_success_from_persisted_report(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -277,11 +332,17 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(records[0].verdict, "failure")
         self.assertEqual(records[0].score, 0.0)
         self.assertEqual(records[0].execution_status, "error")
+        self.assertEqual(records[0].latency_ms, 1500.0)
+        self.assertEqual(records[0].input_cost_per_1k, 0.002)
+        self.assertEqual(records[0].estimated_total_cost, 0.0016)
         self.assertEqual(records[0].metadata["comparisonAttemptNumber"], 1)
         self.assertEqual(records[0].metadata["operator"], "test")
         self.assertEqual(records[1].selected_model_id, "cli-fallback")
         self.assertEqual(records[1].verdict, "success")
         self.assertEqual(records[1].score, 1.0)
+        self.assertEqual(records[1].latency_ms, 900.0)
+        self.assertEqual(records[1].output_cost_per_1k, 0.009)
+        self.assertEqual(records[1].estimated_total_cost, 0.0072)
         self.assertEqual(records[1].metadata["comparisonExecutedCount"], 2)
 
     def test_capture_comparative_execution_outcomes_appends_all_candidate_records(self):
@@ -329,10 +390,15 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(records[0].metadata["comparisonSituationCount"], 3)
         self.assertEqual(records[0].metadata["comparisonBatchExecutedCandidateCount"], 3)
         self.assertEqual(records[0].metadata["operator"], "test")
+        self.assertEqual(records[0].latency_ms, 1400.0)
+        self.assertEqual(records[0].estimated_total_cost, 0.0014)
         self.assertEqual(records[2].situation_id, "tool-heavy-coding")
         self.assertEqual(records[2].selected_model_id, "cli-coder")
         self.assertEqual(records[2].verdict, "success")
         self.assertEqual(records[2].score, 1.0)
+        self.assertEqual(records[2].latency_ms, 650.0)
+        self.assertEqual(records[2].input_cost_per_1k, 0.004)
+        self.assertEqual(records[2].estimated_total_cost, 0.0096)
 
     def test_capture_comparative_execution_outcomes_skips_blocked_batch_situations(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -412,6 +478,12 @@ class OutcomeFeedbackTests(unittest.TestCase):
                 situation_id="private-chat",
                 selected_model_id="local-model",
                 selected_provider="local",
+                latency_ms=900.0,
+                input_cost_per_1k=0.001,
+                output_cost_per_1k=0.002,
+                estimated_input_cost=0.01,
+                estimated_output_cost=0.02,
+                estimated_total_cost=0.03,
                 verdict="success",
                 score=0.9,
             ),
@@ -423,6 +495,12 @@ class OutcomeFeedbackTests(unittest.TestCase):
                 situation_id="private-chat",
                 selected_model_id="local-model",
                 selected_provider="local",
+                latency_ms=1500.0,
+                input_cost_per_1k=0.001,
+                output_cost_per_1k=0.002,
+                estimated_input_cost=0.02,
+                estimated_output_cost=0.03,
+                estimated_total_cost=0.05,
                 verdict="failure",
                 score=0.2,
             ),
@@ -434,6 +512,12 @@ class OutcomeFeedbackTests(unittest.TestCase):
                 situation_id="coding",
                 selected_model_id="api-model",
                 selected_provider="api",
+                latency_ms=2000.0,
+                input_cost_per_1k=0.004,
+                output_cost_per_1k=0.012,
+                estimated_input_cost=0.04,
+                estimated_output_cost=0.08,
+                estimated_total_cost=0.12,
                 verdict="quality_concern",
                 score=0.4,
             ),
@@ -446,6 +530,12 @@ class OutcomeFeedbackTests(unittest.TestCase):
                 selected_model_id="api-model",
                 selected_provider="api",
                 override_model_id="local-model",
+                latency_ms=1000.0,
+                input_cost_per_1k=0.004,
+                output_cost_per_1k=0.012,
+                estimated_input_cost=0.03,
+                estimated_output_cost=0.05,
+                estimated_total_cost=0.08,
                 verdict="manual_override",
                 score=0.8,
             ),
@@ -461,19 +551,32 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(payload["total"]["concernCount"], 1)
         self.assertEqual(payload["total"]["manualOverrideCount"], 1)
         self.assertEqual(payload["total"]["averageScore"], 0.575)
+        self.assertEqual(payload["total"]["latencyRecordCount"], 4)
+        self.assertEqual(payload["total"]["averageLatencyMs"], 1350.0)
+        self.assertEqual(payload["total"]["minimumLatencyMs"], 900.0)
+        self.assertEqual(payload["total"]["maximumLatencyMs"], 2000.0)
+        self.assertEqual(payload["total"]["costRecordCount"], 4)
+        self.assertEqual(payload["total"]["averageInputCostPer1k"], 0.0025)
+        self.assertEqual(payload["total"]["averageOutputCostPer1k"], 0.007)
+        self.assertEqual(payload["total"]["averageEstimatedTotalCost"], 0.07)
         self.assertEqual(payload["models"][0]["key"], "local-model")
         self.assertGreater(payload["models"][0]["rankScore"], payload["models"][1]["rankScore"])
         self.assertEqual(payload["models"][0]["recordCount"], 2)
         self.assertEqual(payload["models"][0]["weightedRecordCount"], 3.0)
         self.assertEqual(payload["models"][0]["provider"], "local")
+        self.assertEqual(payload["models"][0]["averageLatencyMs"], 1200.0)
+        self.assertEqual(payload["models"][0]["averageEstimatedTotalCost"], 0.04)
         self.assertEqual(payload["providers"][0]["key"], "local")
         self.assertEqual([summary["key"] for summary in payload["situations"]], ["coding", "private-chat"])
         self.assertEqual(payload["modelScorecards"][0]["modelId"], "local-model")
         self.assertEqual(payload["modelScorecards"][0]["provider"], "local")
         self.assertEqual(payload["modelScorecards"][0]["overall"]["key"], "local-model")
         self.assertEqual(payload["modelScorecards"][0]["situations"][0]["key"], "private-chat")
+        self.assertEqual(payload["modelScorecards"][0]["overall"]["averageLatencyMs"], 1200.0)
         self.assertEqual(payload["situationLeaderboards"][0]["situationId"], "coding")
         self.assertEqual(payload["situationLeaderboards"][0]["models"][0]["key"], "api-model")
+        self.assertEqual(payload["situationLeaderboards"][0]["models"][0]["averageLatencyMs"], 1500.0)
+        self.assertEqual(payload["situationLeaderboards"][0]["models"][0]["averageEstimatedTotalCost"], 0.1)
         self.assertEqual(payload["feedbackPolicy"]["source"], "default")
 
     def test_summarize_outcome_feedback_accepts_empty_records(self):
