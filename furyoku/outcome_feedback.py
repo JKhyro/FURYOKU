@@ -268,31 +268,84 @@ def create_decision_outcome_record(
 
     _validate_verdict(verdict, source="<feedback>")
     normalized_score = _optional_score(score, source="<feedback>")
-    path = Path(report_path)
-    report_bytes = path.read_bytes()
-    report = json.loads(report_bytes.decode("utf-8"))
-    if not isinstance(report, Mapping):
-        raise OutcomeFeedbackError(f"{path}: persisted report must be a JSON object")
-
-    selection = _extract_selected_model(report)
-    execution = report.get("execution")
-    return DecisionOutcomeRecord(
-        record_id=str(uuid4()),
-        report_path=str(path),
-        report_sha256=hashlib.sha256(report_bytes).hexdigest(),
-        report_generated_at=_report_generated_at(report),
-        generated_at=datetime.now(timezone.utc).isoformat(),
-        situation_id=str(report.get("situationId", _first_decision_task_id(report)) or ""),
-        selected_model_id=str(selection.get("modelId", "") or ""),
-        selected_provider=str(selection.get("provider", "") or ""),
-        execution_status=_execution_status(execution),
+    path, report_bytes, report = _read_report_payload(report_path)
+    return _decision_outcome_record_from_report(
+        path=path,
+        report_bytes=report_bytes,
+        report=report,
         verdict=verdict,
         score=normalized_score,
         reason=reason,
-        tags=tuple(str(tag) for tag in tags),
+        tags=tags,
         override_model_id=override_model_id,
-        metadata=dict(metadata or {}),
+        metadata=metadata,
     )
+
+
+def create_execution_outcome_record(
+    report_path: str | Path,
+    *,
+    verdict: str | None = None,
+    score: float | None = None,
+    reason: str = "",
+    tags: Iterable[str] = (),
+    override_model_id: str = "",
+    metadata: Mapping[str, Any] | None = None,
+) -> DecisionOutcomeRecord:
+    """Create feedback evidence by inferring success/failure from a persisted execution report."""
+
+    normalized_score = _optional_score(score, source="<outcome-capture>")
+    path, report_bytes, report = _read_report_payload(report_path)
+    resolved_verdict = verdict or infer_execution_outcome_verdict(report, source=str(path))
+    _validate_verdict(resolved_verdict, source="<outcome-capture>")
+    return _decision_outcome_record_from_report(
+        path=path,
+        report_bytes=report_bytes,
+        report=report,
+        verdict=resolved_verdict,
+        score=normalized_score,
+        reason=reason,
+        tags=tags,
+        override_model_id=override_model_id,
+        metadata=metadata,
+    )
+
+
+def capture_execution_outcome(
+    feedback_log_path: str | Path,
+    report_path: str | Path,
+    *,
+    verdict: str | None = None,
+    score: float | None = None,
+    reason: str = "",
+    tags: Iterable[str] = (),
+    override_model_id: str = "",
+    metadata: Mapping[str, Any] | None = None,
+) -> DecisionOutcomeRecord:
+    """Append one inferred or explicit execution outcome record to a JSONL feedback log."""
+
+    record = create_execution_outcome_record(
+        report_path,
+        verdict=verdict,
+        score=score,
+        reason=reason,
+        tags=tags,
+        override_model_id=override_model_id,
+        metadata=metadata,
+    )
+    append_decision_outcome(feedback_log_path, record)
+    return record
+
+
+def infer_execution_outcome_verdict(report: Mapping[str, Any], *, source: str = "<memory>") -> str:
+    """Infer a feedback verdict from a persisted run report execution status."""
+
+    if not isinstance(report, Mapping):
+        raise OutcomeFeedbackError(f"{source}: persisted report must be a JSON object")
+    execution_status = _execution_status(report.get("execution"))
+    if not execution_status:
+        raise OutcomeFeedbackError(f"{source}: cannot infer outcome verdict without execution.status")
+    return "success" if execution_status == "ok" else "failure"
 
 
 def build_model_feedback_summaries(
@@ -393,6 +446,48 @@ def load_decision_outcomes(feedback_log_path: str | Path) -> tuple[DecisionOutco
                 raise OutcomeFeedbackError(f"{path}:{line_number}: invalid JSON feedback record") from exc
             records.append(DecisionOutcomeRecord.from_dict(payload, source=f"{path}:{line_number}"))
     return tuple(records)
+
+
+def _read_report_payload(report_path: str | Path) -> tuple[Path, bytes, Mapping[str, Any]]:
+    path = Path(report_path)
+    report_bytes = path.read_bytes()
+    report = json.loads(report_bytes.decode("utf-8-sig"))
+    if not isinstance(report, Mapping):
+        raise OutcomeFeedbackError(f"{path}: persisted report must be a JSON object")
+    return path, report_bytes, report
+
+
+def _decision_outcome_record_from_report(
+    *,
+    path: Path,
+    report_bytes: bytes,
+    report: Mapping[str, Any],
+    verdict: str,
+    score: float | None,
+    reason: str,
+    tags: Iterable[str],
+    override_model_id: str,
+    metadata: Mapping[str, Any] | None,
+) -> DecisionOutcomeRecord:
+    selection = _extract_selected_model(report)
+    execution = report.get("execution")
+    return DecisionOutcomeRecord(
+        record_id=str(uuid4()),
+        report_path=str(path),
+        report_sha256=hashlib.sha256(report_bytes).hexdigest(),
+        report_generated_at=_report_generated_at(report),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        situation_id=str(report.get("situationId", _first_decision_task_id(report)) or ""),
+        selected_model_id=str(selection.get("modelId", "") or ""),
+        selected_provider=str(selection.get("provider", "") or ""),
+        execution_status=_execution_status(execution),
+        verdict=verdict,
+        score=score,
+        reason=reason,
+        tags=tuple(str(tag) for tag in tags),
+        override_model_id=override_model_id,
+        metadata=dict(metadata or {}),
+    )
 
 
 def _normalize_feedback_record(

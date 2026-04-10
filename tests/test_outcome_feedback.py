@@ -10,7 +10,10 @@ from furyoku import (
     append_decision_outcome,
     build_feedback_policy_metadata,
     build_model_feedback_summaries,
+    capture_execution_outcome,
     create_decision_outcome_record,
+    create_execution_outcome_record,
+    infer_execution_outcome_verdict,
     load_decision_outcomes,
     load_feedback_adjustment_policy,
     parse_feedback_adjustment_policy,
@@ -77,6 +80,54 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(loaded[0].record_id, record.record_id)
         self.assertEqual(loaded[0].verdict, "quality_concern")
         self.assertEqual(loaded[0].reason, "too terse")
+
+    def test_create_execution_outcome_record_infers_success_from_persisted_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "run-report.json"
+            write_execution_report(report_path)
+
+            record = create_execution_outcome_record(
+                report_path,
+                score=0.97,
+                reason="accepted generated answer",
+                tags=("auto-capture",),
+            )
+
+        self.assertEqual(record.verdict, "success")
+        self.assertEqual(record.score, 0.97)
+        self.assertEqual(record.reason, "accepted generated answer")
+        self.assertEqual(record.tags, ("auto-capture",))
+        self.assertEqual(record.selected_model_id, "local-gemma3-heretic-q4")
+        self.assertEqual(record.execution_status, "ok")
+
+    def test_capture_execution_outcome_appends_inferred_failure(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "failed-run.json"
+            feedback_path = Path(temp_dir) / "feedback" / "outcomes.jsonl"
+            report_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "selection": {"modelId": "local-broken", "provider": "local"},
+                        "execution": {"status": "error", "stderr": "bad runtime"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            record = capture_execution_outcome(feedback_path, report_path, reason="provider failed")
+            loaded = load_decision_outcomes(feedback_path)
+
+        self.assertEqual(record.verdict, "failure")
+        self.assertEqual(record.execution_status, "error")
+        self.assertEqual(loaded[0].record_id, record.record_id)
+        self.assertEqual(loaded[0].selected_model_id, "local-broken")
+
+    def test_infer_execution_outcome_rejects_reports_without_execution_status(self):
+        with self.assertRaises(OutcomeFeedbackError) as error:
+            infer_execution_outcome_verdict({"schemaVersion": 1})
+
+        self.assertIn("execution.status", str(error.exception))
 
     def test_rejects_invalid_feedback_verdict_and_score(self):
         with tempfile.TemporaryDirectory() as temp_dir:

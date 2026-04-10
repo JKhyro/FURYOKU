@@ -1,9 +1,10 @@
 import io
+import hashlib
 import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from furyoku.cli import main
@@ -417,6 +418,87 @@ class CliTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["selection"]["modelId"], "local-echo")
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+
+    def test_run_capture_outcome_appends_inferred_success_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            output_path = Path(temp_dir) / "reports" / "run.json"
+            feedback_path = Path(temp_dir) / "feedback" / "outcomes.jsonl"
+            write_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "private-chat",
+                        "--capability",
+                        "conversation=0.9",
+                        "--privacy",
+                        "local_only",
+                        "--prompt",
+                        "hello",
+                        "--output",
+                        str(output_path),
+                        "--capture-outcome-log",
+                        str(feedback_path),
+                        "--outcome-score",
+                        "0.96",
+                        "--outcome-reason",
+                        "accepted response",
+                        "--outcome-tag",
+                        "auto-capture",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            logged = [json.loads(line) for line in feedback_path.read_text(encoding="utf-8").splitlines()]
+            report_bytes = output_path.read_bytes()
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertTrue(payload["outcomeCapture"]["captured"])
+            self.assertEqual(payload["outcomeCapture"]["feedbackLog"], str(feedback_path))
+            self.assertEqual(len(logged), 1)
+            self.assertEqual(logged[0]["recordId"], payload["outcomeCapture"]["record"]["recordId"])
+            self.assertEqual(logged[0]["verdict"], "success")
+            self.assertEqual(logged[0]["score"], 0.96)
+            self.assertEqual(logged[0]["reason"], "accepted response")
+            self.assertEqual(logged[0]["tags"], ["auto-capture"])
+            self.assertEqual(logged[0]["selectedModelId"], "local-echo")
+            self.assertEqual(logged[0]["executionStatus"], "ok")
+            self.assertEqual(logged[0]["reportSha256"], hashlib.sha256(report_bytes).hexdigest())
+
+    def test_run_capture_outcome_requires_output_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            feedback_path = Path(temp_dir) / "feedback" / "outcomes.jsonl"
+            write_registry(registry_path)
+            stderr = io.StringIO()
+
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+                main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "private-chat",
+                        "--capability",
+                        "conversation=0.9",
+                        "--privacy",
+                        "local_only",
+                        "--prompt",
+                        "hello",
+                        "--capture-outcome-log",
+                        str(feedback_path),
+                    ]
+                )
+
+            self.assertEqual(error.exception.code, 2)
+            self.assertIn("--capture-outcome-log requires --output", stderr.getvalue())
 
     def test_run_decision_suite_executes_named_situation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
