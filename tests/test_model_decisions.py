@@ -1,10 +1,15 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from furyoku import (
     ModelDecisionError,
     ModelEndpoint,
     TaskProfile,
     evaluate_model_decisions,
+    load_decision_suite,
+    parse_decision_suite,
 )
 
 
@@ -145,13 +150,56 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertIn("providerCoverage", payload["aggregate"])
         self.assertIn("rationale", payload["situations"]["hard-coding"])
 
+    def test_load_decision_suite_parses_reusable_situations(self):
+        payload = {
+            "schemaVersion": 1,
+            "suiteId": "primary-routing",
+            "description": "Reusable model decision suite.",
+            "situations": [
+                {
+                    "taskId": "private-chat",
+                    "privacyRequirement": "local_only",
+                    "requiredCapabilities": {"conversation": 0.8},
+                },
+                {
+                    "taskId": "hard-coding",
+                    "requireTools": True,
+                    "requiredCapabilities": {"coding": 0.9},
+                },
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "suite.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            suite = load_decision_suite(path)
+
+        self.assertEqual(suite.suite_id, "primary-routing")
+        self.assertEqual(suite.description, "Reusable model decision suite.")
+        self.assertEqual([task.task_id for task in suite.situations], ["private-chat", "hard-coding"])
+
+    def test_decision_suite_rejects_duplicate_situations(self):
+        payload = {
+            "schemaVersion": 1,
+            "suiteId": "broken",
+            "situations": [
+                {"taskId": "duplicate", "requiredCapabilities": {"conversation": 0.5}},
+                {"taskId": "duplicate", "requiredCapabilities": {"coding": 0.5}},
+            ],
+        }
+
+        with self.assertRaises(ModelDecisionError) as error:
+            parse_decision_suite(payload)
+
+        self.assertIn("duplicate task ids", str(error.exception))
+
     def test_rejects_duplicate_task_ids(self):
         task = TaskProfile(task_id="duplicate", required_capabilities={"conversation": 0.5})
 
         with self.assertRaises(ModelDecisionError) as error:
             evaluate_model_decisions(sample_models(), [task, task])
 
-        self.assertIn("Duplicate task ids", str(error.exception))
+        self.assertIn("duplicate task ids", str(error.exception))
 
     def test_rejects_explicit_empty_task_list(self):
         with self.assertRaises(ModelDecisionError) as error:

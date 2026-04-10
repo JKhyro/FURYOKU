@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "primary-routing",
+  "description": "Primary FURYOKU decision situations for choosing between local, CLI, and API model endpoints.",
+  "situations": [
+    {
+      "taskId": "decision.private-chat",
+      "description": "Private conversational response that must stay on a local model.",
+      "privacyRequirement": "local_only",
+      "requiredCapabilities": {
+        "conversation": 0.8,
+        "instruction_following": 0.75
+      }
+    },
+    {
+      "taskId": "decision.tool-heavy-coding",
+      "description": "Tool-capable coding and reasoning task.",
+      "requireTools": true,
+      "requiredCapabilities": {
+        "coding": 0.9,
+        "reasoning": 0.85,
+        "instruction_following": 0.85
+      }
+    },
+    {
+      "taskId": "decision.long-context-memory",
+      "description": "Long-context memory retrieval and summarization task.",
+      "minContextTokens": 64000,
+      "requireJson": true,
+      "requiredCapabilities": {
+        "retrieval": 0.85,
+        "summarization": 0.85
+      }
+    },
+    {
+      "taskId": "decision.low-latency-local",
+      "description": "Low-latency local response lane.",
+      "privacyRequirement": "prefer_local",
+      "requiredCapabilities": {
+        "conversation": 0.75,
+        "instruction_following": 0.75
+      }
+    },
+    {
+      "taskId": "decision.structured-json",
+      "description": "Structured response task requiring JSON output.",
+      "requireJson": true,
+      "requiredCapabilities": {
+        "instruction_following": 0.8
+      }
+    },
+    {
+      "taskId": "decision.cost-sensitive-remote",
+      "description": "Remote-allowed task with tight cost controls.",
+      "maxInputCostPer1k": 0.01,
+      "maxOutputCostPer1k": 0.02,
+      "requiredCapabilities": {
+        "summarization": 0.8,
+        "instruction_following": 0.8
+      }
+    }
+  ]
+}
