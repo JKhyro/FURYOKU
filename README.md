@@ -13,7 +13,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current bounded follow-on: [#68](https://github.com/JKhyro/FURYOKU/issues/68)
+- Current primary lane: [#74](https://github.com/JKhyro/FURYOKU/issues/74)
+- Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
 ## Current Baseline
 
@@ -21,7 +22,22 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: add a one-command compare publish helper so operators can regenerate the compare summary and current-baseline manifest together without a long manual reporter invocation
+- Current follow-on focus: build a multi-model router that can choose the best local, CLI, or API LLM for a task and later feed CHARACTER/MOA-style agent arrays.
+
+## Product Direction
+
+FURYOKU's primary job is to help the wider system choose the right LLM for the situation.
+
+- Register multiple model endpoints: local models, command-line/CLI models, and remote API models.
+- Describe task requirements such as privacy, reasoning, coding, memory retrieval, context size, latency, tool support, and structured output.
+- Rank eligible models and explain why a model was selected or rejected.
+- Support three-role CHARACTER panels where one model can act as the interactive face, one as memory/retrieval support, and one as reasoning/coding/rationality support.
+- Use benchmark truth as evidence for routing decisions, not as the project goal by itself.
+
+Current routing core:
+
+- [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract.
+- [`tests/test_model_router.py`](tests/test_model_router.py) verifies local-only selection, CLI/API routing, blocker reporting, and three-role CHARACTER panel selection.
 
 ## Benchmark Evidence Lane
 
