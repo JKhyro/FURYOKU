@@ -18,6 +18,7 @@ from furyoku import (
     load_feedback_adjustment_policy,
     parse_feedback_adjustment_policy,
     resolve_feedback_adjustment_policy,
+    summarize_outcome_feedback,
 )
 
 
@@ -172,6 +173,83 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertLess(summaries["remote-model"].adjustment, 0.0)
         self.assertEqual(summaries["local-model"].manual_override_count, 1)
         self.assertTrue(any("bounded feedback adjustment" in reason for reason in summaries["local-model"].rationale))
+
+    def test_summarize_outcome_feedback_reports_model_provider_and_situation_rollups(self):
+        records = [
+            DecisionOutcomeRecord(
+                record_id="1",
+                report_path="report-1.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                situation_id="private-chat",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="success",
+                score=0.9,
+            ),
+            DecisionOutcomeRecord(
+                record_id="2",
+                report_path="report-2.json",
+                report_sha256="1" * 64,
+                generated_at="2026-04-10T12:01:00+00:00",
+                situation_id="private-chat",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="failure",
+                score=0.2,
+            ),
+            DecisionOutcomeRecord(
+                record_id="3",
+                report_path="report-3.json",
+                report_sha256="2" * 64,
+                generated_at="2026-04-10T12:02:00+00:00",
+                situation_id="coding",
+                selected_model_id="api-model",
+                selected_provider="api",
+                verdict="quality_concern",
+                score=0.4,
+            ),
+            DecisionOutcomeRecord(
+                record_id="4",
+                report_path="report-4.json",
+                report_sha256="3" * 64,
+                generated_at="2026-04-10T12:03:00+00:00",
+                situation_id="coding",
+                selected_model_id="api-model",
+                selected_provider="api",
+                override_model_id="local-model",
+                verdict="manual_override",
+                score=0.8,
+            ),
+        ]
+
+        report = summarize_outcome_feedback(records, generated_at="2026-04-11T00:00:00+00:00")
+        payload = report.to_dict()
+
+        self.assertEqual(payload["recordCount"], 4)
+        self.assertEqual(payload["generatedAt"], "2026-04-11T00:00:00+00:00")
+        self.assertEqual(payload["total"]["successCount"], 1)
+        self.assertEqual(payload["total"]["failureCount"], 1)
+        self.assertEqual(payload["total"]["concernCount"], 1)
+        self.assertEqual(payload["total"]["manualOverrideCount"], 1)
+        self.assertEqual(payload["total"]["averageScore"], 0.575)
+        self.assertEqual(payload["models"][0]["key"], "local-model")
+        self.assertGreater(payload["models"][0]["rankScore"], payload["models"][1]["rankScore"])
+        self.assertEqual(payload["models"][0]["recordCount"], 2)
+        self.assertEqual(payload["models"][0]["weightedRecordCount"], 3.0)
+        self.assertEqual(payload["providers"][0]["key"], "local")
+        self.assertEqual([summary["key"] for summary in payload["situations"]], ["coding", "private-chat"])
+        self.assertEqual(payload["feedbackPolicy"]["source"], "default")
+
+    def test_summarize_outcome_feedback_accepts_empty_records(self):
+        payload = summarize_outcome_feedback((), generated_at="2026-04-11T00:00:00+00:00").to_dict()
+
+        self.assertEqual(payload["recordCount"], 0)
+        self.assertEqual(payload["total"]["recordCount"], 0)
+        self.assertEqual(payload["total"]["successRate"], 0.0)
+        self.assertEqual(payload["models"], [])
+        self.assertEqual(payload["providers"], [])
+        self.assertEqual(payload["situations"], [])
 
     def test_custom_feedback_policy_changes_adjustment_size(self):
         records = [

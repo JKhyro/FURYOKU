@@ -24,6 +24,7 @@ from .outcome_feedback import (
     create_decision_outcome_record,
     load_feedback_adjustment_policy,
     load_decision_outcomes,
+    summarize_outcome_feedback,
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
@@ -53,6 +54,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         append_decision_outcome(args.feedback_log, record)
         _write_json(record.to_dict())
+        return 0
+
+    if args.command == "feedback-summary":
+        feedback_policy = load_feedback_adjustment_policy(args.feedback_policy) if args.feedback_policy else None
+        report = summarize_outcome_feedback(
+            _load_feedback_logs(args.feedback_log),
+            policy=feedback_policy,
+            as_of=args.as_of,
+        )
+        _write_json(report.to_dict(), output_path=args.output)
         return 0
 
     models = load_model_registry(args.registry)
@@ -284,6 +295,23 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback_parser.add_argument("--reason", default="", help="Short reason or operator note for this outcome.")
     feedback_parser.add_argument("--tag", action="append", default=[], help="Optional feedback tag. Repeat for multiple tags.")
     feedback_parser.add_argument("--override-model-id", help="Model id that should have been used when verdict is manual_override.")
+    feedback_summary_parser = subparsers.add_parser(
+        "feedback-summary",
+        help="Summarize captured outcome feedback logs by model, provider, and situation.",
+    )
+    feedback_summary_parser.add_argument(
+        "--feedback-log",
+        required=True,
+        action="append",
+        type=Path,
+        help="JSONL outcome feedback log to summarize. Repeat to merge multiple logs.",
+    )
+    _add_feedback_policy_arg(feedback_summary_parser)
+    feedback_summary_parser.add_argument(
+        "--as-of",
+        help="Optional ISO timestamp used for recency-aware feedback policy weighting.",
+    )
+    feedback_summary_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON summary report.")
     character_parser = subparsers.add_parser(
         "character-select",
         help="Select concrete model endpoints for every role in a CHARACTER profile.",
@@ -504,6 +532,13 @@ def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParse
         load_decision_outcomes(feedback_log),
         load_feedback_adjustment_policy(feedback_policy_path) if feedback_policy_path else None,
     )
+
+
+def _load_feedback_logs(paths: Sequence[Path]):
+    records = []
+    for path in paths:
+        records.extend(load_decision_outcomes(path))
+    return tuple(records)
 
 
 def _routing_policy_from_args(args: argparse.Namespace):
