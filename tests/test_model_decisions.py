@@ -5,6 +5,7 @@ from pathlib import Path
 
 from furyoku import (
     DecisionOutcomeRecord,
+    FeedbackAdjustmentPolicy,
     ModelDecisionError,
     ModelEndpoint,
     ModelReadinessEvidence,
@@ -259,6 +260,53 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(selected.model.model_id, "local-gemma3-heretic")
         self.assertIn("local-gemma3-heretic", report.feedback_adjustments)
         self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank.reasons))
+
+    def test_feedback_policy_changes_decision_adjustment_size(self):
+        task = TaskProfile(
+            task_id="feedback-chat",
+            required_capabilities={"conversation": 0.8},
+        )
+
+        default_report = evaluate_model_decisions(
+            sample_models()[:2],
+            [task],
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-gemma3-heretic",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+        )
+        policy_report = evaluate_model_decisions(
+            sample_models()[:2],
+            [task],
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-gemma3-heretic",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+            feedback_policy=FeedbackAdjustmentPolicy(
+                max_adjustment=3.0,
+                success_base=0.5,
+                success_score_multiplier=1.0,
+            ),
+        )
+
+        self.assertEqual(default_report.feedback_adjustments["local-gemma3-heretic"].adjustment, 10.0)
+        self.assertEqual(policy_report.feedback_adjustments["local-gemma3-heretic"].adjustment, 1.5)
 
     def test_feedback_adjustment_does_not_bypass_hard_blockers(self):
         task = TaskProfile(

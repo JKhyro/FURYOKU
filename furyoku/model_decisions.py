@@ -8,6 +8,7 @@ from typing import Any, Iterable, Mapping
 from .model_router import ModelEndpoint, ModelScore, TaskProfile, rank_models
 from .outcome_feedback import (
     FeedbackAdjustmentInput,
+    FeedbackAdjustmentPolicyInput,
     ModelOutcomeFeedbackSummary,
     build_model_feedback_summaries,
 )
@@ -496,6 +497,7 @@ def evaluate_model_decisions(
     *,
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
     situation_weights: Mapping[str, float] | None = None,
     minimum_scores: Mapping[str, float] | None = None,
 ) -> ModelDecisionReport:
@@ -516,7 +518,7 @@ def evaluate_model_decisions(
     _validate_inputs(model_list, task_list)
     readiness_by_model = _normalize_readiness_evidence(readiness)
     _validate_readiness_evidence(readiness_by_model, model_list)
-    feedback_by_model = _feedback_for_models(feedback, model_list)
+    feedback_by_model = _feedback_for_models(feedback, model_list, feedback_policy=feedback_policy)
 
     situation_decisions: dict[str, SituationDecision] = {}
     for task in task_list:
@@ -662,13 +664,15 @@ def _validate_readiness_evidence(
 def _feedback_for_models(
     feedback: FeedbackAdjustmentInput | None,
     models: list[ModelEndpoint],
+    *,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None,
 ) -> dict[str, ModelOutcomeFeedbackSummary]:
     if feedback is None:
         return {}
     known_model_ids = {model.model_id for model in models}
     return {
         model_id: summary
-        for model_id, summary in build_model_feedback_summaries(feedback).items()
+        for model_id, summary in build_model_feedback_summaries(feedback, policy=feedback_policy).items()
         if model_id in known_model_ids
     }
 
