@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#146](https://github.com/JKhyro/FURYOKU/issues/146)
+- Current active lane: [#148](https://github.com/JKhyro/FURYOKU/issues/148)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: add feedback-backed recommendation reports that explain the best model/provider for each situation.
+- Current follow-on focus: add runnable recommendation workflow fixtures for captured outcomes, summaries, and recommendations.
 
 ## Product Direction
 
@@ -61,6 +61,7 @@ Current routing core:
 - Routed `run` executions can append inferred success/failure outcome records to JSONL feedback logs with `--output` plus `--capture-outcome-log`, allowing real execution results to become future routing evidence without hand-authored feedback entries.
 - Captured outcome feedback logs can be summarized by model, provider, and situation with diagnostic `rankScore` and feedback-adjustment signals for operator review.
 - Feedback-backed recommendation reports reuse the current decision engine and explain the recommended model/provider per situation without changing routing policy.
+- [`examples/decision_outcomes.example.jsonl`](examples/decision_outcomes.example.jsonl) is a runnable outcome fixture for the summary and recommendation workflow.
 - [`examples/feedback_policy.example.json`](examples/feedback_policy.example.json) shows the configurable feedback adjustment policy contract for tuning max adjustment, verdict weights, default outcome scores, and optional recency decay.
 - [`examples/routing_score_policy.speed-first.json`](examples/routing_score_policy.speed-first.json) shows a speed-heavy routing score policy profile.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
@@ -79,7 +80,7 @@ Current routing core:
 - [`tests/test_provider_adapters.py`](tests/test_provider_adapters.py) verifies subprocess, API transport, timeout, failure, unsupported-provider, and router-selected execution paths.
 - [`tests/test_provider_health.py`](tests/test_provider_health.py) verifies command resolution, missing invocation, missing transport, probe, and aggregate readiness paths.
 - [`tests/test_runtime.py`](tests/test_runtime.py) verifies route-and-execute success and observable execution failure paths.
-- [`tests/test_cli.py`](tests/test_cli.py) verifies operator-facing selection and local execution command paths.
+- [`tests/test_cli.py`](tests/test_cli.py) verifies operator-facing selection, local execution, and runnable recommendation workflow fixture command paths.
 
 CLI example:
 
@@ -95,7 +96,7 @@ python -m furyoku.cli decide --registry .\examples\model_registry.example.json -
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json
 python -m furyoku.cli decide --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --routing-policy .\examples\routing_score_policy.speed-first.json
-python -m furyoku.cli recommend --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\decision-outcomes.jsonl --output .\recommendations.json
+python -m furyoku.cli recommend --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --feedback-log .\examples\decision_outcomes.example.jsonl --output .\recommendations.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello"
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --decision-suite .\examples\decision_suite.primary-routing.json --situation-id decision.private-chat --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl
@@ -104,7 +105,7 @@ python -m furyoku.cli run --registry .\examples\model_registry.example.json --ta
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --routing-policy .\examples\routing_score_policy.speed-first.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --output .\run-report.json --capture-outcome-log .\decision-outcomes.jsonl --outcome-score 0.9 --outcome-reason "accepted response"
 python -m furyoku.cli feedback --report .\decision-report.json --feedback-log .\decision-outcomes.jsonl --verdict success --score 0.9 --reason "accepted response"
-python -m furyoku.cli feedback-summary --feedback-log .\decision-outcomes.jsonl --output .\feedback-summary.json
+python -m furyoku.cli feedback-summary --feedback-log .\examples\decision_outcomes.example.jsonl --output .\feedback-summary.json
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.tertiary-symbiote.json --check-health

@@ -689,6 +689,77 @@ class CliTests(unittest.TestCase):
             self.assertIn("outcomeSummary", payload)
             self.assertIn("reportMetadata", persisted)
 
+    def test_example_recommendation_workflow_fixture_is_runnable(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        registry_path = repo_root / "examples" / "model_registry.example.json"
+        suite_path = repo_root / "examples" / "decision_suite.primary-routing.json"
+        feedback_path = repo_root / "examples" / "decision_outcomes.example.jsonl"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            summary_output = Path(temp_dir) / "feedback-summary.json"
+            recommendation_output = Path(temp_dir) / "recommendations.json"
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                summary_exit = main(
+                    [
+                        "feedback-summary",
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--output",
+                        str(summary_output),
+                    ]
+                )
+
+            summary = json.loads(stdout.getvalue())
+            persisted_summary = json.loads(summary_output.read_text(encoding="utf-8"))
+            self.assertEqual(summary_exit, 0)
+            self.assertEqual(summary["recordCount"], 5)
+            self.assertEqual(summary["total"]["successCount"], 2)
+            self.assertEqual(summary["total"]["failureCount"], 1)
+            self.assertEqual(summary["total"]["manualOverrideCount"], 1)
+            self.assertEqual(
+                {model["key"] for model in summary["models"]},
+                {"local-gemma3-heretic-q4", "cli-codex-high", "api-long-context-memory"},
+            )
+            self.assertEqual(persisted_summary["recordCount"], 5)
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                recommendation_exit = main(
+                    [
+                        "recommend",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--output",
+                        str(recommendation_output),
+                    ]
+                )
+
+            report = json.loads(stdout.getvalue())
+            persisted_report = json.loads(recommendation_output.read_text(encoding="utf-8"))
+            selected_by_task = {
+                recommendation["taskId"]: recommendation["selectedModel"]
+                for recommendation in report["recommendations"]
+            }
+            self.assertEqual(recommendation_exit, 0)
+            self.assertTrue(report["ok"])
+            self.assertEqual(report["blockedTasks"], [])
+            self.assertEqual(report["outcomeSummary"]["recordCount"], 5)
+            self.assertEqual(len(report["recommendations"]), 6)
+            self.assertEqual(selected_by_task["decision.private-chat"]["modelId"], "local-gemma3-heretic-q4")
+            self.assertEqual(selected_by_task["decision.tool-heavy-coding"]["modelId"], "cli-codex-high")
+            self.assertEqual(selected_by_task["decision.long-context-memory"]["modelId"], "api-long-context-memory")
+            self.assertEqual(selected_by_task["decision.structured-json"]["modelId"], "cli-codex-high")
+            self.assertEqual({model["provider"] for model in selected_by_task.values()}, {"local", "cli", "api"})
+            self.assertIn("feedbackAdjustment", selected_by_task["decision.tool-heavy-coding"])
+            self.assertEqual(persisted_report["schemaVersion"], 1)
+            self.assertEqual(len(persisted_report["recommendations"]), 6)
+
     def test_run_decision_suite_returns_blockers_without_execution_when_threshold_blocks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
