@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "taskId": "private-chat",
+  "description": "Local/private conversational response with basic instruction following.",
+  "privacyRequirement": "local_only",
+  "requiredCapabilities": {
+    "conversation": 0.8,
+    "instruction_following": 0.75
+  }
+}

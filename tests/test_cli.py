@@ -47,6 +47,16 @@ def write_registry(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_task_profile(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "taskId": "private-chat",
+        "privacyRequirement": "local_only",
+        "requiredCapabilities": {"conversation": 0.9},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 class CliTests(unittest.TestCase):
     def test_select_outputs_selected_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -103,6 +113,29 @@ class CliTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["selection"]["modelId"], "local-echo")
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+
+    def test_select_accepts_task_profile_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            write_registry(registry_path)
+            write_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-echo")
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ from .provider_adapters import (
     execute_selected_model,
 )
 from .runtime import RoutedExecutionResult, route_and_execute
+from .task_profiles import TaskProfileError, load_task_profile, parse_task_profile
 
 __all__ = [
     "ApiProviderAdapter",
@@ -42,12 +43,15 @@ __all__ = [
     "RoutedExecutionResult",
     "SubprocessProviderAdapter",
     "TaskProfile",
+    "TaskProfileError",
     "default_character_role_tasks",
     "default_provider_adapters",
     "execute_model",
     "execute_selected_model",
     "load_model_registry",
+    "load_task_profile",
     "parse_model_registry",
+    "parse_task_profile",
     "rank_models",
     "route_and_execute",
     "select_character_composition",
