@@ -19,8 +19,10 @@ from .outcome_feedback import (
     FeedbackAdjustmentPolicyInput,
     FeedbackPolicyMetadata,
     ModelOutcomeFeedbackSummary,
+    OutcomeFeedbackSummaryReport,
     build_feedback_policy_metadata,
     build_model_feedback_summaries,
+    summarize_outcome_feedback,
 )
 from .provider_health import ProviderHealthCheckResult
 from .task_profiles import parse_task_profile
@@ -379,6 +381,78 @@ class ModelDecisionReport:
         }
 
 
+@dataclass(frozen=True)
+class ModelRecommendation:
+    """Operator-facing recommendation for one task/situation."""
+
+    task_id: str
+    selected: ModelScore | None
+    ranked: tuple[ModelScore, ...]
+    blockers: Mapping[str, tuple[str, ...]]
+    rationale: tuple[str, ...]
+    feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary] = field(default_factory=dict)
+    outcome_models: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+
+    @property
+    def recommended(self) -> bool:
+        return self.selected is not None
+
+    def to_dict(self) -> dict:
+        return {
+            "taskId": self.task_id,
+            "recommended": self.recommended,
+            "selectedModel": _recommendation_score_to_dict(
+                self.selected,
+                feedback_adjustments=self.feedback_adjustments,
+                outcome_models=self.outcome_models,
+            ) if self.selected is not None else None,
+            "rankedModels": [
+                _recommendation_score_to_dict(
+                    score,
+                    feedback_adjustments=self.feedback_adjustments,
+                    outcome_models=self.outcome_models,
+                )
+                for score in self.ranked
+            ],
+            "blockers": {model_id: list(blockers) for model_id, blockers in self.blockers.items()},
+            "rationale": list(self.rationale),
+        }
+
+
+@dataclass(frozen=True)
+class ModelRecommendationReport:
+    """Feedback-backed recommendation report built from existing decision evidence."""
+
+    decision_report: ModelDecisionReport
+    outcome_summary: OutcomeFeedbackSummaryReport | None = None
+
+    def to_dict(self) -> dict:
+        outcome_models = _outcome_models_by_id(self.outcome_summary)
+        return {
+            "schemaVersion": 1,
+            "ok": not self.decision_report.blocked_tasks,
+            "blockedTasks": list(self.decision_report.blocked_tasks),
+            "recommendations": [
+                ModelRecommendation(
+                    task_id=decision.task.task_id,
+                    selected=decision.selected,
+                    ranked=decision.ranked,
+                    blockers=decision.blockers,
+                    rationale=decision.rationale,
+                    feedback_adjustments=self.decision_report.feedback_adjustments,
+                    outcome_models=outcome_models,
+                ).to_dict()
+                for decision in self.decision_report.decisions
+            ],
+            "decisionReport": self.decision_report.to_dict(),
+            **(
+                {"outcomeSummary": self.outcome_summary.to_dict()}
+                if self.outcome_summary is not None
+                else {}
+            ),
+        }
+
+
 def default_decision_scenarios() -> tuple[TaskProfile, ...]:
     """Representative first-pass situations for local, CLI, and API routing."""
 
@@ -594,6 +668,41 @@ def evaluate_model_decisions(
         feedback_adjustments=feedback_by_model,
         feedback_policy_metadata=feedback_policy_metadata,
         routing_policy_metadata=routing_policy_metadata,
+    )
+
+
+def build_model_recommendation_report(
+    models: Iterable[ModelEndpoint],
+    tasks: DecisionTaskInput = None,
+    *,
+    readiness: ReadinessEvidenceInput | None = None,
+    feedback: FeedbackAdjustmentInput | None = None,
+    feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    situation_weights: Mapping[str, float] | None = None,
+    minimum_scores: Mapping[str, float] | None = None,
+) -> ModelRecommendationReport:
+    """Build an operator-facing recommendation report without changing routing behavior."""
+
+    feedback_records = tuple(feedback or ())
+    decision_report = evaluate_model_decisions(
+        models,
+        tasks,
+        readiness=readiness,
+        feedback=feedback_records if feedback is not None else None,
+        feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
+        situation_weights=situation_weights,
+        minimum_scores=minimum_scores,
+    )
+    outcome_summary = (
+        summarize_outcome_feedback(feedback_records, policy=feedback_policy)
+        if feedback is not None
+        else None
+    )
+    return ModelRecommendationReport(
+        decision_report=decision_report,
+        outcome_summary=outcome_summary,
     )
 
 
@@ -1152,6 +1261,34 @@ def _provider_blockers(
         if provider_blockers:
             blocked[task_id] = tuple(provider_blockers)
     return blocked
+
+
+def _outcome_models_by_id(summary: OutcomeFeedbackSummaryReport | None) -> dict[str, Mapping[str, Any]]:
+    if summary is None:
+        return {}
+    return {
+        model_summary["key"]: model_summary
+        for model_summary in (item.to_dict() for item in summary.models)
+    }
+
+
+def _recommendation_score_to_dict(
+    score: ModelScore,
+    *,
+    feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary],
+    outcome_models: Mapping[str, Mapping[str, Any]],
+) -> dict:
+    payload = _score_to_dict(score)
+    feedback_summary = feedback_adjustments.get(score.model.model_id)
+    if feedback_summary is not None:
+        payload["feedbackAdjustment"] = feedback_summary.adjustment
+        payload["feedbackRecordCount"] = feedback_summary.record_count
+    outcome_summary = outcome_models.get(score.model.model_id)
+    if outcome_summary is not None:
+        payload["outcomeRankScore"] = outcome_summary.get("rankScore")
+        payload["outcomeRecordCount"] = outcome_summary.get("recordCount")
+        payload["outcomeSuccessRate"] = outcome_summary.get("successRate")
+    return payload
 
 
 def _score_for_model(decision: SituationDecision, model_id: str) -> ModelScore | None:

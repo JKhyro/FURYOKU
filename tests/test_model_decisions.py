@@ -12,6 +12,7 @@ from furyoku import (
     ProviderHealthCheckResult,
     RoutingScorePolicy,
     TaskProfile,
+    build_model_recommendation_report,
     evaluate_model_decisions,
     load_decision_suite,
     parse_decision_suite,
@@ -316,6 +317,51 @@ class ModelDecisionTests(unittest.TestCase):
             policy_report.feedback_policy_metadata.customized_fields,
             ("maxAdjustment", "successBase", "successScoreMultiplier"),
         )
+
+    def test_recommendation_report_explains_selected_model_with_feedback_signals(self):
+        task = TaskProfile(task_id="feedback-chat", required_capabilities={"conversation": 0.8})
+        feedback = [
+            DecisionOutcomeRecord(
+                record_id="feedback-1",
+                report_path="decision-report.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                situation_id="feedback-chat",
+                selected_model_id="local-gemma3-heretic",
+                selected_provider="local",
+                verdict="success",
+                score=1.0,
+            )
+        ]
+
+        report = build_model_recommendation_report(sample_models(), [task], feedback=feedback)
+        payload = report.to_dict()
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["recommendations"][0]["taskId"], "feedback-chat")
+        self.assertTrue(payload["recommendations"][0]["recommended"])
+        selected = payload["recommendations"][0]["selectedModel"]
+        self.assertEqual(selected["modelId"], "local-gemma3-heretic")
+        self.assertGreater(selected["feedbackAdjustment"], 0.0)
+        self.assertEqual(selected["outcomeRecordCount"], 1)
+        self.assertIn("decisionReport", payload)
+        self.assertEqual(payload["outcomeSummary"]["recordCount"], 1)
+
+    def test_recommendation_report_preserves_blocked_situations(self):
+        task = TaskProfile(task_id="too-strict", required_capabilities={"conversation": 0.8})
+
+        report = build_model_recommendation_report(
+            [sample_models()[0]],
+            [task],
+            minimum_scores={"too-strict": 200.0},
+        )
+        payload = report.to_dict()
+
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["blockedTasks"], ["too-strict"])
+        self.assertFalse(payload["recommendations"][0]["recommended"])
+        self.assertIsNone(payload["recommendations"][0]["selectedModel"])
+        self.assertIn("local-gemma3-heretic", payload["recommendations"][0]["blockers"])
 
     def test_feedback_adjustment_does_not_bypass_hard_blockers(self):
         task = TaskProfile(

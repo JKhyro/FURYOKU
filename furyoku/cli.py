@@ -15,7 +15,7 @@ from .character_profiles import (
 )
 from .model_registry import load_model_registry
 from .model_router import ModelScore, RouterError, TaskProfile, load_routing_score_policy, select_model
-from .model_decisions import ModelDecisionReport, evaluate_model_decisions, load_decision_suite
+from .model_decisions import ModelDecisionReport, build_model_recommendation_report, evaluate_model_decisions, load_decision_suite
 from .outcome_feedback import (
     OutcomeFeedbackError,
     VALID_OUTCOME_VERDICTS,
@@ -163,6 +163,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         _write_json(_decision_report_to_dict(report, readiness=readiness), output_path=args.output)
         return 0 if not report.blocked_tasks else 2
 
+    if args.command == "recommend":
+        if args.decision_suite and args.task_profile:
+            parser.error("--decision-suite cannot be combined with --task-profile")
+        decision_input = load_decision_suite(args.decision_suite) if args.decision_suite else tuple(
+            load_task_profile(path) for path in args.task_profile
+        )
+        readiness = _readiness_from_args(args, models)
+        feedback, feedback_policy = _feedback_from_args(args, parser)
+        routing_policy = _routing_policy_from_args(args)
+        report = build_model_recommendation_report(
+            models,
+            decision_input or None,
+            readiness=readiness,
+            feedback=feedback,
+            feedback_policy=feedback_policy,
+            routing_policy=routing_policy,
+        )
+        _write_json(report.to_dict(), output_path=args.output)
+        return 0 if not report.decision_report.blocked_tasks else 2
+
     if args.command == "character-select":
         profile = load_character_profile(args.character_profile)
         readiness = _readiness_from_args(args, models)
@@ -274,6 +294,34 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_feedback_policy_arg(decide_parser)
     _add_routing_policy_arg(decide_parser)
     decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
+    recommend_parser = subparsers.add_parser(
+        "recommend",
+        help="Emit feedback-backed model recommendations for task profiles or a decision suite.",
+    )
+    recommend_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    recommend_parser.add_argument(
+        "--decision-suite",
+        type=Path,
+        help="Path to a reusable FURYOKU decision suite JSON file.",
+    )
+    recommend_parser.add_argument(
+        "--task-profile",
+        action="append",
+        default=[],
+        type=Path,
+        help="Optional task profile to include. Repeat for multiple situations. Defaults to built-in scenarios.",
+    )
+    _add_health_decision_args(recommend_parser, "Run provider readiness checks before recommending models.")
+    recommend_parser.add_argument(
+        "--feedback-log",
+        action="append",
+        default=[],
+        type=Path,
+        help="Optional JSONL outcome feedback log used to explain recommendation evidence. Repeat to merge logs.",
+    )
+    _add_feedback_policy_arg(recommend_parser)
+    _add_routing_policy_arg(recommend_parser)
+    recommend_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON recommendation report.")
     feedback_parser = subparsers.add_parser(
         "feedback",
         help="Append an outcome feedback record linked to a persisted decision or execution report.",
@@ -528,6 +576,11 @@ def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParse
         if feedback_policy_path:
             parser.error("--feedback-policy requires --feedback-log")
         return None, None
+    if isinstance(feedback_log, list):
+        return (
+            _load_feedback_logs(feedback_log),
+            load_feedback_adjustment_policy(feedback_policy_path) if feedback_policy_path else None,
+        )
     return (
         load_decision_outcomes(feedback_log),
         load_feedback_adjustment_policy(feedback_policy_path) if feedback_policy_path else None,
