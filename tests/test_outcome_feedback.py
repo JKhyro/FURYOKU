@@ -10,7 +10,9 @@ from furyoku import (
     append_decision_outcome,
     build_feedback_policy_metadata,
     build_model_feedback_summaries,
+    capture_comparative_execution_outcomes,
     capture_execution_outcome,
+    create_comparative_execution_outcome_records,
     create_decision_outcome_record,
     create_execution_outcome_record,
     infer_execution_outcome_verdict,
@@ -38,6 +40,47 @@ def write_execution_report(path: Path) -> None:
             "status": "ok",
             "elapsedMs": 1200,
         },
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def write_comparison_report(path: Path) -> None:
+    payload = {
+        "reportMetadata": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-04-10T12:30:00+00:00",
+        },
+        "ok": True,
+        "taskId": "fallback-chat",
+        "comparison": {
+            "executedCount": 2,
+            "successfulCount": 1,
+            "failedCount": 1,
+        },
+        "executions": [
+            {
+                "attemptNumber": 1,
+                "selectedModel": {
+                    "modelId": "local-failing",
+                    "provider": "local",
+                },
+                "execution": {
+                    "status": "error",
+                    "stderr": "local failed",
+                },
+            },
+            {
+                "attemptNumber": 2,
+                "selectedModel": {
+                    "modelId": "cli-fallback",
+                    "provider": "cli",
+                },
+                "execution": {
+                    "status": "ok",
+                    "responseText": "fallback:hello",
+                },
+            },
+        ],
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -123,6 +166,52 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(record.execution_status, "error")
         self.assertEqual(loaded[0].record_id, record.record_id)
         self.assertEqual(loaded[0].selected_model_id, "local-broken")
+
+    def test_create_comparative_execution_outcome_records_preserves_per_candidate_results(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "comparison.json"
+            write_comparison_report(report_path)
+
+            records = create_comparative_execution_outcome_records(
+                report_path,
+                success_score=1.0,
+                failure_score=0.0,
+                reason="comparison capture",
+                tags=("comparison",),
+                metadata={"operator": "test"},
+            )
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0].selected_model_id, "local-failing")
+        self.assertEqual(records[0].verdict, "failure")
+        self.assertEqual(records[0].score, 0.0)
+        self.assertEqual(records[0].execution_status, "error")
+        self.assertEqual(records[0].metadata["comparisonAttemptNumber"], 1)
+        self.assertEqual(records[0].metadata["operator"], "test")
+        self.assertEqual(records[1].selected_model_id, "cli-fallback")
+        self.assertEqual(records[1].verdict, "success")
+        self.assertEqual(records[1].score, 1.0)
+        self.assertEqual(records[1].metadata["comparisonExecutedCount"], 2)
+
+    def test_capture_comparative_execution_outcomes_appends_all_candidate_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "comparison.json"
+            feedback_path = Path(temp_dir) / "feedback" / "comparison-outcomes.jsonl"
+            write_comparison_report(report_path)
+
+            records = capture_comparative_execution_outcomes(
+                feedback_path,
+                report_path,
+                reason="operator comparison",
+            )
+            loaded = load_decision_outcomes(feedback_path)
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(len(loaded), 2)
+        self.assertEqual(loaded[0].selected_model_id, "local-failing")
+        self.assertEqual(loaded[0].verdict, "failure")
+        self.assertEqual(loaded[1].selected_model_id, "cli-fallback")
+        self.assertEqual(loaded[1].verdict, "success")
 
     def test_infer_execution_outcome_rejects_reports_without_execution_status(self):
         with self.assertRaises(OutcomeFeedbackError) as error:
