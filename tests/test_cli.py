@@ -652,6 +652,43 @@ class CliTests(unittest.TestCase):
             self.assertIn("reportMetadata", persisted)
             self.assertEqual(persisted["recordCount"], 2)
 
+    def test_recommend_outputs_feedback_backed_model_recommendations(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            output_path = Path(temp_dir) / "reports" / "recommendations.json"
+            write_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "recommend",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["recommendations"][0]["taskId"], "feedback-chat")
+            self.assertEqual(payload["recommendations"][0]["selectedModel"]["modelId"], "local-echo")
+            self.assertGreater(payload["recommendations"][0]["selectedModel"]["feedbackAdjustment"], 0.0)
+            self.assertEqual(payload["recommendations"][0]["selectedModel"]["outcomeRecordCount"], 1)
+            self.assertIn("outcomeSummary", payload)
+            self.assertIn("reportMetadata", persisted)
+
     def test_run_decision_suite_returns_blockers_without_execution_when_threshold_blocks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
