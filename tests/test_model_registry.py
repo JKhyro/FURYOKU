@@ -56,6 +56,32 @@ class ModelRegistryTests(unittest.TestCase):
         self.assertEqual(composition.primary_role, "primary")
         self.assertEqual(composition.roles["primary"].model.model_id, "local-gemma3-heretic-q4")
 
+    def test_registry_parses_api_transport_metadata(self):
+        payload = {
+            "schemaVersion": 1,
+            "models": [
+                {
+                    "modelId": "api-configured",
+                    "provider": "api",
+                    "contextWindowTokens": 128000,
+                    "averageLatencyMs": 20,
+                    "apiUrl": "https://api.example.invalid/v1/chat/completions",
+                    "apiKeyEnv": "FURYOKU_API_KEY",
+                    "apiModel": "remote-model",
+                    "capabilities": {"conversation": 1.0},
+                    "metadata": {"apiFormat": "openai-chat", "owner": "test"},
+                }
+            ],
+        }
+
+        models = parse_model_registry(payload)
+
+        self.assertEqual(models[0].metadata["apiUrl"], "https://api.example.invalid/v1/chat/completions")
+        self.assertEqual(models[0].metadata["apiKeyEnv"], "FURYOKU_API_KEY")
+        self.assertEqual(models[0].metadata["apiModel"], "remote-model")
+        self.assertEqual(models[0].metadata["apiFormat"], "openai-chat")
+        self.assertEqual(models[0].metadata["owner"], "test")
+
     def test_duplicate_model_ids_are_rejected(self):
         payload = {
             "schemaVersion": 1,

@@ -54,6 +54,7 @@ def _parse_model_endpoint(raw: Mapping[str, Any], *, source: str, index: int) ->
         invocation = []
     if not isinstance(invocation, list):
         raise RegistryError(f"{source}: models[{index}].invocation must be an array when provided")
+    metadata = _parse_metadata(raw, source=source, index=index)
 
     return ModelEndpoint(
         model_id=model_id,
@@ -69,7 +70,40 @@ def _parse_model_endpoint(raw: Mapping[str, Any], *, source: str, index: int) ->
         supports_tools=bool(raw.get("supportsTools", raw.get("supports_tools", False))),
         supports_json=bool(raw.get("supportsJson", raw.get("supports_json", False))),
         tags=tuple(str(item) for item in raw.get("tags", ())),
+        metadata=metadata,
     )
+
+
+def _parse_metadata(raw: Mapping[str, Any], *, source: str, index: int) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    raw_metadata = raw.get("metadata", {})
+    if raw_metadata is None:
+        raw_metadata = {}
+    if not isinstance(raw_metadata, Mapping):
+        raise RegistryError(f"{source}: models[{index}].metadata must be an object when provided")
+    metadata.update({str(key): value for key, value in raw_metadata.items()})
+
+    raw_api = raw.get("api", {})
+    if raw_api is None:
+        raw_api = {}
+    if not isinstance(raw_api, Mapping):
+        raise RegistryError(f"{source}: models[{index}].api must be an object when provided")
+    metadata.update({str(key): value for key, value in raw_api.items()})
+
+    aliases = {
+        "apiUrl": "apiUrl",
+        "api_url": "apiUrl",
+        "apiKeyEnv": "apiKeyEnv",
+        "api_key_env": "apiKeyEnv",
+        "apiModel": "apiModel",
+        "api_model": "apiModel",
+        "apiFormat": "apiFormat",
+        "api_format": "apiFormat",
+    }
+    for raw_key, metadata_key in aliases.items():
+        if raw_key in raw:
+            metadata[metadata_key] = raw[raw_key]
+    return metadata
 
 
 def _required_str(raw: Mapping[str, Any], *keys: str, source: str, index: int) -> str:

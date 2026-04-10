@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Mapping
@@ -153,13 +154,17 @@ def _check_api_provider(
     adapters: Mapping[str, ProviderAdapter] | None,
 ) -> ProviderHealthCheckResult:
     if api_transport is None and (adapters is None or "api" not in adapters):
-        return ProviderHealthCheckResult(
-            model_id=endpoint.model_id,
-            provider=endpoint.provider,
-            status="missing-transport",
-            ready=False,
-            reason="api health checks require an injected API transport or adapter",
-        )
+        configured = _configured_api_readiness(endpoint)
+        if configured is not None:
+            return configured
+        if not request.probe:
+            return ProviderHealthCheckResult(
+                model_id=endpoint.model_id,
+                provider=endpoint.provider,
+                status="ready",
+                ready=True,
+                reason="api endpoint configuration is available",
+            )
 
     if not request.probe:
         return ProviderHealthCheckResult(
@@ -180,6 +185,37 @@ def _check_api_provider(
         adapters=adapters or default_provider_adapters(api_transport=api_transport),
     )
     return _result_from_execution(endpoint, execution)
+
+
+def _configured_api_readiness(endpoint: ModelEndpoint) -> ProviderHealthCheckResult | None:
+    api_url = _metadata_string(endpoint, "apiUrl", "api_url", "url")
+    if not api_url:
+        return ProviderHealthCheckResult(
+            model_id=endpoint.model_id,
+            provider=endpoint.provider,
+            status="missing-transport",
+            ready=False,
+            reason="api health checks require metadata.apiUrl, an injected API transport, or an adapter",
+        )
+
+    api_key_env = _metadata_string(endpoint, "apiKeyEnv", "api_key_env")
+    if api_key_env and not os.environ.get(api_key_env):
+        return ProviderHealthCheckResult(
+            model_id=endpoint.model_id,
+            provider=endpoint.provider,
+            status="missing-credential",
+            ready=False,
+            reason=f"api key environment variable '{api_key_env}' is not set",
+        )
+    return None
+
+
+def _metadata_string(endpoint: ModelEndpoint, *keys: str) -> str:
+    for key in keys:
+        value = endpoint.metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 def _result_from_execution(

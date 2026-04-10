@@ -1,5 +1,9 @@
+import json
+import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import subprocess
 import sys
+import threading
 import unittest
 
 from furyoku import (
@@ -148,6 +152,75 @@ class ProviderAdapterTests(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.response_text, "api-memory: retrieve memory")
         self.assertEqual(result.provider, "api")
+
+    def test_api_adapter_executes_registry_configured_openai_compatible_endpoint(self):
+        seen_requests = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers["Content-Length"])
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                seen_requests.append((self.path, self.headers.get("Authorization"), payload))
+                response = {
+                    "choices": [
+                        {"message": {"content": f"api:{payload['messages'][0]['content']}"}}
+                    ]
+                }
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(response).encode("utf-8"))
+
+            def log_message(self, format, *args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        old_key = os.environ.get("FURYOKU_TEST_API_KEY")
+        os.environ["FURYOKU_TEST_API_KEY"] = "test-secret"
+        self.addCleanup(
+            lambda: os.environ.pop("FURYOKU_TEST_API_KEY", None)
+            if old_key is None
+            else os.environ.__setitem__("FURYOKU_TEST_API_KEY", old_key)
+        )
+        endpoint = ModelEndpoint(
+            model_id="api-configured",
+            provider="api",
+            capabilities={"conversation": 1.0},
+            context_window_tokens=128000,
+            average_latency_ms=20,
+            metadata={
+                "apiUrl": f"http://127.0.0.1:{server.server_port}/v1/chat/completions",
+                "apiKeyEnv": "FURYOKU_TEST_API_KEY",
+                "apiModel": "remote-model",
+            },
+        )
+
+        result = ApiProviderAdapter().execute(endpoint, ProviderExecutionRequest("hello"))
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.response_text, "api:hello")
+        self.assertEqual(seen_requests[0][0], "/v1/chat/completions")
+        self.assertEqual(seen_requests[0][1], "Bearer test-secret")
+        self.assertEqual(seen_requests[0][2]["model"], "remote-model")
+
+    def test_api_adapter_missing_configured_api_key_is_observable_error(self):
+        endpoint = ModelEndpoint(
+            model_id="api-configured",
+            provider="api",
+            capabilities={"conversation": 1.0},
+            context_window_tokens=128000,
+            average_latency_ms=20,
+            metadata={"apiUrl": "http://127.0.0.1:9/test", "apiKeyEnv": "FURYOKU_TEST_MISSING_KEY"},
+        )
+
+        result = ApiProviderAdapter().execute(endpoint, ProviderExecutionRequest("hello"))
+
+        self.assertFalse(result.ok)
+        self.assertIn("FURYOKU_TEST_MISSING_KEY", result.error)
 
     def test_api_adapter_failure_returns_error_result(self):
         def transport(endpoint, request):
