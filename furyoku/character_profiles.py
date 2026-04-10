@@ -57,6 +57,96 @@ class CharacterProfileSelection:
         return self.composition.max_subagents_for(role_id)
 
 
+@dataclass(frozen=True)
+class CharacterRoleAssignment:
+    """One selected role inside a CHARACTER orchestration envelope."""
+
+    role_spec: CharacterRoleSpec
+    selection: ModelScore
+
+    @property
+    def role_id(self) -> str:
+        return self.role_spec.role_id
+
+    @property
+    def primary(self) -> bool:
+        return self.role_spec.primary
+
+    @property
+    def max_subagents(self) -> int:
+        return self.role_spec.max_subagents
+
+    def to_dict(self) -> dict:
+        return {
+            "roleId": self.role_id,
+            "primary": self.primary,
+            "maxSubagents": self.max_subagents,
+            "taskId": self.role_spec.task.task_id,
+            "selectedModelId": self.selection.model.model_id,
+            "selectedProvider": self.selection.model.provider,
+            "selection": _score_to_dict(self.selection),
+        }
+
+
+@dataclass(frozen=True)
+class CharacterOrchestrationEnvelope:
+    """Serializable assignment plan for a flexible CHARACTER/MOA role array."""
+
+    selection: CharacterProfileSelection
+    role_assignments: Mapping[str, CharacterRoleAssignment]
+
+    @property
+    def character_id(self) -> str:
+        return self.selection.character_id
+
+    @property
+    def primary_role(self) -> str:
+        return self.selection.primary_role
+
+    @property
+    def role_count(self) -> int:
+        return len(self.role_assignments)
+
+    @property
+    def total_max_subagents(self) -> int:
+        return sum(assignment.max_subagents for assignment in self.role_assignments.values())
+
+    def assignment_for(self, role_id: str) -> CharacterRoleAssignment:
+        try:
+            return self.role_assignments[role_id]
+        except KeyError as exc:
+            raise RouterError(f"Unknown CHARACTER role '{role_id}'") from exc
+
+    def to_dict(self) -> dict:
+        profile = self.selection.profile
+        return {
+            "characterId": profile.character_id,
+            "class": profile.character_class,
+            "rank": profile.rank,
+            "description": profile.description,
+            "primaryRole": self.primary_role,
+            "roleCount": self.role_count,
+            "totalMaxSubagents": self.total_max_subagents,
+            "roles": [
+                self.role_assignments[role.role_id].to_dict()
+                for role in profile.role_specs
+            ],
+        }
+
+
+def build_character_orchestration_envelope(
+    selection: CharacterProfileSelection,
+) -> CharacterOrchestrationEnvelope:
+    assignments = {
+        role_spec.role_id: CharacterRoleAssignment(
+            role_spec=role_spec,
+            selection=selection.roles[role_spec.role_id],
+        )
+        for role_spec in selection.profile.role_specs
+    }
+    return CharacterOrchestrationEnvelope(selection=selection, role_assignments=assignments)
+
+
 def load_character_profile(path: str | Path) -> CharacterProfile:
     profile_path = Path(path)
     with profile_path.open("r", encoding="utf-8") as handle:
@@ -76,6 +166,17 @@ def select_character_profile_models(
         raise RouterError("CHARACTER profile selection requires a parsed CharacterProfile")
     composition = select_character_composition(models, profile.role_specs, allow_reuse=allow_reuse)
     return CharacterProfileSelection(profile=profile, composition=composition)
+
+
+def select_character_orchestration_envelope(
+    models: Iterable[ModelEndpoint],
+    profile: CharacterProfile,
+    *,
+    allow_reuse: bool = True,
+) -> CharacterOrchestrationEnvelope:
+    return build_character_orchestration_envelope(
+        select_character_profile_models(models, profile, allow_reuse=allow_reuse)
+    )
 
 
 def parse_character_profile(payload: Mapping[str, Any], *, source: str = "<memory>") -> CharacterProfile:
@@ -135,3 +236,14 @@ def _validate_roles(role_specs: tuple[CharacterRoleSpec, ...], *, source: str) -
         seen.add(role.role_id)
     if primary_count > 1:
         raise CharacterProfileError(f"{source}: only one role can be primary")
+
+
+def _score_to_dict(selection: ModelScore) -> dict:
+    return {
+        "modelId": selection.model.model_id,
+        "provider": selection.model.provider,
+        "score": selection.score,
+        "eligible": selection.eligible,
+        "reasons": list(selection.reasons),
+        "blockers": list(selection.blockers),
+    }
