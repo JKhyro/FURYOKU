@@ -455,6 +455,7 @@ def _single_selection_to_dict(selection: ModelScore, *, report: ModelDecisionRep
     payload = _score_to_dict(selection)
     if report is not None:
         payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(report)
+        _add_feedback_policy_metadata(payload, report)
     return payload
 
 
@@ -466,6 +467,7 @@ def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
     }
     if result.report is not None:
         payload["feedbackAdjustments"] = _feedback_adjustments_to_dict(result.report)
+        _add_feedback_policy_metadata(payload, result.report)
     return payload
 
 
@@ -479,6 +481,7 @@ def _decision_execution_result_to_dict(result: DecisionSituationExecutionResult,
         "aggregate": result.report.aggregate.to_dict(),
         "feedbackAdjustments": _feedback_adjustments_to_dict(result.report),
     }
+    _add_feedback_policy_metadata(payload, result.report)
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
@@ -516,6 +519,7 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
         "aggregate": report.aggregate.to_dict(),
         "feedbackAdjustments": _feedback_adjustments_to_dict(report),
     }
+    _add_feedback_policy_metadata(payload, report)
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]
     return payload
@@ -555,6 +559,11 @@ def _feedback_adjustments_to_dict(report: ModelDecisionReport) -> dict:
         model_id: summary.to_dict()
         for model_id, summary in report.feedback_adjustments.items()
     }
+
+
+def _add_feedback_policy_metadata(payload: dict, report: ModelDecisionReport) -> None:
+    if report.feedback_policy_metadata is not None:
+        payload["feedbackPolicy"] = report.feedback_policy_metadata.to_dict()
 
 
 def _health_to_dict(result: ProviderHealthCheckResult) -> dict:

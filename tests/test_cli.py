@@ -511,6 +511,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["selectedModel"]["modelId"], "local-echo")
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+            self.assertEqual(payload["feedbackPolicy"]["source"], "default")
+            self.assertEqual(payload["feedbackPolicy"]["policy"]["maxAdjustment"], 12.0)
 
     def test_select_accepts_task_profile_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -562,6 +564,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["modelId"], "local-echo")
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+            self.assertEqual(payload["feedbackPolicy"]["source"], "default")
 
     def test_select_feedback_policy_file_changes_adjustment(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -593,6 +596,12 @@ class CliTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 3.0)
+            self.assertEqual(payload["feedbackPolicy"]["source"], "custom")
+            self.assertEqual(
+                payload["feedbackPolicy"]["customizedFields"],
+                ["maxAdjustment", "successBase", "successScoreMultiplier"],
+            )
+            self.assertEqual(payload["feedbackPolicy"]["policy"]["maxAdjustment"], 4.0)
 
     def test_run_feedback_log_adjusts_single_task_executed_model(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -831,6 +840,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertEqual(decision["selectedModel"]["modelId"], "local-echo")
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+            self.assertEqual(payload["feedbackPolicy"]["source"], "default")
             self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank["reasons"]))
 
     def test_character_select_outputs_role_to_model_json(self):
