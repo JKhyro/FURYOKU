@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import sys
 from pathlib import Path
@@ -50,7 +51,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
                 readiness=readiness,
             )
-            _write_json(_decision_execution_result_to_dict(result, readiness=readiness))
+            _write_json(_decision_execution_result_to_dict(result, readiness=readiness), output_path=args.output)
             return 0 if result.ok else 2
 
         task = _task_from_args(args, parser)
@@ -59,7 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             task,
             ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
         )
-        _write_json(_routed_result_to_dict(result))
+        _write_json(_routed_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
 
     if args.command == "health":
@@ -82,7 +83,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         readiness = _readiness_from_args(args, models)
         report = evaluate_model_decisions(models, decision_input or None, readiness=readiness)
-        _write_json(_decision_report_to_dict(report, readiness=readiness))
+        _write_json(_decision_report_to_dict(report, readiness=readiness), output_path=args.output)
         return 0 if not report.blocked_tasks else 2
 
     if args.command == "character-select":
@@ -124,6 +125,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument("--prompt", required=True, help="Prompt text passed to the selected model.")
     run_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
+    run_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON execution report.")
     run_parser.add_argument(
         "--check-health",
         action="store_true",
@@ -162,6 +164,7 @@ def _build_parser() -> argparse.ArgumentParser:
     decide_parser.add_argument("--health-probe", action="store_true", help="Run lightweight provider probes with --check-health.")
     decide_parser.add_argument("--health-probe-prompt", default="", help="Prompt text used when --health-probe is set.")
     decide_parser.add_argument("--health-timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
     character_parser = subparsers.add_parser(
         "character-select",
         help="Select concrete model endpoints for every role in a CHARACTER profile.",
@@ -443,7 +446,19 @@ def _health_to_dict(result: ProviderHealthCheckResult) -> dict:
     return payload
 
 
-def _write_json(payload: dict) -> None:
+def _write_json(payload: dict, *, output_path: Path | None = None) -> None:
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        persisted_payload = {
+            "reportMetadata": {
+                "schemaVersion": 1,
+                "generatedAt": datetime.now(timezone.utc).isoformat(),
+            },
+            **payload,
+        }
+        with output_path.open("w", encoding="utf-8") as handle:
+            json.dump(persisted_payload, handle, indent=2, sort_keys=True)
+            handle.write("\n")
     json.dump(payload, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
 

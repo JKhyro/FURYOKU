@@ -258,6 +258,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
             suite_path = Path(temp_dir) / "suite.json"
+            output_path = Path(temp_dir) / "reports" / "run.json"
             write_executable_character_registry(registry_path)
             write_decision_suite(suite_path)
             stdout = io.StringIO()
@@ -274,16 +275,21 @@ class CliTests(unittest.TestCase):
                         "private-chat",
                         "--prompt",
                         "hello",
+                        "--output",
+                        str(output_path),
                     ]
                 )
 
             payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(exit_code, 0)
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["situationId"], "private-chat")
             self.assertEqual(payload["selectedModel"]["modelId"], "local-echo")
             self.assertEqual(payload["decision"]["weight"], 3.0)
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+            self.assertEqual(persisted["situationId"], "private-chat")
 
     def test_run_decision_suite_returns_blockers_without_execution_when_threshold_blocks(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -432,6 +438,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
             suite_path = Path(temp_dir) / "suite.json"
+            output_path = Path(temp_dir) / "reports" / "decision.json"
             write_executable_character_registry(registry_path)
             write_decision_suite(suite_path)
             stdout = io.StringIO()
@@ -444,10 +451,13 @@ class CliTests(unittest.TestCase):
                         str(registry_path),
                         "--decision-suite",
                         str(suite_path),
+                        "--output",
+                        str(output_path),
                     ]
                 )
 
             payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(exit_code, 0)
             self.assertEqual([decision["taskId"] for decision in payload["decisions"]], ["private-chat", "coding", "memory"])
             self.assertEqual(payload["decisions"][0]["weight"], 3.0)
@@ -455,6 +465,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "local-echo")
             self.assertEqual(payload["decisions"][1]["selectedModel"]["modelId"], "cli-coder")
             self.assertEqual(payload["decisions"][2]["selectedModel"]["modelId"], "api-memory")
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+            self.assertEqual(persisted["aggregate"]["totalWeight"], 5.0)
 
     def test_decide_surfaces_minimum_score_threshold_blockers(self):
         with tempfile.TemporaryDirectory() as temp_dir:
