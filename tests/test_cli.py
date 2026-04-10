@@ -128,6 +128,7 @@ def write_decision_suite(path: Path) -> None:
         "situations": [
             {
                 "taskId": "private-chat",
+                "weight": 3.0,
                 "privacyRequirement": "local_only",
                 "requiredCapabilities": {"conversation": 0.9},
             },
@@ -368,9 +369,53 @@ class CliTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertEqual(exit_code, 0)
             self.assertEqual([decision["taskId"] for decision in payload["decisions"]], ["private-chat", "coding", "memory"])
+            self.assertEqual(payload["decisions"][0]["weight"], 3.0)
+            self.assertEqual(payload["aggregate"]["totalWeight"], 5.0)
             self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "local-echo")
             self.assertEqual(payload["decisions"][1]["selectedModel"]["modelId"], "cli-coder")
             self.assertEqual(payload["decisions"][2]["selectedModel"]["modelId"], "api-memory")
+
+    def test_decide_surfaces_minimum_score_threshold_blockers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            suite_path = Path(temp_dir) / "suite.json"
+            write_registry(registry_path)
+            payload = {
+                "schemaVersion": 1,
+                "suiteId": "threshold-suite",
+                "situations": [
+                    {
+                        "taskId": "too-strict",
+                        "minimumScore": 120.0,
+                        "requiredCapabilities": {"conversation": 0.5},
+                    }
+                ],
+            }
+            suite_path.write_text(json.dumps(payload), encoding="utf-8")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--decision-suite",
+                        str(suite_path),
+                    ]
+                )
+
+            result = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(result["blockedTasks"], ["too-strict"])
+            self.assertEqual(result["decisions"][0]["minimumScore"], 120.0)
+            self.assertEqual(result["aggregate"]["blockedWeight"], 1.0)
+            self.assertTrue(
+                any(
+                    "below minimum score 120.00" in blocker
+                    for blocker in result["decisions"][0]["rankedModels"][0]["blockers"]
+                )
+            )
 
     def test_decide_check_health_demotes_not_ready_endpoints(self):
         with tempfile.TemporaryDirectory() as temp_dir:

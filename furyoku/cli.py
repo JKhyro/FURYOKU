@@ -61,7 +61,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "decide":
         if args.decision_suite and args.task_profile:
             parser.error("--decision-suite cannot be combined with --task-profile")
-        tasks = load_decision_suite(args.decision_suite).situations if args.decision_suite else tuple(
+        decision_input = load_decision_suite(args.decision_suite) if args.decision_suite else tuple(
             load_task_profile(path) for path in args.task_profile
         )
         readiness = None
@@ -74,7 +74,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     timeout_seconds=args.health_timeout_seconds,
                 ),
             )
-        report = evaluate_model_decisions(models, tasks or None, readiness=readiness)
+        report = evaluate_model_decisions(models, decision_input or None, readiness=readiness)
         _write_json(_decision_report_to_dict(report, readiness=readiness))
         return 0 if not report.blocked_tasks else 2
 
@@ -296,6 +296,8 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
             {
                 "taskId": decision.task.task_id,
                 "description": decision.task.description,
+                "weight": decision.weight,
+                "minimumScore": decision.minimum_score,
                 "selectedModel": _score_to_dict(decision.selected) if decision.selected else None,
                 "rankedModels": [_score_to_dict(score) for score in decision.ranked],
             }
@@ -309,9 +311,13 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
                 "eligibleCount": summary.eligible_count,
                 "averageScore": summary.average_score,
                 "blockedCount": summary.blocked_count,
+                "selectedWeight": summary.selected_weight,
+                "eligibleWeight": summary.eligible_weight,
+                "weightedAverageScore": summary.weighted_average_score,
             }
             for summary in report.summaries
         ],
+        "aggregate": report.aggregate.to_dict(),
     }
     if readiness is not None:
         payload["readiness"] = [_health_to_dict(result) for result in readiness]

@@ -236,12 +236,56 @@ class ModelDecisionTests(unittest.TestCase):
         cli_coverage = report.aggregate.model_coverage["cli-codex-high"]
         api_coverage = report.aggregate.provider_coverage["api"]
 
+        self.assertEqual(report.aggregate.total_weight, 3.0)
+        self.assertEqual(report.aggregate.selected_weight, 3.0)
         self.assertEqual(local_coverage.selected_situations, ("private-chat",))
+        self.assertEqual(local_coverage.selected_weight, 1.0)
         self.assertIn("hard-coding", local_coverage.blocked_situations)
         self.assertTrue(any("tool support" in blocker for blocker in local_coverage.blocked_situations["hard-coding"]))
         self.assertEqual(cli_coverage.selected_situations, ("hard-coding",))
+        self.assertEqual(cli_coverage.weighted_average_score, cli_coverage.average_eligible_score)
         self.assertEqual(api_coverage.selected_situations, ("long-memory",))
+        self.assertEqual(api_coverage.selected_weight, 1.0)
         self.assertIn("cli-codex-high", report.aggregate.provider_coverage["cli"].model_ids)
+
+    def test_weighted_decisions_surface_importance_in_aggregate_coverage(self):
+        report = evaluate_model_decisions(
+            sample_models(),
+            sample_tasks(),
+            situation_weights={"private-chat": 5.0, "hard-coding": 2.0, "long-memory": 1.0},
+        )
+
+        self.assertEqual(report.aggregate.total_weight, 8.0)
+        self.assertEqual(report.aggregate.selected_weight, 8.0)
+        self.assertEqual(report.situations["private-chat"].weight, 5.0)
+        self.assertEqual(report.aggregate.model_coverage["local-gemma3-heretic"].selected_weight, 5.0)
+        self.assertEqual(report.aggregate.model_coverage["cli-codex-high"].selected_weight, 2.0)
+        self.assertEqual(report.aggregate.provider_coverage["local"].selected_weight, 5.0)
+        self.assertGreater(report.summaries[0].selected_weight, report.summaries[-1].selected_weight)
+
+    def test_minimum_score_threshold_blocks_underqualified_winner(self):
+        task = TaskProfile(
+            task_id="threshold-chat",
+            required_capabilities={"conversation": 0.5},
+        )
+
+        report = evaluate_model_decisions(
+            [sample_models()[0]],
+            [task],
+            minimum_scores={"threshold-chat": 120.0},
+        )
+        decision = report.situations["threshold-chat"]
+
+        self.assertFalse(decision.eligible)
+        self.assertIsNone(decision.selected)
+        self.assertEqual(decision.minimum_score, 120.0)
+        self.assertEqual(report.aggregate.blocked_weight, 1.0)
+        self.assertTrue(
+            any(
+                "below minimum score 120.00" in blocker
+                for blocker in decision.blockers["local-gemma3-heretic"]
+            )
+        )
 
     def test_uncovered_situation_returns_blockers_without_raising(self):
         task = TaskProfile(
@@ -297,6 +341,31 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(suite.suite_id, "primary-routing")
         self.assertEqual(suite.description, "Reusable model decision suite.")
         self.assertEqual([task.task_id for task in suite.situations], ["private-chat", "hard-coding"])
+        self.assertEqual(suite.weight_for("private-chat"), 1.0)
+        self.assertIsNone(suite.minimum_score_for("hard-coding"))
+
+    def test_decision_suite_parses_weight_and_minimum_score_policy(self):
+        payload = {
+            "schemaVersion": 1,
+            "suiteId": "calibrated",
+            "situations": [
+                {
+                    "taskId": "private-chat",
+                    "weight": 4.5,
+                    "minimumScore": 110.0,
+                    "requiredCapabilities": {"conversation": 0.8},
+                }
+            ],
+        }
+
+        suite = parse_decision_suite(payload)
+        report = evaluate_model_decisions(sample_models(), suite)
+
+        self.assertEqual(suite.weight_for("private-chat"), 4.5)
+        self.assertEqual(suite.minimum_score_for("private-chat"), 110.0)
+        self.assertEqual(report.situations["private-chat"].weight, 4.5)
+        self.assertEqual(report.situations["private-chat"].minimum_score, 110.0)
+        self.assertEqual(report.aggregate.total_weight, 4.5)
 
     def test_decision_suite_rejects_duplicate_situations(self):
         payload = {
@@ -312,6 +381,14 @@ class ModelDecisionTests(unittest.TestCase):
             parse_decision_suite(payload)
 
         self.assertIn("duplicate task ids", str(error.exception))
+
+    def test_decision_policy_rejects_unknown_task_ids(self):
+        task = TaskProfile(task_id="known", required_capabilities={"conversation": 0.5})
+
+        with self.assertRaises(ModelDecisionError) as error:
+            evaluate_model_decisions(sample_models(), [task], situation_weights={"unknown": 2.0})
+
+        self.assertIn("unknown task ids", str(error.exception))
 
     def test_rejects_duplicate_task_ids(self):
         task = TaskProfile(task_id="duplicate", required_capabilities={"conversation": 0.5})
