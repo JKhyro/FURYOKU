@@ -57,6 +57,7 @@ Current routing core:
 - [`furyoku/outcome_feedback.py`](furyoku/outcome_feedback.py) records operator or automated feedback linked to persisted decision/execution reports.
 - Outcome feedback records can be aggregated into bounded per-model score adjustments for future decision reports.
 - [`examples/feedback_policy.example.json`](examples/feedback_policy.example.json) shows the configurable feedback adjustment policy contract for tuning max adjustment, verdict weights, default outcome scores, and optional recency decay.
+- Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.

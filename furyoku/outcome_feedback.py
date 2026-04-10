@@ -192,6 +192,23 @@ FeedbackAdjustmentPolicyInput = FeedbackAdjustmentPolicy | Mapping[str, Any]
 
 
 @dataclass(frozen=True)
+class FeedbackPolicyMetadata:
+    """Stable report metadata for the feedback policy that shaped routing."""
+
+    source: str
+    policy: FeedbackAdjustmentPolicy
+    customized_fields: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": 1,
+            "source": self.source,
+            "customizedFields": list(self.customized_fields),
+            "policy": self.policy.to_dict(),
+        }
+
+
+@dataclass(frozen=True)
 class ModelOutcomeFeedbackSummary:
     """Bounded per-model outcome evidence used to adjust eligible rankings."""
 
@@ -317,9 +334,30 @@ def build_model_feedback_summaries(
     }
 
 
+def build_feedback_policy_metadata(
+    policy: FeedbackAdjustmentPolicyInput | None = None,
+    *,
+    max_adjustment: float | None = None,
+    source: str | None = None,
+) -> FeedbackPolicyMetadata:
+    resolved_policy = resolve_feedback_adjustment_policy(policy, max_adjustment=max_adjustment)
+    default_payload = DEFAULT_FEEDBACK_ADJUSTMENT_POLICY.to_dict()
+    policy_payload = resolved_policy.to_dict()
+    customized_fields = tuple(
+        key
+        for key in sorted(policy_payload)
+        if key != "schemaVersion" and policy_payload[key] != default_payload.get(key)
+    )
+    return FeedbackPolicyMetadata(
+        source=source or ("default" if not customized_fields else "custom"),
+        policy=resolved_policy,
+        customized_fields=customized_fields,
+    )
+
+
 def load_feedback_adjustment_policy(path: str | Path) -> FeedbackAdjustmentPolicy:
     policy_path = Path(path)
-    with policy_path.open("r", encoding="utf-8") as handle:
+    with policy_path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
     return parse_feedback_adjustment_policy(payload, source=str(policy_path))
 
@@ -344,7 +382,7 @@ def load_decision_outcomes(feedback_log_path: str | Path) -> tuple[DecisionOutco
     if not path.exists():
         return ()
     records: list[DecisionOutcomeRecord] = []
-    with path.open("r", encoding="utf-8") as handle:
+    with path.open("r", encoding="utf-8-sig") as handle:
         for line_number, raw_line in enumerate(handle, start=1):
             raw_line = raw_line.strip()
             if not raw_line:
@@ -507,6 +545,14 @@ def _resolve_feedback_policy(
     policy: FeedbackAdjustmentPolicyInput | None,
     *,
     max_adjustment: float | None,
+) -> FeedbackAdjustmentPolicy:
+    return resolve_feedback_adjustment_policy(policy, max_adjustment=max_adjustment)
+
+
+def resolve_feedback_adjustment_policy(
+    policy: FeedbackAdjustmentPolicyInput | None = None,
+    *,
+    max_adjustment: float | None = None,
 ) -> FeedbackAdjustmentPolicy:
     if policy is None:
         resolved = DEFAULT_FEEDBACK_ADJUSTMENT_POLICY

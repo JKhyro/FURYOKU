@@ -8,11 +8,13 @@ from furyoku import (
     FeedbackAdjustmentPolicy,
     OutcomeFeedbackError,
     append_decision_outcome,
+    build_feedback_policy_metadata,
     build_model_feedback_summaries,
     create_decision_outcome_record,
     load_decision_outcomes,
     load_feedback_adjustment_policy,
     parse_feedback_adjustment_policy,
+    resolve_feedback_adjustment_policy,
 )
 
 
@@ -144,6 +146,38 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(summaries["local-model"].adjustment, 3.0)
         self.assertEqual(summaries["local-model"].weighted_record_count, 1.0)
 
+    def test_feedback_policy_metadata_surfaces_default_contract(self):
+        metadata = build_feedback_policy_metadata()
+        payload = metadata.to_dict()
+
+        self.assertEqual(metadata.source, "default")
+        self.assertEqual(metadata.customized_fields, ())
+        self.assertEqual(payload["schemaVersion"], 1)
+        self.assertEqual(payload["source"], "default")
+        self.assertEqual(payload["customizedFields"], [])
+        self.assertEqual(payload["policy"]["maxAdjustment"], 12.0)
+        self.assertEqual(resolve_feedback_adjustment_policy(), metadata.policy)
+
+    def test_feedback_policy_metadata_tracks_custom_fields(self):
+        metadata = build_feedback_policy_metadata(
+            FeedbackAdjustmentPolicy(
+                max_adjustment=4.0,
+                success_base=1.0,
+                recency_half_life_days=7.0,
+            )
+        )
+        payload = metadata.to_dict()
+
+        self.assertEqual(metadata.source, "custom")
+        self.assertEqual(payload["source"], "custom")
+        self.assertEqual(
+            payload["customizedFields"],
+            ["maxAdjustment", "recencyHalfLifeDays", "successBase"],
+        )
+        self.assertEqual(payload["policy"]["maxAdjustment"], 4.0)
+        self.assertEqual(payload["policy"]["successBase"], 1.0)
+        self.assertEqual(payload["policy"]["recencyHalfLifeDays"], 7.0)
+
     def test_feedback_policy_supports_recency_half_life(self):
         records = [
             DecisionOutcomeRecord(
@@ -196,6 +230,28 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(loaded, parsed)
         self.assertEqual(loaded.max_adjustment, 4.0)
         self.assertEqual(loaded.recency_half_life_days, 7.0)
+
+    def test_feedback_loaders_accept_utf8_bom_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "run-report.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            policy_path = Path(temp_dir) / "policy.json"
+            write_execution_report(report_path)
+            record = create_decision_outcome_record(report_path, verdict="success")
+            feedback_path.write_text(
+                json.dumps(record.to_dict()) + "\n",
+                encoding="utf-8-sig",
+            )
+            policy_path.write_text(
+                json.dumps({"schemaVersion": 1, "maxAdjustment": 4.0}),
+                encoding="utf-8-sig",
+            )
+
+            feedback = load_decision_outcomes(feedback_path)
+            policy = load_feedback_adjustment_policy(policy_path)
+
+        self.assertEqual(feedback[0].record_id, record.record_id)
+        self.assertEqual(policy.max_adjustment, 4.0)
 
     def test_feedback_policy_rejects_invalid_values(self):
         with self.assertRaises(OutcomeFeedbackError):

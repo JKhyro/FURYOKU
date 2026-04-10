@@ -259,6 +259,8 @@ class ModelDecisionTests(unittest.TestCase):
 
         self.assertEqual(selected.model.model_id, "local-gemma3-heretic")
         self.assertIn("local-gemma3-heretic", report.feedback_adjustments)
+        self.assertIsNotNone(report.feedback_policy_metadata)
+        self.assertEqual(report.feedback_policy_metadata.source, "default")
         self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank.reasons))
 
     def test_feedback_policy_changes_decision_adjustment_size(self):
@@ -307,6 +309,12 @@ class ModelDecisionTests(unittest.TestCase):
 
         self.assertEqual(default_report.feedback_adjustments["local-gemma3-heretic"].adjustment, 10.0)
         self.assertEqual(policy_report.feedback_adjustments["local-gemma3-heretic"].adjustment, 1.5)
+        self.assertEqual(default_report.feedback_policy_metadata.source, "default")
+        self.assertEqual(policy_report.feedback_policy_metadata.source, "custom")
+        self.assertEqual(
+            policy_report.feedback_policy_metadata.customized_fields,
+            ("maxAdjustment", "successBase", "successScoreMultiplier"),
+        )
 
     def test_feedback_adjustment_does_not_bypass_hard_blockers(self):
         task = TaskProfile(
@@ -447,11 +455,39 @@ class ModelDecisionTests(unittest.TestCase):
 
         payload = report.to_dict()
 
+        self.assertIsNone(report.feedback_policy_metadata)
+        self.assertNotIn("feedbackPolicy", payload)
         self.assertEqual(payload["situations"]["private-chat"]["selectedModelId"], "local-gemma3-heretic")
         self.assertEqual(payload["aggregate"]["modelCount"], 3)
         self.assertEqual(payload["aggregate"]["situationCount"], 3)
         self.assertIn("providerCoverage", payload["aggregate"])
         self.assertIn("rationale", payload["situations"]["hard-coding"])
+
+    def test_report_serializes_feedback_policy_metadata_when_feedback_is_used(self):
+        task = TaskProfile(task_id="feedback-chat", required_capabilities={"conversation": 0.8})
+        report = evaluate_model_decisions(
+            sample_models()[:2],
+            [task],
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-gemma3-heretic",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+            feedback_policy=FeedbackAdjustmentPolicy(max_adjustment=3.0),
+        )
+
+        payload = report.to_dict()
+
+        self.assertEqual(payload["feedbackPolicy"]["source"], "custom")
+        self.assertEqual(payload["feedbackPolicy"]["customizedFields"], ["maxAdjustment"])
+        self.assertEqual(payload["feedbackPolicy"]["policy"]["maxAdjustment"], 3.0)
 
     def test_load_decision_suite_parses_reusable_situations(self):
         payload = {

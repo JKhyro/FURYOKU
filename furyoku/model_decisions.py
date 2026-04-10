@@ -9,7 +9,9 @@ from .model_router import ModelEndpoint, ModelScore, TaskProfile, rank_models
 from .outcome_feedback import (
     FeedbackAdjustmentInput,
     FeedbackAdjustmentPolicyInput,
+    FeedbackPolicyMetadata,
     ModelOutcomeFeedbackSummary,
+    build_feedback_policy_metadata,
     build_model_feedback_summaries,
 )
 from .provider_health import ProviderHealthCheckResult
@@ -291,6 +293,7 @@ class ModelDecisionReport:
     situations: Mapping[str, SituationDecision]
     aggregate: ModelDecisionAggregate
     feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary] = field(default_factory=dict)
+    feedback_policy_metadata: FeedbackPolicyMetadata | None = None
 
     @property
     def decisions(self) -> tuple[SituationDecision, ...]:
@@ -354,6 +357,11 @@ class ModelDecisionReport:
                 model_id: summary.to_dict()
                 for model_id, summary in self.feedback_adjustments.items()
             },
+            **(
+                {"feedbackPolicy": self.feedback_policy_metadata.to_dict()}
+                if self.feedback_policy_metadata is not None
+                else {}
+            ),
         }
 
 
@@ -519,6 +527,11 @@ def evaluate_model_decisions(
     readiness_by_model = _normalize_readiness_evidence(readiness)
     _validate_readiness_evidence(readiness_by_model, model_list)
     feedback_by_model = _feedback_for_models(feedback, model_list, feedback_policy=feedback_policy)
+    feedback_policy_metadata = (
+        build_feedback_policy_metadata(feedback_policy)
+        if feedback is not None
+        else None
+    )
 
     situation_decisions: dict[str, SituationDecision] = {}
     for task in task_list:
@@ -558,6 +571,7 @@ def evaluate_model_decisions(
         situations=situation_decisions,
         aggregate=_build_aggregate(model_list, situation_decisions),
         feedback_adjustments=feedback_by_model,
+        feedback_policy_metadata=feedback_policy_metadata,
     )
 
 
