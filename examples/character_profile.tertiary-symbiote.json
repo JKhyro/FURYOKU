@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "characterId": "tertiary-symbiote",
+  "class": "Symbiote",
+  "rank": "Tertiary",
+  "description": "Fresh single-role CHARACTER composition where one primary role performs all work.",
+  "roles": [
+    {
+      "roleId": "primary",
+      "primary": true,
+      "maxSubagents": 0,
+      "task": {
+        "taskId": "character.tertiary-symbiote.primary",
+        "privacyRequirement": "prefer_local",
+        "requiredCapabilities": {
+          "conversation": 0.75,
+          "instruction_following": 0.75,
+          "reasoning": 0.65
+        }
+      }
+    }
+  ]
+}

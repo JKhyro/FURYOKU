@@ -43,6 +43,7 @@ Scope guard:
 Current routing core:
 
 - [`furyoku/model_router.py`](furyoku/model_router.py) defines the reusable model/task scoring contract and flexible CHARACTER composition selection.
+- [`furyoku/character_profiles.py`](furyoku/character_profiles.py) loads flexible JSON CHARACTER role compositions for Symbiote/Curator/Synth/Agent-style arrays.
 - [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
 - [`furyoku/task_profiles.py`](furyoku/task_profiles.py) loads reusable JSON task profiles into router-ready task requirements.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
@@ -51,6 +52,9 @@ Current routing core:
 - [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `run`, and `health` commands for registry-backed model routing, execution, and readiness checks.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/task_profile.private-chat.json`](examples/task_profile.private-chat.json) shows reusable task profile configuration.
+- [`examples/character_profile.tertiary-symbiote.json`](examples/character_profile.tertiary-symbiote.json) shows a one-role tertiary Symbiote composition.
+- [`examples/character_profile.kira-array.json`](examples/character_profile.kira-array.json) shows a larger Kira-style one-primary/seven-secondary role array.
+- [`tests/test_character_profiles.py`](tests/test_character_profiles.py) verifies flexible CHARACTER profile loading and validation.
 - [`tests/test_model_router.py`](tests/test_model_router.py) verifies local-only selection, CLI/API routing, blocker reporting, flexible CHARACTER composition, and the three-role compatibility helper.
 - [`tests/test_model_registry.py`](tests/test_model_registry.py) verifies registry loading, validation, and routing from configuration.
 - [`tests/test_task_profiles.py`](tests/test_task_profiles.py) verifies task profile loading and validation.
