@@ -14,7 +14,14 @@ from .model_router import (
     select_character_panel,
     select_model,
 )
-from .character_profiles import CharacterProfile, CharacterProfileError, load_character_profile, parse_character_profile
+from .character_profiles import (
+    CharacterProfile,
+    CharacterProfileError,
+    CharacterProfileSelection,
+    load_character_profile,
+    parse_character_profile,
+    select_character_profile_models,
+)
 from .model_registry import RegistryError, load_model_registry, parse_model_registry
 from .provider_adapters import (
     ApiProviderAdapter,
@@ -41,6 +48,7 @@ __all__ = [
     "CharacterPanelSelection",
     "CharacterProfile",
     "CharacterProfileError",
+    "CharacterProfileSelection",
     "CharacterRoleSpec",
     "ModelEndpoint",
     "ModelScore",
@@ -70,6 +78,7 @@ __all__ = [
     "rank_models",
     "route_and_execute",
     "select_character_composition",
+    "select_character_profile_models",
     "select_character_panel",
     "select_model",
 ]

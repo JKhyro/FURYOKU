@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current primary lane: [#78](https://github.com/JKhyro/FURYOKU/issues/78)
+- Current primary lane: [#92](https://github.com/JKhyro/FURYOKU/issues/92)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
 ## Current Baseline
@@ -21,8 +21,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
-- Current architecture direction: Native C core/runtime first; Avalonia only as a thin shell through native C interop; C# only where necessary for host/binding glue
-- Current follow-on focus: connect concrete local, CLI, and API transports to validated operator/runtime flows.
+- Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
+- Current follow-on focus: connect loaded CHARACTER profiles to concrete registry-backed model selections and then expand live provider execution.
 
 ## Product Direction
 
@@ -49,7 +49,7 @@ Current routing core:
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
-- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `run`, and `health` commands for registry-backed model routing, execution, and readiness checks.
+- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `run`, `health`, and `character-select` commands for registry-backed model routing, execution, readiness checks, and CHARACTER role selection.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/task_profile.private-chat.json`](examples/task_profile.private-chat.json) shows reusable task profile configuration.
 - [`examples/character_profile.tertiary-symbiote.json`](examples/character_profile.tertiary-symbiote.json) shows a one-role tertiary Symbiote composition.
@@ -68,6 +68,7 @@ CLI example:
 ```powershell
 python -m furyoku.cli select --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
+python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json
 ```
 
 ## Benchmark Evidence Lane

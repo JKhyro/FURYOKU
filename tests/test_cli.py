@@ -57,6 +57,37 @@ def write_task_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_character_profile(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "characterId": "test-character",
+        "class": "Symbiote",
+        "rank": "Prototype",
+        "roles": [
+            {
+                "roleId": "primary",
+                "primary": True,
+                "maxSubagents": 2,
+                "task": {
+                    "taskId": "test-character.primary",
+                    "privacyRequirement": "local_only",
+                    "requiredCapabilities": {"conversation": 0.9},
+                },
+            },
+            {
+                "roleId": "coding",
+                "maxSubagents": 4,
+                "task": {
+                    "taskId": "test-character.coding",
+                    "requireTools": True,
+                    "requiredCapabilities": {"coding": 0.9, "instruction_following": 0.8},
+                },
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_local_only_registry(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -169,6 +200,35 @@ class CliTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["providers"][0]["modelId"], "python-local")
             self.assertEqual(payload["providers"][0]["status"], "ready")
+
+    def test_character_select_outputs_role_to_model_json(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            write_registry(registry_path)
+            write_character_profile(character_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-select",
+                        "--registry",
+                        str(registry_path),
+                        "--character-profile",
+                        str(character_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["characterId"], "test-character")
+            self.assertEqual(payload["primaryRole"], "primary")
+            self.assertEqual(payload["roles"][0]["roleId"], "primary")
+            self.assertEqual(payload["roles"][0]["selection"]["modelId"], "local-echo")
+            self.assertEqual(payload["roles"][1]["roleId"], "coding")
+            self.assertEqual(payload["roles"][1]["maxSubagents"], 4)
+            self.assertEqual(payload["roles"][1]["selection"]["modelId"], "remote-coder")
 
 
 if __name__ == "__main__":
