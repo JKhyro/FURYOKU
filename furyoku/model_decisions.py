@@ -382,6 +382,46 @@ class ModelDecisionReport:
 
 
 @dataclass(frozen=True)
+class RecommendationConfidence:
+    """Operator-facing confidence metadata for a recommendation decision."""
+
+    level: str
+    score: float
+    evidence_quality: str
+    score_margin: float | None
+    eligible_model_count: int
+    blocked_model_count: int
+    minimum_score: float | None
+    minimum_score_margin: float | None
+    outcome_record_count: int
+    feedback_record_count: int
+    success_rate: float | None
+    concern_rate: float | None
+    failure_rate: float | None
+    manual_override_rate: float | None
+    rationale: tuple[str, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "level": self.level,
+            "score": self.score,
+            "evidenceQuality": self.evidence_quality,
+            "scoreMargin": self.score_margin,
+            "eligibleModelCount": self.eligible_model_count,
+            "blockedModelCount": self.blocked_model_count,
+            "minimumScore": self.minimum_score,
+            "minimumScoreMargin": self.minimum_score_margin,
+            "outcomeRecordCount": self.outcome_record_count,
+            "feedbackRecordCount": self.feedback_record_count,
+            "successRate": self.success_rate,
+            "concernRate": self.concern_rate,
+            "failureRate": self.failure_rate,
+            "manualOverrideRate": self.manual_override_rate,
+            "rationale": list(self.rationale),
+        }
+
+
+@dataclass(frozen=True)
 class ModelRecommendation:
     """Operator-facing recommendation for one task/situation."""
 
@@ -390,6 +430,7 @@ class ModelRecommendation:
     ranked: tuple[ModelScore, ...]
     blockers: Mapping[str, tuple[str, ...]]
     rationale: tuple[str, ...]
+    minimum_score: float | None = None
     feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary] = field(default_factory=dict)
     outcome_models: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
@@ -414,6 +455,14 @@ class ModelRecommendation:
                 )
                 for score in self.ranked
             ],
+            "confidence": _recommendation_confidence(
+                selected=self.selected,
+                ranked=self.ranked,
+                blockers=self.blockers,
+                minimum_score=self.minimum_score,
+                feedback_adjustments=self.feedback_adjustments,
+                outcome_models=self.outcome_models,
+            ).to_dict(),
             "blockers": {model_id: list(blockers) for model_id, blockers in self.blockers.items()},
             "rationale": list(self.rationale),
         }
@@ -439,6 +488,7 @@ class ModelRecommendationReport:
                     ranked=decision.ranked,
                     blockers=decision.blockers,
                     rationale=decision.rationale,
+                    minimum_score=decision.minimum_score,
                     feedback_adjustments=self.decision_report.feedback_adjustments,
                     outcome_models=outcome_models,
                 ).to_dict()
@@ -1289,6 +1339,206 @@ def _recommendation_score_to_dict(
         payload["outcomeRecordCount"] = outcome_summary.get("recordCount")
         payload["outcomeSuccessRate"] = outcome_summary.get("successRate")
     return payload
+
+
+def _recommendation_confidence(
+    *,
+    selected: ModelScore | None,
+    ranked: tuple[ModelScore, ...],
+    blockers: Mapping[str, tuple[str, ...]],
+    minimum_score: float | None,
+    feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary],
+    outcome_models: Mapping[str, Mapping[str, Any]],
+) -> RecommendationConfidence:
+    eligible_scores = [score for score in ranked if score.eligible]
+    blocked_model_count = sum(1 for score in ranked if score.blockers)
+    if selected is None:
+        return RecommendationConfidence(
+            level="blocked",
+            score=0.0,
+            evidence_quality="blocked",
+            score_margin=None,
+            eligible_model_count=len(eligible_scores),
+            blocked_model_count=blocked_model_count,
+            minimum_score=minimum_score,
+            minimum_score_margin=None,
+            outcome_record_count=0,
+            feedback_record_count=0,
+            success_rate=None,
+            concern_rate=None,
+            failure_rate=None,
+            manual_override_rate=None,
+            rationale=(
+                "no eligible selected model",
+                f"{len(blockers)} models reported blockers",
+            ),
+        )
+
+    selected_model_id = selected.model.model_id
+    next_eligible = next(
+        (
+            score
+            for score in eligible_scores
+            if score.model.model_id != selected_model_id
+        ),
+        None,
+    )
+    score_margin = (
+        round(selected.score - next_eligible.score, 4)
+        if next_eligible is not None
+        else None
+    )
+    minimum_score_margin = (
+        round(selected.score - minimum_score, 4)
+        if minimum_score is not None
+        else None
+    )
+    feedback_summary = feedback_adjustments.get(selected_model_id)
+    outcome_summary = outcome_models.get(selected_model_id, {})
+    outcome_record_count = _int_from_mapping(outcome_summary, "recordCount")
+    feedback_record_count = feedback_summary.record_count if feedback_summary is not None else 0
+    evidence_record_count = max(outcome_record_count, feedback_record_count)
+    success_rate = _float_from_mapping(outcome_summary, "successRate")
+    concern_rate = _float_from_mapping(outcome_summary, "concernRate")
+    failure_rate = _float_from_mapping(outcome_summary, "failureRate")
+    manual_override_rate = _float_from_mapping(outcome_summary, "manualOverrideRate")
+
+    margin_component = 0.65 if score_margin is None else _clamp(score_margin / 20.0, 0.0, 1.0)
+    minimum_component = (
+        0.75
+        if minimum_score_margin is None
+        else _clamp(minimum_score_margin / 20.0, 0.0, 1.0)
+    )
+    record_component = _clamp(evidence_record_count / 4.0, 0.0, 1.0)
+    outcome_component = _outcome_confidence_component(
+        success_rate=success_rate,
+        concern_rate=concern_rate,
+        failure_rate=failure_rate,
+        manual_override_rate=manual_override_rate,
+    )
+    eligibility_component = 1.0 if len(eligible_scores) > 1 else 0.7
+    confidence_score = round(
+        (margin_component * 0.30)
+        + (minimum_component * 0.20)
+        + (record_component * 0.20)
+        + (outcome_component * 0.20)
+        + (eligibility_component * 0.10),
+        4,
+    )
+
+    rationale = [
+        _confidence_margin_rationale(score_margin),
+        f"{len(eligible_scores)} eligible models and {blocked_model_count} blocked models",
+        _confidence_record_rationale(evidence_record_count),
+    ]
+    if minimum_score_margin is not None:
+        rationale.append(f"selected score is {minimum_score_margin:.2f} over minimum threshold")
+    if success_rate is not None:
+        negative_rate = (concern_rate or 0.0) + (failure_rate or 0.0) + (manual_override_rate or 0.0)
+        rationale.append(
+            f"outcome success rate {success_rate:.2f}; negative/override rate {negative_rate:.2f}"
+        )
+
+    return RecommendationConfidence(
+        level=_confidence_level(confidence_score),
+        score=confidence_score,
+        evidence_quality=_evidence_quality(
+            record_count=evidence_record_count,
+            success_rate=success_rate,
+            concern_rate=concern_rate,
+            failure_rate=failure_rate,
+            manual_override_rate=manual_override_rate,
+        ),
+        score_margin=score_margin,
+        eligible_model_count=len(eligible_scores),
+        blocked_model_count=blocked_model_count,
+        minimum_score=minimum_score,
+        minimum_score_margin=minimum_score_margin,
+        outcome_record_count=outcome_record_count,
+        feedback_record_count=feedback_record_count,
+        success_rate=success_rate,
+        concern_rate=concern_rate,
+        failure_rate=failure_rate,
+        manual_override_rate=manual_override_rate,
+        rationale=tuple(rationale),
+    )
+
+
+def _outcome_confidence_component(
+    *,
+    success_rate: float | None,
+    concern_rate: float | None,
+    failure_rate: float | None,
+    manual_override_rate: float | None,
+) -> float:
+    if success_rate is None:
+        return 0.35
+    return _clamp(
+        success_rate
+        - ((failure_rate or 0.0) * 0.80)
+        - ((concern_rate or 0.0) * 0.40)
+        - ((manual_override_rate or 0.0) * 0.40),
+        0.0,
+        1.0,
+    )
+
+
+def _confidence_level(score: float) -> str:
+    if score >= 0.75:
+        return "high"
+    if score >= 0.50:
+        return "medium"
+    return "low"
+
+
+def _evidence_quality(
+    *,
+    record_count: int,
+    success_rate: float | None,
+    concern_rate: float | None,
+    failure_rate: float | None,
+    manual_override_rate: float | None,
+) -> str:
+    if record_count <= 0:
+        return "none"
+    negative_rate = (concern_rate or 0.0) + (failure_rate or 0.0) + (manual_override_rate or 0.0)
+    if negative_rate >= 0.50:
+        return "mixed"
+    if record_count >= 3 and (success_rate or 0.0) >= 0.60:
+        return "strong"
+    return "sparse"
+
+
+def _confidence_margin_rationale(score_margin: float | None) -> str:
+    if score_margin is None:
+        return "no alternate eligible model margin"
+    return f"selected model leads next eligible model by {score_margin:.2f} points"
+
+
+def _confidence_record_rationale(record_count: int) -> str:
+    if record_count <= 0:
+        return "no outcome feedback records for selected model"
+    if record_count == 1:
+        return "1 outcome feedback record for selected model"
+    return f"{record_count} outcome feedback records for selected model"
+
+
+def _float_from_mapping(payload: Mapping[str, Any], key: str) -> float | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    return float(value)
+
+
+def _int_from_mapping(payload: Mapping[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if value is None:
+        return 0
+    return int(value)
+
+
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(maximum, float(value)))
 
 
 def _score_for_model(decision: SituationDecision, model_id: str) -> ModelScore | None:
