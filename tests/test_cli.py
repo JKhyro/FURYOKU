@@ -27,6 +27,7 @@ def write_registry(path: Path) -> None:
                 "capabilities": {
                     "conversation": 0.95,
                     "instruction_following": 0.9,
+                    "speed": 0.96,
                 },
             },
             {
@@ -40,6 +41,7 @@ def write_registry(path: Path) -> None:
                     "conversation": 0.8,
                     "instruction_following": 0.9,
                     "coding": 0.98,
+                    "reasoning": 0.96,
                 },
             },
         ],
@@ -65,6 +67,7 @@ def write_executable_character_registry(path: Path) -> None:
                 "capabilities": {
                     "conversation": 0.95,
                     "instruction_following": 0.9,
+                    "speed": 0.96,
                 },
             },
             {
@@ -83,6 +86,24 @@ def write_executable_character_registry(path: Path) -> None:
                     "conversation": 0.8,
                     "instruction_following": 0.9,
                     "coding": 0.98,
+                    "reasoning": 0.96,
+                },
+            },
+            {
+                "modelId": "api-memory",
+                "provider": "api",
+                "privacyLevel": "remote",
+                "contextWindowTokens": 200000,
+                "averageLatencyMs": 100,
+                "inputCostPer1k": 0.004,
+                "outputCostPer1k": 0.012,
+                "supportsJson": True,
+                "capabilities": {
+                    "conversation": 0.8,
+                    "instruction_following": 0.86,
+                    "retrieval": 0.95,
+                    "summarization": 0.94,
+                    "speed": 0.78,
                 },
             },
         ],
@@ -243,6 +264,61 @@ class CliTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["providers"][0]["modelId"], "python-local")
             self.assertEqual(payload["providers"][0]["status"], "ready")
+
+    def test_decide_outputs_multi_situation_decision_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_executable_character_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(["decide", "--registry", str(registry_path)])
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertGreaterEqual(len(payload["decisions"]), 3)
+            selected_by_task = {
+                decision["taskId"]: decision["selectedModel"]["modelId"]
+                for decision in payload["decisions"]
+                if decision["selectedModel"]
+            }
+            self.assertEqual(selected_by_task["decision.private-chat"], "local-echo")
+            self.assertEqual(selected_by_task["decision.tool-heavy-coding"], "cli-coder")
+            self.assertGreaterEqual(len(payload["summaries"]), 2)
+            coding_decision = next(
+                decision for decision in payload["decisions"] if decision["taskId"] == "decision.tool-heavy-coding"
+            )
+            local_rank = next(
+                score for score in coding_decision["rankedModels"] if score["modelId"] == "local-echo"
+            )
+            self.assertFalse(local_rank["eligible"])
+            self.assertTrue(any("tool support" in blocker for blocker in local_rank["blockers"]))
+
+    def test_decide_accepts_explicit_task_profile_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            write_registry(registry_path)
+            write_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(len(payload["decisions"]), 1)
+            self.assertEqual(payload["decisions"][0]["taskId"], "private-chat")
+            self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "local-echo")
 
     def test_character_select_outputs_role_to_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:

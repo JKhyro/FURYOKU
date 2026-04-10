@@ -13,6 +13,7 @@ from .character_profiles import (
 )
 from .model_registry import load_model_registry
 from .model_router import ModelScore, TaskProfile, select_model
+from .model_decisions import ModelDecisionReport, evaluate_model_decisions
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .runtime import (
@@ -57,6 +58,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         _write_json({"ok": all(result.ready for result in results), "providers": [_health_to_dict(result) for result in results]})
         return 0 if all(result.ready for result in results) else 2
 
+    if args.command == "decide":
+        tasks = tuple(load_task_profile(path) for path in args.task_profile)
+        report = evaluate_model_decisions(models, tasks or None)
+        _write_json(_decision_report_to_dict(report))
+        return 0 if not report.blocked_tasks else 2
+
     if args.command == "character-select":
         profile = load_character_profile(args.character_profile)
         selection = select_character_profile_models(models, profile, allow_reuse=not args.no_reuse)
@@ -92,6 +99,18 @@ def _build_parser() -> argparse.ArgumentParser:
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
     health_parser.add_argument("--probe-prompt", default="", help="Prompt text used when --probe is set.")
     health_parser.add_argument("--timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    decide_parser = subparsers.add_parser(
+        "decide",
+        help="Evaluate local, CLI, and API models across multiple decision situations.",
+    )
+    decide_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    decide_parser.add_argument(
+        "--task-profile",
+        action="append",
+        default=[],
+        type=Path,
+        help="Optional task profile to include. Repeat for multiple situations. Defaults to built-in scenarios.",
+    )
     character_parser = subparsers.add_parser(
         "character-select",
         help="Select concrete model endpoints for every role in a CHARACTER profile.",
@@ -239,6 +258,33 @@ def _routed_result_to_dict(result: RoutedExecutionResult) -> dict:
         "ok": result.ok,
         "selection": _score_to_dict(result.selection),
         "execution": _execution_to_dict(result.execution),
+    }
+
+
+def _decision_report_to_dict(report: ModelDecisionReport) -> dict:
+    return {
+        "ok": not report.blocked_tasks,
+        "blockedTasks": list(report.blocked_tasks),
+        "decisions": [
+            {
+                "taskId": decision.task.task_id,
+                "description": decision.task.description,
+                "selectedModel": _score_to_dict(decision.selected) if decision.selected else None,
+                "rankedModels": [_score_to_dict(score) for score in decision.ranked],
+            }
+            for decision in report.decisions
+        ],
+        "summaries": [
+            {
+                "modelId": summary.model_id,
+                "provider": summary.provider,
+                "selectedCount": summary.selected_count,
+                "eligibleCount": summary.eligible_count,
+                "averageScore": summary.average_score,
+                "blockedCount": summary.blocked_count,
+            }
+            for summary in report.summaries
+        ],
     }
 
 

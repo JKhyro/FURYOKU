@@ -1,0 +1,164 @@
+import unittest
+
+from furyoku import (
+    ModelDecisionError,
+    ModelEndpoint,
+    TaskProfile,
+    evaluate_model_decisions,
+)
+
+
+def sample_models():
+    return [
+        ModelEndpoint(
+            model_id="local-gemma3-heretic",
+            provider="local",
+            privacy_level="local",
+            context_window_tokens=8192,
+            average_latency_ms=1500,
+            capabilities={
+                "conversation": 0.9,
+                "instruction_following": 0.85,
+                "coding": 0.75,
+                "reasoning": 0.82,
+                "retrieval": 0.6,
+                "summarization": 0.75,
+            },
+            supports_json=True,
+        ),
+        ModelEndpoint(
+            model_id="cli-codex-high",
+            provider="cli",
+            privacy_level="remote",
+            context_window_tokens=128000,
+            average_latency_ms=6000,
+            input_cost_per_1k=0.02,
+            output_cost_per_1k=0.08,
+            capabilities={
+                "conversation": 0.85,
+                "instruction_following": 0.95,
+                "coding": 0.98,
+                "reasoning": 0.97,
+                "retrieval": 0.8,
+                "summarization": 0.87,
+            },
+            supports_tools=True,
+            supports_json=True,
+        ),
+        ModelEndpoint(
+            model_id="api-long-context-memory",
+            provider="api",
+            privacy_level="remote",
+            context_window_tokens=200000,
+            average_latency_ms=4000,
+            input_cost_per_1k=0.004,
+            output_cost_per_1k=0.012,
+            capabilities={
+                "conversation": 0.8,
+                "instruction_following": 0.88,
+                "coding": 0.7,
+                "reasoning": 0.86,
+                "retrieval": 0.97,
+                "summarization": 0.95,
+            },
+            supports_json=True,
+        ),
+    ]
+
+
+def sample_tasks():
+    return [
+        TaskProfile(
+            task_id="private-chat",
+            required_capabilities={"conversation": 0.8, "instruction_following": 0.8},
+            privacy_requirement="local_only",
+        ),
+        TaskProfile(
+            task_id="hard-coding",
+            required_capabilities={
+                "coding": 0.92,
+                "reasoning": 0.9,
+                "instruction_following": 0.85,
+            },
+            require_tools=True,
+        ),
+        TaskProfile(
+            task_id="long-memory",
+            required_capabilities={"retrieval": 0.9, "summarization": 0.9},
+            min_context_tokens=64000,
+            require_json=True,
+        ),
+    ]
+
+
+class ModelDecisionTests(unittest.TestCase):
+    def test_evaluate_model_decisions_selects_best_model_per_situation(self):
+        report = evaluate_model_decisions(sample_models(), sample_tasks())
+
+        self.assertEqual(report.selected_for("private-chat").model.model_id, "local-gemma3-heretic")
+        self.assertEqual(report.selected_for("hard-coding").model.model_id, "cli-codex-high")
+        self.assertEqual(report.selected_for("long-memory").model.model_id, "api-long-context-memory")
+        self.assertEqual(
+            report.aggregate.selected_model_ids,
+            ("api-long-context-memory", "cli-codex-high", "local-gemma3-heretic"),
+        )
+        self.assertEqual(report.aggregate.selected_providers, ("api", "cli", "local"))
+
+    def test_report_surfaces_per_model_and_provider_coverage(self):
+        report = evaluate_model_decisions(sample_models(), sample_tasks())
+
+        local_coverage = report.aggregate.model_coverage["local-gemma3-heretic"]
+        cli_coverage = report.aggregate.model_coverage["cli-codex-high"]
+        api_coverage = report.aggregate.provider_coverage["api"]
+
+        self.assertEqual(local_coverage.selected_situations, ("private-chat",))
+        self.assertIn("hard-coding", local_coverage.blocked_situations)
+        self.assertTrue(any("tool support" in blocker for blocker in local_coverage.blocked_situations["hard-coding"]))
+        self.assertEqual(cli_coverage.selected_situations, ("hard-coding",))
+        self.assertEqual(api_coverage.selected_situations, ("long-memory",))
+        self.assertIn("cli-codex-high", report.aggregate.provider_coverage["cli"].model_ids)
+
+    def test_uncovered_situation_returns_blockers_without_raising(self):
+        task = TaskProfile(
+            task_id="impossible-local-coder",
+            required_capabilities={"coding": 0.99},
+            privacy_requirement="local_only",
+        )
+
+        report = evaluate_model_decisions(sample_models(), [task])
+        decision = report.situations["impossible-local-coder"]
+
+        self.assertFalse(decision.eligible)
+        self.assertIsNone(report.selected_for("impossible-local-coder"))
+        self.assertIn("local-gemma3-heretic", decision.blockers)
+        self.assertTrue(any("coding capability" in blocker for blocker in decision.blockers["local-gemma3-heretic"]))
+        self.assertTrue(any("uncovered situations" in reason for reason in report.aggregate.rationale))
+
+    def test_report_serializes_stable_json_ready_shape(self):
+        report = evaluate_model_decisions(sample_models(), sample_tasks())
+
+        payload = report.to_dict()
+
+        self.assertEqual(payload["situations"]["private-chat"]["selectedModelId"], "local-gemma3-heretic")
+        self.assertEqual(payload["aggregate"]["modelCount"], 3)
+        self.assertEqual(payload["aggregate"]["situationCount"], 3)
+        self.assertIn("providerCoverage", payload["aggregate"])
+        self.assertIn("rationale", payload["situations"]["hard-coding"])
+
+    def test_rejects_duplicate_task_ids(self):
+        task = TaskProfile(task_id="duplicate", required_capabilities={"conversation": 0.5})
+
+        with self.assertRaises(ModelDecisionError) as error:
+            evaluate_model_decisions(sample_models(), [task, task])
+
+        self.assertIn("Duplicate task ids", str(error.exception))
+
+    def test_rejects_explicit_empty_task_list(self):
+        with self.assertRaises(ModelDecisionError) as error:
+            evaluate_model_decisions(sample_models(), [])
+
+        self.assertIn("At least one task profile", str(error.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()
