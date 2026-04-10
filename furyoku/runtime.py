@@ -12,7 +12,7 @@ from .model_decisions import (
     SituationDecision,
     evaluate_model_decisions,
 )
-from .model_router import ModelEndpoint, ModelScore, RouterError, TaskProfile, select_model
+from .model_router import ModelEndpoint, ModelScore, RouterError, RoutingScorePolicyInput, TaskProfile, select_model
 from .outcome_feedback import FeedbackAdjustmentInput, FeedbackAdjustmentPolicyInput
 from .provider_adapters import (
     ProviderAdapter,
@@ -100,12 +100,13 @@ def route_and_execute(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> RoutedExecutionResult:
     """Select the best eligible model for a task, then execute it."""
 
     report = None
-    if feedback is None and readiness is None:
+    if feedback is None and readiness is None and routing_policy is None:
         selection = select_model(models, task)
     else:
         report = evaluate_model_decisions(
@@ -114,6 +115,7 @@ def route_and_execute(
             readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
+            routing_policy=routing_policy,
         )
         selection = report.selected_for(task.task_id)
         if selection is None:
@@ -136,6 +138,7 @@ def execute_decision_situation(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> DecisionSituationExecutionResult:
     """Run one calibrated decision situation using the same selection evidence as `decide`."""
@@ -146,6 +149,7 @@ def execute_decision_situation(
         readiness=readiness,
         feedback=feedback,
         feedback_policy=feedback_policy,
+        routing_policy=routing_policy,
     )
     try:
         decision = report.situations[situation_id]

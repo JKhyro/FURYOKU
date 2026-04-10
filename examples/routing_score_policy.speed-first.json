@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "capabilityWeight": 40.0,
+  "contextBonusWeight": 8.0,
+  "contextReferenceTokens": 128000,
+  "speedBonusWeight": 80.0,
+  "speedReferenceMs": 30000,
+  "localPreferenceBonus": 12.0,
+  "remotePrivacyPenalty": 8.0,
+  "preferredProviderBonus": 8.0,
+  "costPenaltyMultiplier": 2.0,
+  "maxCostPenalty": 15.0
+}

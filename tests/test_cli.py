@@ -155,6 +155,51 @@ def write_feedback_policy(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_routing_policy(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "capabilityWeight": 40.0,
+        "speedBonusWeight": 80.0,
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def write_routing_policy_registry(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "models": [
+            {
+                "modelId": "fast-local",
+                "provider": "local",
+                "privacyLevel": "local",
+                "contextWindowTokens": 4096,
+                "averageLatencyMs": 100,
+                "invocation": [
+                    sys.executable,
+                    "-c",
+                    "import sys; print('fast:' + sys.stdin.read())",
+                ],
+                "capabilities": {
+                    "conversation": 0.82,
+                    "instruction_following": 0.82,
+                },
+            },
+            {
+                "modelId": "slow-api",
+                "provider": "api",
+                "privacyLevel": "remote",
+                "contextWindowTokens": 128000,
+                "averageLatencyMs": 5000,
+                "capabilities": {
+                    "conversation": 0.95,
+                    "instruction_following": 0.95,
+                },
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_feedback_decision_suite(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -629,6 +674,39 @@ class CliTests(unittest.TestCase):
             )
             self.assertEqual(payload["feedbackPolicy"]["policy"]["maxAdjustment"], 4.0)
 
+    def test_select_routing_policy_file_changes_single_task_ranking(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            policy_path = Path(temp_dir) / "routing-policy.json"
+            write_routing_policy_registry(registry_path)
+            write_routing_policy(policy_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "policy-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--routing-policy",
+                        str(policy_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "fast-local")
+            self.assertNotIn("feedbackAdjustments", payload)
+            self.assertEqual(payload["routingPolicy"]["source"], "custom")
+            self.assertEqual(
+                payload["routingPolicy"]["customizedFields"],
+                ["capabilityWeight", "speedBonusWeight"],
+            )
+
     def test_select_check_health_demotes_missing_cli_endpoint(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
@@ -744,6 +822,37 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["execution"]["responseText"].strip(), "ready")
             self.assertNotIn("feedbackAdjustments", payload)
             self.assertEqual(readiness_by_model["cli-missing"]["status"], "missing-command")
+
+    def test_run_routing_policy_file_changes_executed_model(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            policy_path = Path(temp_dir) / "routing-policy.json"
+            write_routing_policy_registry(registry_path)
+            write_routing_policy(policy_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "policy-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--prompt",
+                        "hello",
+                        "--routing-policy",
+                        str(policy_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["selection"]["modelId"], "fast-local")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "fast:hello")
+            self.assertEqual(payload["routingPolicy"]["source"], "custom")
 
     def test_health_reports_registry_provider_readiness(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -953,6 +1062,34 @@ class CliTests(unittest.TestCase):
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
             self.assertEqual(payload["feedbackPolicy"]["source"], "default")
             self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank["reasons"]))
+
+    def test_decide_routing_policy_file_includes_policy_metadata(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            policy_path = Path(temp_dir) / "routing-policy.json"
+            write_routing_policy_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_routing_policy(policy_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--routing-policy",
+                        str(policy_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["decisions"][0]["selectedModel"]["modelId"], "fast-local")
+            self.assertEqual(payload["routingPolicy"]["source"], "custom")
 
     def test_character_select_outputs_role_to_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:

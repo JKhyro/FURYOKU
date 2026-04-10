@@ -4,7 +4,10 @@ from furyoku import (
     CharacterRoleSpec,
     ModelEndpoint,
     RouterError,
+    RoutingScorePolicy,
     TaskProfile,
+    build_routing_score_policy_metadata,
+    parse_routing_score_policy,
     rank_models,
     select_character_composition,
     select_character_panel,
@@ -107,6 +110,126 @@ class ModelRouterTests(unittest.TestCase):
 
         self.assertEqual(selected.model.model_id, "cli-codex-high")
         self.assertTrue(selected.eligible)
+
+    def test_default_routing_score_policy_preserves_selection(self):
+        task = TaskProfile(
+            task_id="hard-coding",
+            required_capabilities={
+                "reasoning": 0.9,
+                "coding": 0.9,
+                "instruction_following": 0.85,
+            },
+            require_tools=True,
+        )
+
+        default_selected = select_model(sample_models(), task)
+        policy_selected = select_model(sample_models(), task, policy=RoutingScorePolicy())
+
+        self.assertEqual(policy_selected.model.model_id, default_selected.model.model_id)
+        self.assertEqual(policy_selected.score, default_selected.score)
+        self.assertEqual(policy_selected.reasons, default_selected.reasons)
+
+    def test_custom_speed_heavy_policy_can_change_eligible_ranking(self):
+        models = [
+            ModelEndpoint(
+                model_id="fast-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=100,
+                capabilities={"conversation": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="slow-remote",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=5000,
+                capabilities={"conversation": 0.95},
+            ),
+        ]
+        task = TaskProfile(task_id="chat", required_capabilities={"conversation": 0.8})
+
+        default_selected = select_model(models, task)
+        speed_selected = select_model(
+            models,
+            task,
+            policy=RoutingScorePolicy(capability_weight=40.0, speed_bonus_weight=80.0),
+        )
+
+        self.assertEqual(default_selected.model.model_id, "slow-remote")
+        self.assertEqual(speed_selected.model.model_id, "fast-local")
+        self.assertTrue(any("speed bonus" in reason for reason in speed_selected.reasons))
+
+    def test_custom_cost_policy_can_demote_expensive_eligible_model(self):
+        models = [
+            ModelEndpoint(
+                model_id="cheap-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=1200,
+                input_cost_per_1k=0.0,
+                output_cost_per_1k=0.0,
+                capabilities={"summarization": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="expensive-api",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=1200,
+                input_cost_per_1k=0.08,
+                output_cost_per_1k=0.12,
+                capabilities={"summarization": 0.95},
+            ),
+        ]
+        task = TaskProfile(task_id="summary", required_capabilities={"summarization": 0.8})
+
+        default_selected = select_model(models, task)
+        cheap_selected = select_model(
+            models,
+            task,
+            policy=RoutingScorePolicy(cost_penalty_multiplier=100.0, max_cost_penalty=30.0),
+        )
+
+        self.assertEqual(default_selected.model.model_id, "expensive-api")
+        self.assertEqual(cheap_selected.model.model_id, "cheap-local")
+
+    def test_score_policy_does_not_bypass_hard_blockers(self):
+        task = TaskProfile(
+            task_id="tool-coding",
+            required_capabilities={"coding": 0.5},
+            require_tools=True,
+            privacy_requirement="prefer_local",
+        )
+        policy = RoutingScorePolicy(
+            local_preference_bonus=1000.0,
+            preferred_provider_bonus=1000.0,
+        )
+
+        local_rank = next(
+            score
+            for score in rank_models(sample_models(), task, policy=policy)
+            if score.model.model_id == "local-gemma3-heretic-q4"
+        )
+
+        self.assertFalse(local_rank.eligible)
+        self.assertTrue(any("tool support" in blocker for blocker in local_rank.blockers))
+
+    def test_routing_score_policy_metadata_tracks_custom_fields(self):
+        metadata = build_routing_score_policy_metadata(
+            RoutingScorePolicy(speed_bonus_weight=20.0, cost_penalty_multiplier=10.0)
+        )
+        payload = metadata.to_dict()
+
+        self.assertEqual(payload["source"], "custom")
+        self.assertEqual(payload["customizedFields"], ["costPenaltyMultiplier", "speedBonusWeight"])
+        self.assertEqual(payload["policy"]["speedBonusWeight"], 20.0)
+
+    def test_parse_routing_score_policy_rejects_invalid_values(self):
+        with self.assertRaises(RouterError):
+            parse_routing_score_policy({"schemaVersion": 1, "speedReferenceMs": 0})
 
     def test_rank_models_surfaces_blockers_for_ineligible_models(self):
         task = TaskProfile(

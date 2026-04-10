@@ -8,6 +8,7 @@ from furyoku import (
     ProviderExecutionRequest,
     ProviderHealthCheckResult,
     RouterError,
+    RoutingScorePolicy,
     SubprocessProviderAdapter,
     TaskProfile,
     execute_decision_situation,
@@ -150,6 +151,41 @@ class RuntimeTests(unittest.TestCase):
         self.assertIsNotNone(result.report)
         self.assertIn("cli-primary", result.report.situations["readiness-chat"].blockers)
         self.assertEqual(result.execution.response_text, "local-fallback:hello")
+
+    def test_route_and_execute_uses_routing_policy(self):
+        fast_local = ModelEndpoint(
+            model_id="fast-local",
+            provider="local",
+            privacy_level="local",
+            context_window_tokens=4096,
+            average_latency_ms=100,
+            invocation=("fast-local",),
+            capabilities={"conversation": 0.82},
+        )
+        slow_api = ModelEndpoint(
+            model_id="slow-api",
+            provider="api",
+            privacy_level="remote",
+            context_window_tokens=4096,
+            average_latency_ms=29000,
+            capabilities={"conversation": 0.95},
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = route_and_execute(
+            [fast_local, slow_api],
+            TaskProfile(task_id="policy-chat", required_capabilities={"conversation": 0.8}),
+            "hello",
+            routing_policy=RoutingScorePolicy(capability_weight=40.0, speed_bonus_weight=80.0),
+            adapters={"local": SubprocessProviderAdapter(runner)},
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.model_id, "fast-local")
+        self.assertIsNotNone(result.report.routing_policy_metadata)
+        self.assertEqual(result.execution.response_text, "fast-local:hello")
 
     def test_route_and_execute_preserves_execution_failure_observability(self):
         def runner(invocation, prompt, timeout):

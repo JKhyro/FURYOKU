@@ -10,6 +10,7 @@ from furyoku import (
     ModelEndpoint,
     ModelReadinessEvidence,
     ProviderHealthCheckResult,
+    RoutingScorePolicy,
     TaskProfile,
     evaluate_model_decisions,
     load_decision_suite,
@@ -376,6 +377,60 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank.reasons))
         self.assertTrue(any("below minimum score 105.00" in blocker for blocker in local_rank.blockers))
 
+    def test_routing_policy_changes_decision_ranking_and_serializes_metadata(self):
+        models = [
+            ModelEndpoint(
+                model_id="fast-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=100,
+                capabilities={"conversation": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="slow-remote",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=5000,
+                capabilities={"conversation": 0.95},
+            ),
+        ]
+        task = TaskProfile(task_id="policy-chat", required_capabilities={"conversation": 0.8})
+
+        default_report = evaluate_model_decisions(models, [task])
+        policy_report = evaluate_model_decisions(
+            models,
+            [task],
+            routing_policy=RoutingScorePolicy(capability_weight=40.0, speed_bonus_weight=80.0),
+        )
+        payload = policy_report.to_dict()
+
+        self.assertEqual(default_report.selected_for("policy-chat").model.model_id, "slow-remote")
+        self.assertEqual(policy_report.selected_for("policy-chat").model.model_id, "fast-local")
+        self.assertIsNone(default_report.routing_policy_metadata)
+        self.assertEqual(payload["routingPolicy"]["source"], "custom")
+        self.assertEqual(
+            payload["routingPolicy"]["customizedFields"],
+            ["capabilityWeight", "speedBonusWeight"],
+        )
+
+    def test_routing_policy_does_not_bypass_minimum_score_gate(self):
+        task = TaskProfile(task_id="policy-threshold", required_capabilities={"conversation": 0.8})
+
+        report = evaluate_model_decisions(
+            [sample_models()[0]],
+            [task],
+            minimum_scores={"policy-threshold": 250.0},
+            routing_policy=RoutingScorePolicy(speed_bonus_weight=100.0),
+        )
+
+        local_rank = report.situations["policy-threshold"].ranked[0]
+
+        self.assertFalse(report.situations["policy-threshold"].eligible)
+        self.assertFalse(local_rank.eligible)
+        self.assertTrue(any("below minimum score 250.00" in blocker for blocker in local_rank.blockers))
+
     def test_report_surfaces_per_model_and_provider_coverage(self):
         report = evaluate_model_decisions(sample_models(), sample_tasks())
 
@@ -457,6 +512,8 @@ class ModelDecisionTests(unittest.TestCase):
 
         self.assertIsNone(report.feedback_policy_metadata)
         self.assertNotIn("feedbackPolicy", payload)
+        self.assertIsNone(report.routing_policy_metadata)
+        self.assertNotIn("routingPolicy", payload)
         self.assertEqual(payload["situations"]["private-chat"]["selectedModelId"], "local-gemma3-heretic")
         self.assertEqual(payload["aggregate"]["modelCount"], 3)
         self.assertEqual(payload["aggregate"]["situationCount"], 3)

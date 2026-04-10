@@ -5,7 +5,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from .model_router import ModelEndpoint, ModelScore, TaskProfile, rank_models
+from .model_router import (
+    ModelEndpoint,
+    ModelScore,
+    RoutingScorePolicyInput,
+    RoutingScorePolicyMetadata,
+    TaskProfile,
+    build_routing_score_policy_metadata,
+    rank_models,
+)
 from .outcome_feedback import (
     FeedbackAdjustmentInput,
     FeedbackAdjustmentPolicyInput,
@@ -294,6 +302,7 @@ class ModelDecisionReport:
     aggregate: ModelDecisionAggregate
     feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary] = field(default_factory=dict)
     feedback_policy_metadata: FeedbackPolicyMetadata | None = None
+    routing_policy_metadata: RoutingScorePolicyMetadata | None = None
 
     @property
     def decisions(self) -> tuple[SituationDecision, ...]:
@@ -360,6 +369,11 @@ class ModelDecisionReport:
             **(
                 {"feedbackPolicy": self.feedback_policy_metadata.to_dict()}
                 if self.feedback_policy_metadata is not None
+                else {}
+            ),
+            **(
+                {"routingPolicy": self.routing_policy_metadata.to_dict()}
+                if self.routing_policy_metadata is not None
                 else {}
             ),
         }
@@ -506,6 +520,7 @@ def evaluate_model_decisions(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
     situation_weights: Mapping[str, float] | None = None,
     minimum_scores: Mapping[str, float] | None = None,
 ) -> ModelDecisionReport:
@@ -532,6 +547,11 @@ def evaluate_model_decisions(
         if feedback is not None
         else None
     )
+    routing_policy_metadata = (
+        build_routing_score_policy_metadata(routing_policy)
+        if routing_policy is not None
+        else None
+    )
 
     situation_decisions: dict[str, SituationDecision] = {}
     for task in task_list:
@@ -542,6 +562,7 @@ def evaluate_model_decisions(
                 task,
                 readiness_by_model,
                 feedback_by_model,
+                routing_policy=routing_policy,
                 minimum_score=minimum_score,
             )
         )
@@ -572,6 +593,7 @@ def evaluate_model_decisions(
         aggregate=_build_aggregate(model_list, situation_decisions),
         feedback_adjustments=feedback_by_model,
         feedback_policy_metadata=feedback_policy_metadata,
+        routing_policy_metadata=routing_policy_metadata,
     )
 
 
@@ -806,6 +828,7 @@ def _rank_models_with_readiness(
     readiness_by_model: Mapping[str, ModelReadinessEvidence],
     feedback_by_model: Mapping[str, ModelOutcomeFeedbackSummary],
     *,
+    routing_policy: RoutingScorePolicyInput | None,
     minimum_score: float | None,
 ) -> list[ModelScore]:
     ranked = [
@@ -819,7 +842,7 @@ def _rank_models_with_readiness(
             ),
             minimum_score,
         )
-        for score in rank_models(models, task)
+        for score in rank_models(models, task, policy=routing_policy)
     ]
     return sorted(ranked, key=lambda item: (item.eligible, item.score, item.model.model_id), reverse=True)
 
