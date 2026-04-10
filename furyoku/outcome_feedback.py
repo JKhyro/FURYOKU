@@ -37,6 +37,12 @@ class DecisionOutcomeRecord:
     selected_model_id: str = ""
     selected_provider: str = ""
     execution_status: str = ""
+    latency_ms: float | None = None
+    input_cost_per_1k: float | None = None
+    output_cost_per_1k: float | None = None
+    estimated_input_cost: float | None = None
+    estimated_output_cost: float | None = None
+    estimated_total_cost: float | None = None
     score: float | None = None
     reason: str = ""
     tags: tuple[str, ...] = ()
@@ -55,6 +61,12 @@ class DecisionOutcomeRecord:
             "selectedModelId": self.selected_model_id,
             "selectedProvider": self.selected_provider,
             "executionStatus": self.execution_status,
+            "latencyMs": self.latency_ms,
+            "inputCostPer1k": self.input_cost_per_1k,
+            "outputCostPer1k": self.output_cost_per_1k,
+            "estimatedInputCost": self.estimated_input_cost,
+            "estimatedOutputCost": self.estimated_output_cost,
+            "estimatedTotalCost": self.estimated_total_cost,
             "verdict": self.verdict,
             "score": self.score,
             "reason": self.reason,
@@ -83,6 +95,36 @@ class DecisionOutcomeRecord:
             selected_model_id=str(payload.get("selectedModelId", payload.get("selected_model_id", "")) or ""),
             selected_provider=str(payload.get("selectedProvider", payload.get("selected_provider", "")) or ""),
             execution_status=str(payload.get("executionStatus", payload.get("execution_status", "")) or ""),
+            latency_ms=_optional_non_negative_float(
+                payload.get("latencyMs", payload.get("latency_ms")),
+                field_name="latencyMs",
+                source=source,
+            ),
+            input_cost_per_1k=_optional_non_negative_float(
+                payload.get("inputCostPer1k", payload.get("input_cost_per_1k")),
+                field_name="inputCostPer1k",
+                source=source,
+            ),
+            output_cost_per_1k=_optional_non_negative_float(
+                payload.get("outputCostPer1k", payload.get("output_cost_per_1k")),
+                field_name="outputCostPer1k",
+                source=source,
+            ),
+            estimated_input_cost=_optional_non_negative_float(
+                payload.get("estimatedInputCost", payload.get("estimated_input_cost")),
+                field_name="estimatedInputCost",
+                source=source,
+            ),
+            estimated_output_cost=_optional_non_negative_float(
+                payload.get("estimatedOutputCost", payload.get("estimated_output_cost")),
+                field_name="estimatedOutputCost",
+                source=source,
+            ),
+            estimated_total_cost=_optional_non_negative_float(
+                payload.get("estimatedTotalCost", payload.get("estimated_total_cost")),
+                field_name="estimatedTotalCost",
+                source=source,
+            ),
             verdict=verdict,
             score=score,
             reason=str(payload.get("reason", "") or ""),
@@ -260,6 +302,16 @@ class OutcomeFeedbackGroupSummary:
     adjustment: float | None = None
     weighted_record_count: float | None = None
     provider: str = ""
+    latency_record_count: int | None = None
+    average_latency_ms: float | None = None
+    minimum_latency_ms: float | None = None
+    maximum_latency_ms: float | None = None
+    cost_record_count: int | None = None
+    average_input_cost_per_1k: float | None = None
+    average_output_cost_per_1k: float | None = None
+    average_estimated_input_cost: float | None = None
+    average_estimated_output_cost: float | None = None
+    average_estimated_total_cost: float | None = None
 
     def to_dict(self) -> dict:
         payload = {
@@ -285,6 +337,26 @@ class OutcomeFeedbackGroupSummary:
             payload["weightedRecordCount"] = self.weighted_record_count
         if self.provider:
             payload["provider"] = self.provider
+        if self.latency_record_count is not None:
+            payload["latencyRecordCount"] = self.latency_record_count
+        if self.average_latency_ms is not None:
+            payload["averageLatencyMs"] = self.average_latency_ms
+        if self.minimum_latency_ms is not None:
+            payload["minimumLatencyMs"] = self.minimum_latency_ms
+        if self.maximum_latency_ms is not None:
+            payload["maximumLatencyMs"] = self.maximum_latency_ms
+        if self.cost_record_count is not None:
+            payload["costRecordCount"] = self.cost_record_count
+        if self.average_input_cost_per_1k is not None:
+            payload["averageInputCostPer1k"] = self.average_input_cost_per_1k
+        if self.average_output_cost_per_1k is not None:
+            payload["averageOutputCostPer1k"] = self.average_output_cost_per_1k
+        if self.average_estimated_input_cost is not None:
+            payload["averageEstimatedInputCost"] = self.average_estimated_input_cost
+        if self.average_estimated_output_cost is not None:
+            payload["averageEstimatedOutputCost"] = self.average_estimated_output_cost
+        if self.average_estimated_total_cost is not None:
+            payload["averageEstimatedTotalCost"] = self.average_estimated_total_cost
         return payload
 
 
@@ -373,10 +445,17 @@ class _OutcomeSummaryStats:
     key: str
     scores: list[float] = field(default_factory=list)
     generated_at_values: list[str] = field(default_factory=list)
+    latencies_ms: list[float] = field(default_factory=list)
+    input_costs_per_1k: list[float] = field(default_factory=list)
+    output_costs_per_1k: list[float] = field(default_factory=list)
+    estimated_input_costs: list[float] = field(default_factory=list)
+    estimated_output_costs: list[float] = field(default_factory=list)
+    estimated_total_costs: list[float] = field(default_factory=list)
     success_count: int = 0
     concern_count: int = 0
     failure_count: int = 0
     manual_override_count: int = 0
+    cost_record_count: int = 0
 
     @property
     def record_count(self) -> int:
@@ -387,6 +466,26 @@ class _OutcomeSummaryStats:
             self.scores.append(record.score)
         if record.generated_at:
             self.generated_at_values.append(record.generated_at)
+        if record.latency_ms is not None:
+            self.latencies_ms.append(record.latency_ms)
+        has_cost_telemetry = False
+        if record.input_cost_per_1k is not None:
+            self.input_costs_per_1k.append(record.input_cost_per_1k)
+            has_cost_telemetry = True
+        if record.output_cost_per_1k is not None:
+            self.output_costs_per_1k.append(record.output_cost_per_1k)
+            has_cost_telemetry = True
+        if record.estimated_input_cost is not None:
+            self.estimated_input_costs.append(record.estimated_input_cost)
+            has_cost_telemetry = True
+        if record.estimated_output_cost is not None:
+            self.estimated_output_costs.append(record.estimated_output_cost)
+            has_cost_telemetry = True
+        if record.estimated_total_cost is not None:
+            self.estimated_total_costs.append(record.estimated_total_cost)
+            has_cost_telemetry = True
+        if has_cost_telemetry:
+            self.cost_record_count += 1
         if record.verdict == "success":
             self.success_count += 1
         elif record.verdict == "failure":
@@ -395,6 +494,16 @@ class _OutcomeSummaryStats:
             self.concern_count += 1
         elif record.verdict == "manual_override":
             self.manual_override_count += 1
+
+
+@dataclass(frozen=True)
+class _OutcomeRecordTelemetry:
+    latency_ms: float | None = None
+    input_cost_per_1k: float | None = None
+    output_cost_per_1k: float | None = None
+    estimated_input_cost: float | None = None
+    estimated_output_cost: float | None = None
+    estimated_total_cost: float | None = None
 
 
 @dataclass(frozen=True)
@@ -526,6 +635,12 @@ def create_comparative_execution_outcome_records(
         if not execution_status:
             raise OutcomeFeedbackError(f"{path}: {capture.source_label}.execution.status is required")
         verdict = "success" if execution_status == "ok" else "failure"
+        telemetry = _extract_outcome_record_telemetry(
+            report=attempt,
+            execution=execution,
+            selection=selected,
+            source=f"{path}: {capture.source_label}",
+        )
         capture_metadata = {
             "captureSource": "furyoku.comparative-execution",
             "comparisonAttemptNumber": capture.comparison_attempt_number,
@@ -551,6 +666,12 @@ def create_comparative_execution_outcome_records(
                 selected_model_id=str(selected.get("modelId", "") or ""),
                 selected_provider=str(selected.get("provider", "") or ""),
                 execution_status=execution_status,
+                latency_ms=telemetry.latency_ms,
+                input_cost_per_1k=telemetry.input_cost_per_1k,
+                output_cost_per_1k=telemetry.output_cost_per_1k,
+                estimated_input_cost=telemetry.estimated_input_cost,
+                estimated_output_cost=telemetry.estimated_output_cost,
+                estimated_total_cost=telemetry.estimated_total_cost,
                 verdict=verdict,
                 score=normalized_success_score if verdict == "success" else normalized_failure_score,
                 reason=reason,
@@ -844,6 +965,12 @@ def _decision_outcome_record_from_report(
 ) -> DecisionOutcomeRecord:
     selection = _extract_selected_model(report)
     execution = report.get("execution")
+    telemetry = _extract_outcome_record_telemetry(
+        report=report,
+        execution=execution,
+        selection=selection,
+        source=str(path),
+    )
     return DecisionOutcomeRecord(
         record_id=str(uuid4()),
         report_path=str(path),
@@ -854,6 +981,12 @@ def _decision_outcome_record_from_report(
         selected_model_id=str(selection.get("modelId", "") or ""),
         selected_provider=str(selection.get("provider", "") or ""),
         execution_status=_execution_status(execution),
+        latency_ms=telemetry.latency_ms,
+        input_cost_per_1k=telemetry.input_cost_per_1k,
+        output_cost_per_1k=telemetry.output_cost_per_1k,
+        estimated_input_cost=telemetry.estimated_input_cost,
+        estimated_output_cost=telemetry.estimated_output_cost,
+        estimated_total_cost=telemetry.estimated_total_cost,
         verdict=verdict,
         score=score,
         reason=reason,
@@ -1057,6 +1190,16 @@ def _summarize_outcome_stats(
         adjustment=model_feedback.adjustment if model_feedback is not None else None,
         weighted_record_count=model_feedback.weighted_record_count if model_feedback is not None else None,
         provider=provider,
+        latency_record_count=len(stats.latencies_ms) or None,
+        average_latency_ms=_average_metric(stats.latencies_ms, digits=4),
+        minimum_latency_ms=_minimum_metric(stats.latencies_ms, digits=4),
+        maximum_latency_ms=_maximum_metric(stats.latencies_ms, digits=4),
+        cost_record_count=stats.cost_record_count or None,
+        average_input_cost_per_1k=_average_metric(stats.input_costs_per_1k, digits=6),
+        average_output_cost_per_1k=_average_metric(stats.output_costs_per_1k, digits=6),
+        average_estimated_input_cost=_average_metric(stats.estimated_input_costs, digits=6),
+        average_estimated_output_cost=_average_metric(stats.estimated_output_costs, digits=6),
+        average_estimated_total_cost=_average_metric(stats.estimated_total_costs, digits=6),
     )
 
 
@@ -1084,6 +1227,24 @@ def _outcome_rank_score(
 def _outcome_group_sort_key(summary: OutcomeFeedbackGroupSummary) -> tuple[float, float, int, str]:
     average_score = summary.average_score if summary.average_score is not None else -1.0
     return (-summary.rank_score, -summary.success_rate, -average_score, -summary.record_count, summary.key)
+
+
+def _average_metric(values: list[float], *, digits: int) -> float | None:
+    if not values:
+        return None
+    return round(sum(values) / len(values), digits)
+
+
+def _minimum_metric(values: list[float], *, digits: int) -> float | None:
+    if not values:
+        return None
+    return round(min(values), digits)
+
+
+def _maximum_metric(values: list[float], *, digits: int) -> float | None:
+    if not values:
+        return None
+    return round(max(values), digits)
 
 
 def _summary_generated_at(value: datetime | str | None) -> str:
@@ -1375,6 +1536,87 @@ def _report_generated_at(report: Mapping[str, Any]) -> str:
     return ""
 
 
+def _extract_outcome_record_telemetry(
+    *,
+    report: Mapping[str, Any],
+    execution: Any,
+    selection: Mapping[str, Any],
+    source: str,
+) -> _OutcomeRecordTelemetry:
+    telemetry_sources = _telemetry_sources(report=report, execution=execution, selection=selection)
+    return _OutcomeRecordTelemetry(
+        latency_ms=_first_optional_non_negative_float(
+            telemetry_sources,
+            ("elapsedMs", "elapsed_ms", "latencyMs", "latency_ms"),
+            source=source,
+        ),
+        input_cost_per_1k=_first_optional_non_negative_float(
+            telemetry_sources,
+            ("inputCostPer1k", "input_cost_per_1k"),
+            source=source,
+        ),
+        output_cost_per_1k=_first_optional_non_negative_float(
+            telemetry_sources,
+            ("outputCostPer1k", "output_cost_per_1k"),
+            source=source,
+        ),
+        estimated_input_cost=_first_optional_non_negative_float(
+            telemetry_sources,
+            ("estimatedInputCost", "estimated_input_cost", "inputCost", "input_cost"),
+            source=source,
+        ),
+        estimated_output_cost=_first_optional_non_negative_float(
+            telemetry_sources,
+            ("estimatedOutputCost", "estimated_output_cost", "outputCost", "output_cost"),
+            source=source,
+        ),
+        estimated_total_cost=_first_optional_non_negative_float(
+            telemetry_sources,
+            ("estimatedTotalCost", "estimated_total_cost", "totalCost", "total_cost"),
+            source=source,
+        ),
+    )
+
+
+def _telemetry_sources(
+    *,
+    report: Mapping[str, Any],
+    execution: Any,
+    selection: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    sources: list[Mapping[str, Any]] = []
+    _append_telemetry_source(sources, execution)
+    _append_telemetry_source(sources, selection)
+    _append_telemetry_source(sources, report.get("metadata"))
+    _append_telemetry_source(sources, report.get("telemetry"))
+    _append_telemetry_source(sources, report)
+    return tuple(sources)
+
+
+def _append_telemetry_source(sources: list[Mapping[str, Any]], value: Any) -> None:
+    if not isinstance(value, Mapping):
+        return
+    sources.append(value)
+    for nested_key in ("telemetry", "metadata", "cost", "usage"):
+        nested = value.get(nested_key)
+        if isinstance(nested, Mapping):
+            _append_telemetry_source(sources, nested)
+
+
+def _first_optional_non_negative_float(
+    sources: Iterable[Mapping[str, Any]],
+    keys: tuple[str, ...],
+    *,
+    source: str,
+) -> float | None:
+    for mapping in sources:
+        for key in keys:
+            if key not in mapping:
+                continue
+            return _optional_non_negative_float(mapping.get(key), field_name=key, source=source)
+    return None
+
+
 def _required_string(payload: Mapping[str, Any], *keys: str, source: str) -> str:
     for key in keys:
         value = payload.get(key)
@@ -1400,6 +1642,15 @@ def _optional_score(value: Any, *, source: str) -> float | None:
     if score < 0.0 or score > 1.0:
         raise OutcomeFeedbackError(f"{source}: score must be between 0.0 and 1.0")
     return round(score, 4)
+
+
+def _optional_non_negative_float(value: Any, *, field_name: str, source: str) -> float | None:
+    if value in (None, ""):
+        return None
+    parsed = _parse_float(value, field_name=field_name, source=source)
+    if parsed < 0.0:
+        raise OutcomeFeedbackError(f"{source}: {field_name} must be 0 or greater")
+    return round(parsed, 6)
 
 
 def _metadata_mapping(value: Any, *, source: str) -> Mapping[str, Any]:

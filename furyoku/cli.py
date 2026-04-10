@@ -873,7 +873,7 @@ def _readiness_from_args(args: argparse.Namespace, models):
 
 
 def _score_to_dict(selection: ModelScore) -> dict:
-    return {
+    payload = {
         "modelId": selection.model.model_id,
         "provider": selection.model.provider,
         "score": selection.score,
@@ -881,6 +881,11 @@ def _score_to_dict(selection: ModelScore) -> dict:
         "reasons": list(selection.reasons),
         "blockers": list(selection.blockers),
     }
+    if selection.model.input_cost_per_1k > 0.0:
+        payload["inputCostPer1k"] = selection.model.input_cost_per_1k
+    if selection.model.output_cost_per_1k > 0.0:
+        payload["outputCostPer1k"] = selection.model.output_cost_per_1k
+    return payload
 
 
 def _single_selection_to_dict(

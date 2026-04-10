@@ -20,6 +20,8 @@ def write_registry(path: Path) -> None:
                 "privacyLevel": "local",
                 "contextWindowTokens": 4096,
                 "averageLatencyMs": 10,
+                "inputCostPer1k": 0.0015,
+                "outputCostPer1k": 0.0045,
                 "invocation": [
                     sys.executable,
                     "-c",
@@ -37,6 +39,8 @@ def write_registry(path: Path) -> None:
                 "privacyLevel": "remote",
                 "contextWindowTokens": 128000,
                 "averageLatencyMs": 100,
+                "inputCostPer1k": 0.004,
+                "outputCostPer1k": 0.012,
                 "supportsTools": True,
                 "capabilities": {
                     "conversation": 0.8,
@@ -60,6 +64,8 @@ def write_executable_character_registry(path: Path) -> None:
                 "privacyLevel": "local",
                 "contextWindowTokens": 4096,
                 "averageLatencyMs": 10,
+                "inputCostPer1k": 0.0015,
+                "outputCostPer1k": 0.0045,
                 "invocation": [
                     sys.executable,
                     "-c",
@@ -77,6 +83,8 @@ def write_executable_character_registry(path: Path) -> None:
                 "privacyLevel": "remote",
                 "contextWindowTokens": 128000,
                 "averageLatencyMs": 20,
+                "inputCostPer1k": 0.0025,
+                "outputCostPer1k": 0.0075,
                 "invocation": [
                     sys.executable,
                     "-c",
@@ -122,6 +130,8 @@ def write_fallback_registry(path: Path) -> None:
                 "privacyLevel": "local",
                 "contextWindowTokens": 4096,
                 "averageLatencyMs": 10,
+                "inputCostPer1k": 0.002,
+                "outputCostPer1k": 0.006,
                 "invocation": [
                     sys.executable,
                     "-c",
@@ -139,6 +149,8 @@ def write_fallback_registry(path: Path) -> None:
                 "privacyLevel": "remote",
                 "contextWindowTokens": 128000,
                 "averageLatencyMs": 20,
+                "inputCostPer1k": 0.003,
+                "outputCostPer1k": 0.009,
                 "invocation": [
                     sys.executable,
                     "-c",
@@ -526,6 +538,9 @@ class CliTests(unittest.TestCase):
             self.assertEqual(logged[0]["tags"], ["auto-capture"])
             self.assertEqual(logged[0]["selectedModelId"], "local-echo")
             self.assertEqual(logged[0]["executionStatus"], "ok")
+            self.assertEqual(logged[0]["latencyMs"], payload["execution"]["elapsedMs"])
+            self.assertEqual(logged[0]["inputCostPer1k"], 0.0015)
+            self.assertEqual(logged[0]["outputCostPer1k"], 0.0045)
             self.assertEqual(logged[0]["reportSha256"], hashlib.sha256(report_bytes).hexdigest())
 
     def test_run_capture_outcome_requires_output_report(self):
@@ -704,6 +719,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["executions"][0]["execution"]["status"], "error")
             self.assertEqual(payload["executions"][1]["selectedModel"]["modelId"], "cli-fallback")
             self.assertEqual(payload["executions"][1]["execution"]["responseText"].strip(), "fallback:hello")
+            self.assertEqual(payload["executions"][0]["selectedModel"]["inputCostPer1k"], 0.002)
+            self.assertEqual(payload["executions"][1]["selectedModel"]["outputCostPer1k"], 0.009)
             self.assertEqual(persisted["comparison"]["executedCount"], 2)
             self.assertTrue(payload["comparisonOutcomeCapture"]["captured"])
             self.assertEqual(payload["comparisonOutcomeCapture"]["recordCount"], 2)
@@ -711,12 +728,16 @@ class CliTests(unittest.TestCase):
             self.assertEqual(logged[0]["selectedModelId"], "local-failing")
             self.assertEqual(logged[0]["verdict"], "failure")
             self.assertEqual(logged[0]["score"], 0.0)
+            self.assertEqual(logged[0]["latencyMs"], persisted["executions"][0]["execution"]["elapsedMs"])
+            self.assertEqual(logged[0]["inputCostPer1k"], 0.002)
             self.assertEqual(logged[0]["tags"], ["compare-run"])
             self.assertEqual(logged[0]["metadata"]["captureSource"], "furyoku.cli.compare-run")
             self.assertEqual(logged[0]["reportSha256"], hashlib.sha256(report_bytes).hexdigest())
             self.assertEqual(logged[1]["selectedModelId"], "cli-fallback")
             self.assertEqual(logged[1]["verdict"], "success")
             self.assertEqual(logged[1]["score"], 1.0)
+            self.assertEqual(logged[1]["latencyMs"], persisted["executions"][1]["execution"]["elapsedMs"])
+            self.assertEqual(logged[1]["outputCostPer1k"], 0.009)
 
     def test_compare_run_decision_suite_outputs_candidate_executions(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -843,6 +864,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["situations"][0]["situationId"], "fallback-chat")
             self.assertEqual(payload["situations"][0]["selectedModel"]["modelId"], "local-echo")
             self.assertEqual(payload["situations"][1]["selectedModel"]["modelId"], "cli-coder")
+            self.assertEqual(payload["situations"][0]["selectedModel"]["inputCostPer1k"], 0.0015)
+            self.assertEqual(payload["situations"][1]["selectedModel"]["outputCostPer1k"], 0.0075)
             self.assertEqual(persisted["comparison"]["successfulSituationCount"], 2)
             self.assertTrue(payload["comparisonOutcomeCapture"]["captured"])
             self.assertEqual(payload["comparisonOutcomeCapture"]["recordCount"], 2)
@@ -850,6 +873,15 @@ class CliTests(unittest.TestCase):
             self.assertEqual({record["situationId"] for record in logged}, {"fallback-chat", "tool-heavy-coding"})
             self.assertTrue(all(record["metadata"]["comparisonReportType"] == "compare-batch" for record in logged))
             self.assertTrue(all(record["metadata"]["captureSource"] == "furyoku.cli.compare-batch" for record in logged))
+            self.assertEqual(logged[0]["inputCostPer1k"], 0.0015)
+            self.assertEqual(logged[1]["outputCostPer1k"], 0.0075)
+            self.assertEqual(
+                {record["latencyMs"] for record in logged},
+                {
+                    persisted["situations"][0]["executions"][0]["execution"]["elapsedMs"],
+                    persisted["situations"][1]["executions"][0]["execution"]["elapsedMs"],
+                },
+            )
             self.assertEqual(logged[0]["reportSha256"], hashlib.sha256(report_bytes).hexdigest())
 
     def test_compare_batch_capture_comparison_outcomes_requires_output_report(self):
@@ -1071,6 +1103,12 @@ class CliTests(unittest.TestCase):
                         "selectedModelId": "local-echo",
                         "selectedProvider": "local",
                         "executionStatus": "ok",
+                        "latencyMs": 600.0,
+                        "inputCostPer1k": 0.0015,
+                        "outputCostPer1k": 0.0045,
+                        "estimatedInputCost": 0.0012,
+                        "estimatedOutputCost": 0.0024,
+                        "estimatedTotalCost": 0.0036,
                         "verdict": "success",
                         "score": 0.95,
                     }
@@ -1090,6 +1128,12 @@ class CliTests(unittest.TestCase):
                         "selectedModelId": "remote-coder",
                         "selectedProvider": "api",
                         "executionStatus": "error",
+                        "latencyMs": 1200.0,
+                        "inputCostPer1k": 0.004,
+                        "outputCostPer1k": 0.012,
+                        "estimatedInputCost": 0.0048,
+                        "estimatedOutputCost": 0.0096,
+                        "estimatedTotalCost": 0.0144,
                         "verdict": "failure",
                         "score": 0.1,
                     }
@@ -1118,14 +1162,22 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["recordCount"], 2)
             self.assertEqual(payload["total"]["successCount"], 1)
             self.assertEqual(payload["total"]["failureCount"], 1)
+            self.assertEqual(payload["total"]["latencyRecordCount"], 2)
+            self.assertEqual(payload["total"]["averageLatencyMs"], 900.0)
+            self.assertEqual(payload["total"]["costRecordCount"], 2)
+            self.assertEqual(payload["total"]["averageInputCostPer1k"], 0.00275)
+            self.assertEqual(payload["total"]["averageEstimatedTotalCost"], 0.009)
             self.assertEqual(payload["models"][0]["key"], "local-echo")
             self.assertIn("rankScore", payload["models"][0])
             self.assertEqual(payload["models"][0]["provider"], "local")
+            self.assertEqual(payload["models"][0]["averageLatencyMs"], 600.0)
             self.assertEqual({provider["key"] for provider in payload["providers"]}, {"local", "api"})
             self.assertEqual(payload["modelScorecards"][0]["modelId"], "local-echo")
             self.assertEqual(payload["modelScorecards"][0]["overall"]["provider"], "local")
+            self.assertEqual(payload["modelScorecards"][0]["overall"]["averageEstimatedTotalCost"], 0.0036)
             self.assertEqual(payload["situationLeaderboards"][0]["situationId"], "coding")
             self.assertEqual(payload["situationLeaderboards"][1]["situationId"], "private-chat")
+            self.assertEqual(payload["situationLeaderboards"][0]["models"][0]["averageLatencyMs"], 1200.0)
             self.assertIn("reportMetadata", persisted)
             self.assertEqual(persisted["recordCount"], 2)
 
