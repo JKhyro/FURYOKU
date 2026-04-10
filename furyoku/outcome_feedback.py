@@ -259,6 +259,7 @@ class OutcomeFeedbackGroupSummary:
     latest_generated_at: str = ""
     adjustment: float | None = None
     weighted_record_count: float | None = None
+    provider: str = ""
 
     def to_dict(self) -> dict:
         payload = {
@@ -282,7 +283,44 @@ class OutcomeFeedbackGroupSummary:
             payload["adjustment"] = self.adjustment
         if self.weighted_record_count is not None:
             payload["weightedRecordCount"] = self.weighted_record_count
+        if self.provider:
+            payload["provider"] = self.provider
         return payload
+
+
+@dataclass(frozen=True)
+class OutcomeFeedbackModelScorecard:
+    """Aggregate outcome scorecard for one model across all and per-situation evidence."""
+
+    model_id: str
+    provider: str
+    overall: OutcomeFeedbackGroupSummary
+    situations: tuple[OutcomeFeedbackGroupSummary, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "modelId": self.model_id,
+            "provider": self.provider,
+            "overall": self.overall.to_dict(),
+            "situations": [summary.to_dict() for summary in self.situations],
+        }
+
+
+@dataclass(frozen=True)
+class OutcomeFeedbackSituationLeaderboard:
+    """Ranked model leaderboard for one situation using accumulated feedback evidence."""
+
+    situation_id: str
+    record_count: int
+    models: tuple[OutcomeFeedbackGroupSummary, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "situationId": self.situation_id,
+            "recordCount": self.record_count,
+            "modelCount": len(self.models),
+            "models": [summary.to_dict() for summary in self.models],
+        }
 
 
 @dataclass(frozen=True)
@@ -295,6 +333,8 @@ class OutcomeFeedbackSummaryReport:
     providers: tuple[OutcomeFeedbackGroupSummary, ...]
     situations: tuple[OutcomeFeedbackGroupSummary, ...]
     feedback_policy_metadata: FeedbackPolicyMetadata
+    model_scorecards: tuple[OutcomeFeedbackModelScorecard, ...] = ()
+    situation_leaderboards: tuple[OutcomeFeedbackSituationLeaderboard, ...] = ()
 
     def to_dict(self) -> dict:
         return {
@@ -305,6 +345,8 @@ class OutcomeFeedbackSummaryReport:
             "models": [summary.to_dict() for summary in self.models],
             "providers": [summary.to_dict() for summary in self.providers],
             "situations": [summary.to_dict() for summary in self.situations],
+            "modelScorecards": [scorecard.to_dict() for scorecard in self.model_scorecards],
+            "situationLeaderboards": [leaderboard.to_dict() for leaderboard in self.situation_leaderboards],
             "feedbackPolicy": self.feedback_policy_metadata.to_dict(),
         }
 
@@ -618,40 +660,99 @@ def summarize_outcome_feedback(
     model_stats: dict[str, _OutcomeSummaryStats] = {}
     provider_stats: dict[str, _OutcomeSummaryStats] = {}
     situation_stats: dict[str, _OutcomeSummaryStats] = {}
+    model_situation_stats: dict[str, dict[str, _OutcomeSummaryStats]] = {}
+    situation_model_stats: dict[str, dict[str, _OutcomeSummaryStats]] = {}
+    model_providers: dict[str, str] = {}
 
     for record in normalized_records:
+        model_id = record.selected_model_id or "<unknown>"
+        provider = record.selected_provider or "<unknown>"
+        situation_id = record.situation_id or "<unknown>"
         total_stats.add(record)
-        _summary_stats_for(model_stats, "model", record.selected_model_id or "<unknown>").add(record)
-        _summary_stats_for(provider_stats, "provider", record.selected_provider or "<unknown>").add(record)
-        _summary_stats_for(situation_stats, "situation", record.situation_id or "<unknown>").add(record)
+        _summary_stats_for(model_stats, "model", model_id).add(record)
+        _summary_stats_for(provider_stats, "provider", provider).add(record)
+        _summary_stats_for(situation_stats, "situation", situation_id).add(record)
+        _nested_summary_stats_for(model_situation_stats, model_id, "situation", situation_id).add(record)
+        _nested_summary_stats_for(situation_model_stats, situation_id, "model", model_id).add(record)
+        if model_id not in model_providers and provider:
+            model_providers[model_id] = provider
+
+    model_summaries_by_id = {
+        model_id: _summarize_outcome_stats(
+            stats,
+            model_feedback=feedback_adjustments.get(model_id),
+            provider=model_providers.get(model_id, ""),
+        )
+        for model_id, stats in model_stats.items()
+    }
+    models = tuple(sorted(model_summaries_by_id.values(), key=_outcome_group_sort_key))
+    providers = tuple(
+        sorted(
+            (_summarize_outcome_stats(stats) for stats in provider_stats.values()),
+            key=_outcome_group_sort_key,
+        )
+    )
+    situations = tuple(
+        sorted(
+            (_summarize_outcome_stats(stats) for stats in situation_stats.values()),
+            key=lambda summary: summary.key,
+        )
+    )
+    model_scorecards = tuple(
+        sorted(
+            (
+                OutcomeFeedbackModelScorecard(
+                    model_id=model_id,
+                    provider=model_providers.get(model_id, ""),
+                    overall=model_summaries_by_id[model_id],
+                    situations=tuple(
+                        sorted(
+                            (
+                                _summarize_outcome_stats(situation_model_stats)
+                                for situation_model_stats in model_situation_stats[model_id].values()
+                            ),
+                            key=lambda summary: summary.key,
+                        )
+                    ),
+                )
+                for model_id in model_situation_stats
+            ),
+            key=lambda scorecard: _outcome_group_sort_key(scorecard.overall),
+        )
+    )
+    situation_leaderboards = tuple(
+        sorted(
+            (
+                OutcomeFeedbackSituationLeaderboard(
+                    situation_id=situation_id,
+                    record_count=situation_stats[situation_id].record_count if situation_id in situation_stats else 0,
+                    models=tuple(
+                        sorted(
+                            (
+                                _summarize_outcome_stats(
+                                    model_summary_stats,
+                                    provider=model_providers.get(model_id, ""),
+                                )
+                                for model_id, model_summary_stats in situation_model_stats[situation_id].items()
+                            ),
+                            key=_outcome_group_sort_key,
+                        )
+                    ),
+                )
+                for situation_id in situation_model_stats
+            ),
+            key=lambda leaderboard: leaderboard.situation_id,
+        )
+    )
 
     return OutcomeFeedbackSummaryReport(
         generated_at=_summary_generated_at(generated_at),
         total=_summarize_outcome_stats(total_stats),
-        models=tuple(
-            sorted(
-                (
-                    _summarize_outcome_stats(
-                        stats,
-                        model_feedback=feedback_adjustments.get(model_id),
-                    )
-                    for model_id, stats in model_stats.items()
-                ),
-                key=_outcome_group_sort_key,
-            )
-        ),
-        providers=tuple(
-            sorted(
-                (_summarize_outcome_stats(stats) for stats in provider_stats.values()),
-                key=_outcome_group_sort_key,
-            )
-        ),
-        situations=tuple(
-            sorted(
-                (_summarize_outcome_stats(stats) for stats in situation_stats.values()),
-                key=lambda summary: summary.key,
-            )
-        ),
+        models=models,
+        providers=providers,
+        situations=situations,
+        model_scorecards=model_scorecards,
+        situation_leaderboards=situation_leaderboards,
         feedback_policy_metadata=build_feedback_policy_metadata(
             policy,
             max_adjustment=max_adjustment,
@@ -916,10 +1017,24 @@ def _summary_stats_for(
     return summaries.setdefault(key, _OutcomeSummaryStats(group_type=group_type, key=key))
 
 
+def _nested_summary_stats_for(
+    nested_summaries: dict[str, dict[str, _OutcomeSummaryStats]],
+    outer_key: str,
+    group_type: str,
+    key: str,
+) -> _OutcomeSummaryStats:
+    return _summary_stats_for(
+        nested_summaries.setdefault(outer_key, {}),
+        group_type,
+        key,
+    )
+
+
 def _summarize_outcome_stats(
     stats: _OutcomeSummaryStats,
     *,
     model_feedback: ModelOutcomeFeedbackSummary | None = None,
+    provider: str = "",
 ) -> OutcomeFeedbackGroupSummary:
     record_count = stats.record_count
     average_score = round(sum(stats.scores) / len(stats.scores), 4) if stats.scores else None
@@ -941,6 +1056,7 @@ def _summarize_outcome_stats(
         latest_generated_at=max(stats.generated_at_values) if stats.generated_at_values else "",
         adjustment=model_feedback.adjustment if model_feedback is not None else None,
         weighted_record_count=model_feedback.weighted_record_count if model_feedback is not None else None,
+        provider=provider,
     )
 
 

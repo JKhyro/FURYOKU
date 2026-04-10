@@ -1120,7 +1120,12 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["total"]["failureCount"], 1)
             self.assertEqual(payload["models"][0]["key"], "local-echo")
             self.assertIn("rankScore", payload["models"][0])
+            self.assertEqual(payload["models"][0]["provider"], "local")
             self.assertEqual({provider["key"] for provider in payload["providers"]}, {"local", "api"})
+            self.assertEqual(payload["modelScorecards"][0]["modelId"], "local-echo")
+            self.assertEqual(payload["modelScorecards"][0]["overall"]["provider"], "local")
+            self.assertEqual(payload["situationLeaderboards"][0]["situationId"], "coding")
+            self.assertEqual(payload["situationLeaderboards"][1]["situationId"], "private-chat")
             self.assertIn("reportMetadata", persisted)
             self.assertEqual(persisted["recordCount"], 2)
 
