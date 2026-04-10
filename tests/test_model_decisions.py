@@ -6,6 +6,8 @@ from pathlib import Path
 from furyoku import (
     ModelDecisionError,
     ModelEndpoint,
+    ModelReadinessEvidence,
+    ProviderHealthCheckResult,
     TaskProfile,
     evaluate_model_decisions,
     load_decision_suite,
@@ -96,6 +98,44 @@ def sample_tasks():
     ]
 
 
+def readiness_models():
+    return [
+        ModelEndpoint(
+            model_id="local-fallback",
+            provider="local",
+            privacy_level="local",
+            context_window_tokens=8192,
+            average_latency_ms=800,
+            capabilities={"conversation": 0.9, "instruction_following": 0.9},
+            invocation=("local-model",),
+        ),
+        ModelEndpoint(
+            model_id="cli-primary",
+            provider="cli",
+            privacy_level="remote",
+            context_window_tokens=128000,
+            average_latency_ms=200,
+            capabilities={"conversation": 1.0, "instruction_following": 1.0},
+            invocation=("missing-cli",),
+        ),
+        ModelEndpoint(
+            model_id="api-primary",
+            provider="api",
+            privacy_level="remote",
+            context_window_tokens=200000,
+            average_latency_ms=100,
+            capabilities={"conversation": 1.0, "instruction_following": 1.0},
+        ),
+    ]
+
+
+def readiness_task():
+    return TaskProfile(
+        task_id="readiness-chat",
+        required_capabilities={"conversation": 0.85, "instruction_following": 0.85},
+    )
+
+
 class ModelDecisionTests(unittest.TestCase):
     def test_evaluate_model_decisions_selects_best_model_per_situation(self):
         report = evaluate_model_decisions(sample_models(), sample_tasks())
@@ -108,6 +148,86 @@ class ModelDecisionTests(unittest.TestCase):
             ("api-long-context-memory", "cli-codex-high", "local-gemma3-heretic"),
         )
         self.assertEqual(report.aggregate.selected_providers, ("api", "cli", "local"))
+
+    def test_readiness_missing_command_demotes_cli_endpoint(self):
+        report = evaluate_model_decisions(
+            readiness_models()[:2],
+            [readiness_task()],
+            readiness=[
+                ProviderHealthCheckResult(
+                    model_id="cli-primary",
+                    provider="cli",
+                    status="missing-command",
+                    ready=False,
+                    reason="command 'missing-cli' was not found",
+                    command="missing-cli",
+                ),
+                ProviderHealthCheckResult(
+                    model_id="local-fallback",
+                    provider="local",
+                    status="ready",
+                    ready=True,
+                    reason="command is available",
+                    command="local-model",
+                    resolved_command="C:/tools/local-model.exe",
+                ),
+            ],
+        )
+
+        decision = report.situations["readiness-chat"]
+
+        self.assertEqual(decision.selected.model.model_id, "local-fallback")
+        self.assertIn("cli-primary", decision.blockers)
+        self.assertTrue(
+            any("provider readiness missing-command" in blocker for blocker in decision.blockers["cli-primary"])
+        )
+        self.assertTrue(any("missing-cli" in blocker for blocker in decision.blockers["cli-primary"]))
+
+    def test_readiness_missing_api_transport_demotes_api_endpoint(self):
+        models = [readiness_models()[0], readiness_models()[2]]
+
+        report = evaluate_model_decisions(
+            models,
+            [readiness_task()],
+            readiness=[
+                ProviderHealthCheckResult(
+                    model_id="api-primary",
+                    provider="api",
+                    status="missing-transport",
+                    ready=False,
+                    reason="api health checks require an injected API transport or adapter",
+                )
+            ],
+        )
+
+        decision = report.situations["readiness-chat"]
+
+        self.assertEqual(decision.selected.model.model_id, "local-fallback")
+        self.assertIn("api-primary", decision.blockers)
+        self.assertTrue(
+            any("provider readiness missing-transport" in blocker for blocker in decision.blockers["api-primary"])
+        )
+        self.assertTrue(any("API transport" in blocker for blocker in decision.blockers["api-primary"]))
+
+    def test_readiness_ready_endpoint_can_still_win(self):
+        report = evaluate_model_decisions(
+            [readiness_models()[0], readiness_models()[2]],
+            [readiness_task()],
+            readiness={
+                "api-primary": ModelReadinessEvidence(
+                    model_id="api-primary",
+                    provider="api",
+                    status="ready",
+                    ready=True,
+                    reason="api transport is configured",
+                )
+            },
+        )
+
+        decision = report.situations["readiness-chat"]
+
+        self.assertEqual(decision.selected.model.model_id, "api-primary")
+        self.assertTrue(any("provider readiness ready" in reason for reason in decision.selected.reasons))
 
     def test_report_surfaces_per_model_and_provider_coverage(self):
         report = evaluate_model_decisions(sample_models(), sample_tasks())
