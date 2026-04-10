@@ -121,6 +121,30 @@ def write_task_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_feedback_task_profile(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "taskId": "feedback-chat",
+        "requiredCapabilities": {"conversation": 0.8},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def write_feedback_log(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "recordId": "feedback-1",
+        "reportPath": "decision-report.json",
+        "reportSha256": "0" * 64,
+        "generatedAt": "2026-04-10T12:00:00+00:00",
+        "selectedModelId": "local-echo",
+        "selectedProvider": "local",
+        "verdict": "success",
+        "score": 1.0,
+    }
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+
 def write_decision_suite(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -630,6 +654,37 @@ class CliTests(unittest.TestCase):
             api_rank = next(score for score in memory_decision["rankedModels"] if score["modelId"] == "api-memory")
             self.assertFalse(api_rank["eligible"])
             self.assertTrue(any("provider readiness" in blocker for blocker in api_rank["blockers"]))
+
+    def test_decide_feedback_log_adjusts_eligible_model_ranking(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            decision = payload["decisions"][0]
+            local_rank = next(score for score in decision["rankedModels"] if score["modelId"] == "local-echo")
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(decision["selectedModel"]["modelId"], "local-echo")
+            self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+            self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank["reasons"]))
 
     def test_character_select_outputs_role_to_model_json(self):
         with tempfile.TemporaryDirectory() as temp_dir:

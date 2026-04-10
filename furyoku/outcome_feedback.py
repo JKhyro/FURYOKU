@@ -92,6 +92,52 @@ class DecisionOutcomeRecord:
         )
 
 
+FeedbackAdjustmentInput = Iterable[DecisionOutcomeRecord | Mapping[str, Any]]
+
+
+@dataclass(frozen=True)
+class ModelOutcomeFeedbackSummary:
+    """Bounded per-model outcome evidence used to adjust eligible rankings."""
+
+    model_id: str
+    record_count: int
+    success_count: int
+    concern_count: int
+    failure_count: int
+    manual_override_count: int
+    average_score: float | None
+    adjustment: float
+    rationale: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict:
+        return {
+            "modelId": self.model_id,
+            "recordCount": self.record_count,
+            "successCount": self.success_count,
+            "concernCount": self.concern_count,
+            "failureCount": self.failure_count,
+            "manualOverrideCount": self.manual_override_count,
+            "averageScore": self.average_score,
+            "adjustment": self.adjustment,
+            "rationale": list(self.rationale),
+        }
+
+
+@dataclass
+class _FeedbackStats:
+    model_id: str
+    contributions: list[float] = field(default_factory=list)
+    scores: list[float] = field(default_factory=list)
+    success_count: int = 0
+    concern_count: int = 0
+    failure_count: int = 0
+    manual_override_count: int = 0
+
+    @property
+    def record_count(self) -> int:
+        return len(self.contributions)
+
+
 def create_decision_outcome_record(
     report_path: str | Path,
     *,
@@ -133,6 +179,39 @@ def create_decision_outcome_record(
     )
 
 
+def build_model_feedback_summaries(
+    records: FeedbackAdjustmentInput,
+    *,
+    max_adjustment: float = 12.0,
+) -> dict[str, ModelOutcomeFeedbackSummary]:
+    """Aggregate outcome records into bounded per-model score adjustments."""
+
+    stats_by_model: dict[str, _FeedbackStats] = {}
+    for index, raw_record in enumerate(records, start=1):
+        record = _normalize_feedback_record(raw_record, source=f"<feedback:{index}>")
+        if record.selected_model_id:
+            _add_selected_feedback(stats_by_model, record)
+        if (
+            record.verdict == "manual_override"
+            and record.override_model_id
+            and record.override_model_id != record.selected_model_id
+        ):
+            _add_feedback_contribution(
+                stats_by_model,
+                record.override_model_id,
+                contribution=_manual_override_target_contribution(record.score),
+                score=record.score if record.score is not None else 0.9,
+                verdict=record.verdict,
+                override_target=True,
+            )
+
+    return {
+        model_id: _summarize_feedback_stats(stats, max_adjustment=max_adjustment)
+        for model_id, stats in sorted(stats_by_model.items())
+        if stats.record_count
+    }
+
+
 def append_decision_outcome(
     feedback_log_path: str | Path,
     record: DecisionOutcomeRecord,
@@ -160,6 +239,125 @@ def load_decision_outcomes(feedback_log_path: str | Path) -> tuple[DecisionOutco
                 raise OutcomeFeedbackError(f"{path}:{line_number}: invalid JSON feedback record") from exc
             records.append(DecisionOutcomeRecord.from_dict(payload, source=f"{path}:{line_number}"))
     return tuple(records)
+
+
+def _normalize_feedback_record(
+    raw_record: DecisionOutcomeRecord | Mapping[str, Any],
+    *,
+    source: str,
+) -> DecisionOutcomeRecord:
+    if isinstance(raw_record, DecisionOutcomeRecord):
+        return raw_record
+    if isinstance(raw_record, Mapping):
+        return DecisionOutcomeRecord.from_dict(raw_record, source=source)
+    raise OutcomeFeedbackError(f"{source}: unsupported feedback record type {type(raw_record).__name__}")
+
+
+def _add_selected_feedback(
+    stats_by_model: dict[str, _FeedbackStats],
+    record: DecisionOutcomeRecord,
+) -> None:
+    _add_feedback_contribution(
+        stats_by_model,
+        record.selected_model_id,
+        contribution=_selected_model_contribution(record),
+        score=_score_for_record(record),
+        verdict=record.verdict,
+        override_target=False,
+    )
+
+
+def _add_feedback_contribution(
+    stats_by_model: dict[str, _FeedbackStats],
+    model_id: str,
+    *,
+    contribution: float,
+    score: float,
+    verdict: str,
+    override_target: bool,
+) -> None:
+    stats = stats_by_model.setdefault(model_id, _FeedbackStats(model_id=model_id))
+    stats.contributions.append(contribution)
+    stats.scores.append(score)
+    if verdict == "success":
+        stats.success_count += 1
+    elif verdict == "failure":
+        stats.failure_count += 1
+    elif verdict in ("latency_concern", "quality_concern", "cost_concern"):
+        stats.concern_count += 1
+    elif verdict == "manual_override":
+        stats.manual_override_count += 1
+        if override_target:
+            stats.success_count += 1
+
+
+def _selected_model_contribution(record: DecisionOutcomeRecord) -> float:
+    if record.verdict == "success":
+        return 2.0 + (_score_for_record(record) * 8.0)
+    if record.verdict == "failure":
+        return -10.0
+    if record.verdict == "quality_concern":
+        return -7.0
+    if record.verdict in ("latency_concern", "cost_concern"):
+        return -4.0
+    if record.verdict == "manual_override":
+        return -8.0
+    return 0.0
+
+
+def _manual_override_target_contribution(score: float | None) -> float:
+    return 6.0 + (_normalize_outcome_score(score, default=0.9) * 4.0)
+
+
+def _score_for_record(record: DecisionOutcomeRecord) -> float:
+    if record.verdict == "success":
+        return _normalize_outcome_score(record.score, default=1.0)
+    if record.verdict == "failure":
+        return _normalize_outcome_score(record.score, default=0.0)
+    if record.verdict in ("latency_concern", "quality_concern", "cost_concern"):
+        return _normalize_outcome_score(record.score, default=0.35)
+    if record.verdict == "manual_override":
+        return _normalize_outcome_score(record.score, default=0.25)
+    return _normalize_outcome_score(record.score, default=0.5)
+
+
+def _normalize_outcome_score(score: float | None, *, default: float) -> float:
+    return max(0.0, min(1.0, float(default if score is None else score)))
+
+
+def _summarize_feedback_stats(
+    stats: _FeedbackStats,
+    *,
+    max_adjustment: float,
+) -> ModelOutcomeFeedbackSummary:
+    raw_adjustment = sum(stats.contributions) / len(stats.contributions)
+    adjustment = round(max(-max_adjustment, min(max_adjustment, raw_adjustment)), 4)
+    average_score = round(sum(stats.scores) / len(stats.scores), 4) if stats.scores else None
+    rationale = [
+        f"{stats.record_count} outcome feedback records",
+        f"bounded feedback adjustment {adjustment:+.2f}",
+    ]
+    if average_score is not None:
+        rationale.append(f"average outcome score {average_score:.2f}")
+    if stats.success_count:
+        rationale.append(f"{stats.success_count} success signals")
+    if stats.concern_count:
+        rationale.append(f"{stats.concern_count} concern signals")
+    if stats.failure_count:
+        rationale.append(f"{stats.failure_count} failure signals")
+    if stats.manual_override_count:
+        rationale.append(f"{stats.manual_override_count} manual override signals")
+    return ModelOutcomeFeedbackSummary(
+        model_id=stats.model_id,
+        record_count=stats.record_count,
+        success_count=stats.success_count,
+        concern_count=stats.concern_count,
+        failure_count=stats.failure_count,
+        manual_override_count=stats.manual_override_count,
+        average_score=average_score,
+        adjustment=adjustment,
+        rationale=tuple(rationale),
+    )
 
 
 def _extract_selected_model(report: Mapping[str, Any]) -> Mapping[str, Any]:

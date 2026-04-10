@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from furyoku import (
+    DecisionOutcomeRecord,
     ModelDecisionError,
     ModelEndpoint,
     ModelReadinessEvidence,
@@ -228,6 +229,96 @@ class ModelDecisionTests(unittest.TestCase):
 
         self.assertEqual(decision.selected.model.model_id, "api-primary")
         self.assertTrue(any("provider readiness ready" in reason for reason in decision.selected.reasons))
+
+    def test_feedback_adjustment_can_promote_eligible_model(self):
+        task = TaskProfile(
+            task_id="feedback-chat",
+            required_capabilities={"conversation": 0.8},
+        )
+
+        report = evaluate_model_decisions(
+            sample_models()[:2],
+            [task],
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-gemma3-heretic",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+        )
+
+        selected = report.selected_for("feedback-chat")
+        local_rank = next(score for score in report.situations["feedback-chat"].ranked if score.model.model_id == "local-gemma3-heretic")
+
+        self.assertEqual(selected.model.model_id, "local-gemma3-heretic")
+        self.assertIn("local-gemma3-heretic", report.feedback_adjustments)
+        self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank.reasons))
+
+    def test_feedback_adjustment_does_not_bypass_hard_blockers(self):
+        task = TaskProfile(
+            task_id="feedback-coding",
+            required_capabilities={"coding": 0.5},
+            require_tools=True,
+        )
+
+        report = evaluate_model_decisions(
+            sample_models()[:2],
+            [task],
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-gemma3-heretic",
+                    selected_provider="local",
+                    verdict="success",
+                    score=1.0,
+                )
+            ],
+        )
+
+        local_rank = next(score for score in report.situations["feedback-coding"].ranked if score.model.model_id == "local-gemma3-heretic")
+
+        self.assertFalse(local_rank.eligible)
+        self.assertEqual(report.selected_for("feedback-coding").model.model_id, "cli-codex-high")
+        self.assertTrue(any("tool support" in blocker for blocker in local_rank.blockers))
+
+    def test_feedback_adjustment_cannot_bypass_minimum_score_gate(self):
+        task = TaskProfile(
+            task_id="feedback-threshold",
+            required_capabilities={"conversation": 0.8},
+        )
+
+        report = evaluate_model_decisions(
+            [sample_models()[0]],
+            [task],
+            minimum_scores={"feedback-threshold": 105.0},
+            feedback=[
+                DecisionOutcomeRecord(
+                    record_id="feedback-1",
+                    report_path="decision-report.json",
+                    report_sha256="0" * 64,
+                    generated_at="2026-04-10T12:00:00+00:00",
+                    selected_model_id="local-gemma3-heretic",
+                    selected_provider="local",
+                    verdict="failure",
+                )
+            ],
+        )
+
+        local_rank = report.situations["feedback-threshold"].ranked[0]
+
+        self.assertFalse(report.situations["feedback-threshold"].eligible)
+        self.assertFalse(local_rank.eligible)
+        self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank.reasons))
+        self.assertTrue(any("below minimum score 105.00" in blocker for blocker in local_rank.blockers))
 
     def test_report_surfaces_per_model_and_provider_coverage(self):
         report = evaluate_model_decisions(sample_models(), sample_tasks())
