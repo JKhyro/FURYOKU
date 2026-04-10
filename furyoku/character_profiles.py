@@ -13,6 +13,7 @@ from .model_router import (
     RouterError,
     select_character_composition,
 )
+from .model_decisions import ReadinessEvidenceInput, evaluate_model_decisions
 from .task_profiles import parse_task_profile
 
 
@@ -159,11 +160,19 @@ def select_character_profile_models(
     profile: CharacterProfile,
     *,
     allow_reuse: bool = True,
+    readiness: ReadinessEvidenceInput | None = None,
 ) -> CharacterProfileSelection:
     """Select concrete model endpoints for every role in a CHARACTER profile."""
 
     if not isinstance(profile, CharacterProfile):
         raise RouterError("CHARACTER profile selection requires a parsed CharacterProfile")
+    if readiness is not None:
+        return _select_character_profile_models_with_readiness(
+            list(models),
+            profile,
+            allow_reuse=allow_reuse,
+            readiness=readiness,
+        )
     composition = select_character_composition(models, profile.role_specs, allow_reuse=allow_reuse)
     return CharacterProfileSelection(profile=profile, composition=composition)
 
@@ -173,10 +182,81 @@ def select_character_orchestration_envelope(
     profile: CharacterProfile,
     *,
     allow_reuse: bool = True,
+    readiness: ReadinessEvidenceInput | None = None,
 ) -> CharacterOrchestrationEnvelope:
     return build_character_orchestration_envelope(
-        select_character_profile_models(models, profile, allow_reuse=allow_reuse)
+        select_character_profile_models(
+            models,
+            profile,
+            allow_reuse=allow_reuse,
+            readiness=readiness,
+        )
     )
+
+
+def _select_character_profile_models_with_readiness(
+    models: list[ModelEndpoint],
+    profile: CharacterProfile,
+    *,
+    allow_reuse: bool,
+    readiness: ReadinessEvidenceInput,
+) -> CharacterProfileSelection:
+    remaining_models = list(models)
+    selections: dict[str, ModelScore] = {}
+    role_specs = _selection_order(profile.role_specs)
+
+    for role_spec in role_specs:
+        filtered_readiness = _readiness_for_models(readiness, remaining_models)
+        report = evaluate_model_decisions(remaining_models, [role_spec.task], readiness=filtered_readiness)
+        selected = report.selected_for(role_spec.task.task_id)
+        if selected is None:
+            decision = report.situations[role_spec.task.task_id]
+            blocker_summary = "; ".join(
+                f"{model_id}: {', '.join(blockers)}"
+                for model_id, blockers in decision.blockers.items()
+            )
+            raise RouterError(f"No eligible model for CHARACTER role '{role_spec.role_id}'. {blocker_summary}")
+        selections[role_spec.role_id] = selected
+        if not allow_reuse:
+            remaining_models = [
+                model for model in remaining_models if model.model_id != selected.model.model_id
+            ]
+
+    primary_role = profile.primary_role_id
+    return CharacterProfileSelection(
+        profile=profile,
+        composition=CharacterCompositionSelection(
+            roles=selections,
+            role_specs={role.role_id: role for role in profile.role_specs},
+            primary_role=primary_role,
+        ),
+    )
+
+
+def _selection_order(role_specs: tuple[CharacterRoleSpec, ...]) -> tuple[CharacterRoleSpec, ...]:
+    primary_specs = tuple(role for role in role_specs if role.primary)
+    secondary_specs = tuple(role for role in role_specs if not role.primary)
+    return primary_specs + secondary_specs if primary_specs else role_specs
+
+
+def _readiness_for_models(
+    readiness: ReadinessEvidenceInput,
+    models: list[ModelEndpoint],
+) -> ReadinessEvidenceInput:
+    model_ids = {model.model_id for model in models}
+    if isinstance(readiness, Mapping):
+        return {model_id: evidence for model_id, evidence in readiness.items() if str(model_id) in model_ids}
+    return tuple(
+        evidence
+        for evidence in readiness
+        if _readiness_model_id(evidence) in model_ids
+    )
+
+
+def _readiness_model_id(evidence: Any) -> str:
+    if isinstance(evidence, Mapping):
+        return str(evidence.get("modelId", evidence.get("model_id", "")) or "")
+    return str(getattr(evidence, "model_id", "") or "")
 
 
 def parse_character_profile(payload: Mapping[str, Any], *, source: str = "<memory>") -> CharacterProfile:

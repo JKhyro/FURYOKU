@@ -4,6 +4,7 @@ from pathlib import Path
 from furyoku import (
     CharacterProfileError,
     ModelEndpoint,
+    ProviderHealthCheckResult,
     build_character_orchestration_envelope,
     load_character_profile,
     parse_character_profile,
@@ -150,6 +151,51 @@ class CharacterProfileTests(unittest.TestCase):
         self.assertEqual(envelope.role_count, 1)
         self.assertEqual(envelope.total_max_subagents, 0)
         self.assertEqual(envelope.assignment_for("primary").selection.model.model_id, "local-gemma")
+
+    def test_readiness_evidence_demotes_unavailable_character_role_endpoint(self):
+        profile = parse_character_profile(
+            {
+                "schemaVersion": 1,
+                "characterId": "readiness-character",
+                "roles": [
+                    {
+                        "roleId": "primary",
+                        "primary": True,
+                        "task": {
+                            "taskId": "readiness-character.primary",
+                            "requiredCapabilities": {"conversation": 0.8},
+                        },
+                    }
+                ],
+            }
+        )
+
+        selection = select_character_profile_models(
+            sample_models()[:2],
+            profile,
+            readiness=[
+                ProviderHealthCheckResult(
+                    model_id="cli-codex",
+                    provider="cli",
+                    status="missing-command",
+                    ready=False,
+                    reason="command 'codex' was not found",
+                    command="codex",
+                ),
+                ProviderHealthCheckResult(
+                    model_id="local-gemma",
+                    provider="local",
+                    status="ready",
+                    ready=True,
+                    reason="command is available",
+                ),
+            ],
+        )
+
+        self.assertEqual(selection.roles["primary"].model.model_id, "local-gemma")
+        self.assertTrue(
+            any("provider readiness ready" in reason for reason in selection.roles["primary"].reasons)
+        )
 
     def test_duplicate_roles_are_rejected(self):
         payload = {

@@ -179,6 +179,51 @@ def write_character_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_readiness_character_registry(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "models": [
+            {
+                "modelId": "local-ready",
+                "provider": "local",
+                "privacyLevel": "local",
+                "contextWindowTokens": 4096,
+                "averageLatencyMs": 20,
+                "invocation": [sys.executable, "-c", "print('ready')"],
+                "capabilities": {"conversation": 0.95},
+            },
+            {
+                "modelId": "cli-missing",
+                "provider": "cli",
+                "privacyLevel": "remote",
+                "contextWindowTokens": 128000,
+                "averageLatencyMs": 10,
+                "invocation": ["furyoku-missing-cli-command"],
+                "capabilities": {"conversation": 1.0},
+            },
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def write_readiness_character_profile(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "characterId": "readiness-character",
+        "roles": [
+            {
+                "roleId": "primary",
+                "primary": True,
+                "task": {
+                    "taskId": "readiness-character.primary",
+                    "requiredCapabilities": {"conversation": 0.9},
+                },
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_local_only_registry(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -623,6 +668,33 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["roles"][1]["selection"]["modelId"], "remote-coder")
             self.assertIn("generatedAt", persisted["reportMetadata"])
             self.assertEqual(persisted["roleCount"], 2)
+
+    def test_character_select_check_health_demotes_missing_cli_role_assignment(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            write_readiness_character_registry(registry_path)
+            write_readiness_character_profile(character_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-select",
+                        "--registry",
+                        str(registry_path),
+                        "--character-profile",
+                        str(character_path),
+                        "--check-health",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["roles"][0]["selectedModelId"], "local-ready")
+            self.assertTrue(
+                any("provider readiness ready" in reason for reason in payload["roles"][0]["selection"]["reasons"])
+            )
 
     def test_character_run_executes_effective_primary_role(self):
         with tempfile.TemporaryDirectory() as temp_dir:
