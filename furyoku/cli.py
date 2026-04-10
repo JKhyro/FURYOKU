@@ -17,8 +17,10 @@ from .model_registry import load_model_registry
 from .model_router import ModelScore, RouterError, TaskProfile, load_routing_score_policy, select_model
 from .model_decisions import ModelDecisionReport, evaluate_model_decisions, load_decision_suite
 from .outcome_feedback import (
+    OutcomeFeedbackError,
     VALID_OUTCOME_VERDICTS,
     append_decision_outcome,
+    capture_execution_outcome,
     create_decision_outcome_record,
     load_feedback_adjustment_policy,
     load_decision_outcomes,
@@ -72,6 +74,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
+        if args.capture_outcome_log and not args.output:
+            parser.error("--capture-outcome-log requires --output so feedback evidence can link to a stable report")
         if args.decision_suite:
             if not args.situation_id:
                 parser.error("--situation-id is required when --decision-suite is provided")
@@ -88,7 +92,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 feedback_policy=feedback_policy,
                 routing_policy=routing_policy,
             )
-            _write_json(_decision_execution_result_to_dict(result, readiness=readiness), output_path=args.output)
+            _write_json_with_outcome_capture(
+                _decision_execution_result_to_dict(result, readiness=readiness),
+                output_path=args.output,
+                capture_args=args,
+                can_capture=result.execution is not None,
+            )
             return 0 if result.ok else 2
 
         task = _task_from_args(args, parser)
@@ -104,7 +113,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             feedback_policy=feedback_policy,
             routing_policy=routing_policy,
         )
-        _write_json(_routed_result_to_dict(result, readiness=readiness), output_path=args.output)
+        _write_json_with_outcome_capture(
+            _routed_result_to_dict(result, readiness=readiness),
+            output_path=args.output,
+            capture_args=args,
+        )
         return 0 if result.ok else 2
 
     if args.command == "health":
@@ -196,6 +209,7 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--prompt", required=True, help="Prompt text passed to the selected model.")
     run_parser.add_argument("--timeout-seconds", type=float, default=60.0, help="Execution timeout in seconds.")
     run_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON execution report.")
+    _add_outcome_capture_args(run_parser)
     run_parser.add_argument(
         "--check-health",
         action="store_true",
@@ -335,6 +349,27 @@ def _add_routing_policy_arg(parser: argparse.ArgumentParser) -> None:
         "--routing-policy",
         type=Path,
         help="Optional JSON routing score policy profile for baseline model selection.",
+    )
+
+
+def _add_outcome_capture_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--capture-outcome-log",
+        type=Path,
+        help="Append an inferred or explicit execution outcome record to this JSONL feedback log.",
+    )
+    parser.add_argument(
+        "--outcome-verdict",
+        choices=VALID_OUTCOME_VERDICTS,
+        help="Optional explicit verdict. Defaults to success for execution status ok, otherwise failure.",
+    )
+    parser.add_argument("--outcome-score", type=float, default=None, help="Optional normalized outcome score from 0.0 to 1.0.")
+    parser.add_argument("--outcome-reason", default="", help="Short reason stored with captured outcome evidence.")
+    parser.add_argument("--outcome-tag", action="append", default=[], help="Optional outcome tag. Repeat for multiple tags.")
+    parser.add_argument(
+        "--outcome-override-model-id",
+        default="",
+        help="Model id that should have been used when --outcome-verdict is manual_override.",
     )
 
 
@@ -663,17 +698,66 @@ def _health_to_dict(result: ProviderHealthCheckResult) -> dict:
 
 def _write_json(payload: dict, *, output_path: Path | None = None) -> None:
     if output_path is not None:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        persisted_payload = {
-            "reportMetadata": {
-                "schemaVersion": 1,
-                "generatedAt": datetime.now(timezone.utc).isoformat(),
-            },
-            **payload,
+        _persist_json_report(payload, output_path)
+    _emit_json(payload)
+
+
+def _write_json_with_outcome_capture(
+    payload: dict,
+    *,
+    output_path: Path | None,
+    capture_args: argparse.Namespace,
+    can_capture: bool = True,
+) -> None:
+    outcome_log = getattr(capture_args, "capture_outcome_log", None)
+    if not outcome_log:
+        _write_json(payload, output_path=output_path)
+        return
+
+    if output_path is None:
+        raise OutcomeFeedbackError("--capture-outcome-log requires a persisted --output report")
+
+    _persist_json_report(payload, output_path)
+    if can_capture:
+        record = capture_execution_outcome(
+            outcome_log,
+            output_path,
+            verdict=getattr(capture_args, "outcome_verdict", None),
+            score=getattr(capture_args, "outcome_score", None),
+            reason=getattr(capture_args, "outcome_reason", ""),
+            tags=getattr(capture_args, "outcome_tag", ()),
+            override_model_id=getattr(capture_args, "outcome_override_model_id", "") or "",
+            metadata={"captureSource": "furyoku.cli.run"},
+        )
+        payload["outcomeCapture"] = {
+            "captured": True,
+            "feedbackLog": str(outcome_log),
+            "record": record.to_dict(),
         }
-        with output_path.open("w", encoding="utf-8") as handle:
-            json.dump(persisted_payload, handle, indent=2, sort_keys=True)
-            handle.write("\n")
+    else:
+        payload["outcomeCapture"] = {
+            "captured": False,
+            "feedbackLog": str(outcome_log),
+            "reason": "no execution was produced",
+        }
+    _emit_json(payload)
+
+
+def _persist_json_report(payload: dict, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    persisted_payload = {
+        "reportMetadata": {
+            "schemaVersion": 1,
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+        },
+        **payload,
+    }
+    with output_path.open("w", encoding="utf-8") as handle:
+        json.dump(persisted_payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+
+
+def _emit_json(payload: dict) -> None:
     json.dump(payload, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
 

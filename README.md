@@ -58,6 +58,7 @@ Current routing core:
 - Single-task `select` and direct `run` commands can use `--check-health` so unavailable local commands, missing CLI tools, or unconfigured API transports are demoted before execution.
 - [`furyoku/outcome_feedback.py`](furyoku/outcome_feedback.py) records operator or automated feedback linked to persisted decision/execution reports.
 - Outcome feedback records can be aggregated into bounded per-model score adjustments for future decision reports.
+- Routed `run` executions can append inferred success/failure outcome records to JSONL feedback logs with `--output` plus `--capture-outcome-log`, allowing real execution results to become future routing evidence without hand-authored feedback entries.
 - [`examples/feedback_policy.example.json`](examples/feedback_policy.example.json) shows the configurable feedback adjustment policy contract for tuning max adjustment, verdict weights, default outcome scores, and optional recency decay.
 - [`examples/routing_score_policy.speed-first.json`](examples/routing_score_policy.speed-first.json) shows a speed-heavy routing score policy profile.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
@@ -98,6 +99,7 @@ python -m furyoku.cli run --registry .\examples\model_registry.example.json --ta
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --feedback-log .\decision-outcomes.jsonl --feedback-policy .\examples\feedback_policy.example.json
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --check-health
 python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --routing-policy .\examples\routing_score_policy.speed-first.json
+python -m furyoku.cli run --registry .\examples\model_registry.example.json --task-profile .\examples\task_profile.private-chat.json --prompt "Hello" --output .\run-report.json --capture-outcome-log .\decision-outcomes.jsonl --outcome-score 0.9 --outcome-reason "accepted response"
 python -m furyoku.cli feedback --report .\decision-report.json --feedback-log .\decision-outcomes.jsonl --verdict success --score 0.9 --reason "accepted response"
 python -m furyoku.cli health --registry .\examples\model_registry.example.json
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json
