@@ -1,5 +1,12 @@
 """FURYOKU multi-model routing primitives."""
 
+from importlib.metadata import PackageNotFoundError, version as package_version
+
+try:
+    __version__ = package_version("furyoku")
+except PackageNotFoundError:
+    __version__ = "0.1.0"
+
 from .model_router import (
     CharacterCompositionSelection,
     CharacterPanelSelection,
@@ -119,6 +126,7 @@ from .runtime import (
 from .task_profiles import TaskProfileError, load_task_profile, parse_task_profile
 
 __all__ = [
+    "__version__",
     "ApiProviderAdapter",
     "CharacterCompositionSelection",
     "CharacterPanelSelection",
