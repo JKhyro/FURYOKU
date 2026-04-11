@@ -660,6 +660,47 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(local_scorecard["overall"]["provider"], "local")
         self.assertEqual(local_scorecard["situations"][0]["key"], "private-chat")
 
+    def test_summarize_outcome_feedback_tracks_and_filters_evidence_sources(self):
+        records = [
+            DecisionOutcomeRecord(
+                record_id="1",
+                report_path="run-report.json",
+                report_sha256="0" * 64,
+                generated_at="2026-04-10T12:00:00+00:00",
+                situation_id="private-chat",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="success",
+                score=0.95,
+            ),
+            DecisionOutcomeRecord(
+                record_id="2",
+                report_path="compare-report.json",
+                report_sha256="1" * 64,
+                generated_at="2026-04-10T12:01:00+00:00",
+                situation_id="private-chat",
+                selected_model_id="local-model",
+                selected_provider="local",
+                verdict="success",
+                score=0.8,
+                metadata={"captureSource": "furyoku.cli.compare-run"},
+            ),
+        ]
+
+        unfiltered = summarize_outcome_feedback(records, generated_at="2026-04-11T00:00:00+00:00").to_dict()
+        filtered = summarize_outcome_feedback(
+            records,
+            generated_at="2026-04-11T00:00:00+00:00",
+            evidence_sources=("furyoku.cli.compare-run",),
+        ).to_dict()
+
+        self.assertEqual({summary["key"] for summary in unfiltered["sources"]}, {"manual-feedback", "furyoku.cli.compare-run"})
+        self.assertEqual(unfiltered["appliedEvidenceSources"], [])
+        self.assertEqual(filtered["recordCount"], 1)
+        self.assertEqual(filtered["appliedEvidenceSources"], ["furyoku.cli.compare-run"])
+        self.assertEqual(filtered["sources"][0]["key"], "furyoku.cli.compare-run")
+        self.assertEqual(filtered["sources"][0]["recordCount"], 1)
+
     def test_custom_feedback_policy_changes_adjustment_size(self):
         records = [
             DecisionOutcomeRecord(

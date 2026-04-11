@@ -404,9 +404,11 @@ class OutcomeFeedbackSummaryReport:
     models: tuple[OutcomeFeedbackGroupSummary, ...]
     providers: tuple[OutcomeFeedbackGroupSummary, ...]
     situations: tuple[OutcomeFeedbackGroupSummary, ...]
+    sources: tuple[OutcomeFeedbackGroupSummary, ...]
     feedback_policy_metadata: FeedbackPolicyMetadata
     model_scorecards: tuple[OutcomeFeedbackModelScorecard, ...] = ()
     situation_leaderboards: tuple[OutcomeFeedbackSituationLeaderboard, ...] = ()
+    applied_evidence_sources: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
         return {
@@ -417,8 +419,10 @@ class OutcomeFeedbackSummaryReport:
             "models": [summary.to_dict() for summary in self.models],
             "providers": [summary.to_dict() for summary in self.providers],
             "situations": [summary.to_dict() for summary in self.situations],
+            "sources": [summary.to_dict() for summary in self.sources],
             "modelScorecards": [scorecard.to_dict() for scorecard in self.model_scorecards],
             "situationLeaderboards": [leaderboard.to_dict() for leaderboard in self.situation_leaderboards],
+            "appliedEvidenceSources": list(self.applied_evidence_sources),
             "feedbackPolicy": self.feedback_policy_metadata.to_dict(),
         }
 
@@ -764,13 +768,12 @@ def summarize_outcome_feedback(
     max_adjustment: float | None = None,
     as_of: datetime | str | None = None,
     generated_at: datetime | str | None = None,
+    evidence_sources: Iterable[str] | None = None,
 ) -> OutcomeFeedbackSummaryReport:
     """Summarize captured outcome feedback for model/provider/task comparison."""
 
-    normalized_records = tuple(
-        _normalize_feedback_record(raw_record, source=f"<feedback:{index}>")
-        for index, raw_record in enumerate(records, start=1)
-    )
+    normalized_records = filter_outcome_feedback_records(records, evidence_sources=evidence_sources)
+    normalized_evidence_sources = _normalize_evidence_source_filters(evidence_sources)
     feedback_adjustments = build_model_feedback_summaries(
         normalized_records,
         policy=policy,
@@ -781,6 +784,7 @@ def summarize_outcome_feedback(
     model_stats: dict[str, _OutcomeSummaryStats] = {}
     provider_stats: dict[str, _OutcomeSummaryStats] = {}
     situation_stats: dict[str, _OutcomeSummaryStats] = {}
+    source_stats: dict[str, _OutcomeSummaryStats] = {}
     model_situation_stats: dict[str, dict[str, _OutcomeSummaryStats]] = {}
     situation_model_stats: dict[str, dict[str, _OutcomeSummaryStats]] = {}
     model_providers: dict[str, str] = {}
@@ -789,10 +793,12 @@ def summarize_outcome_feedback(
         model_id = record.selected_model_id or "<unknown>"
         provider = record.selected_provider or "<unknown>"
         situation_id = record.situation_id or "<unknown>"
+        evidence_source = outcome_feedback_source(record)
         total_stats.add(record)
         _summary_stats_for(model_stats, "model", model_id).add(record)
         _summary_stats_for(provider_stats, "provider", provider).add(record)
         _summary_stats_for(situation_stats, "situation", situation_id).add(record)
+        _summary_stats_for(source_stats, "source", evidence_source).add(record)
         _nested_summary_stats_for(model_situation_stats, model_id, "situation", situation_id).add(record)
         _nested_summary_stats_for(situation_model_stats, situation_id, "model", model_id).add(record)
         if model_id not in model_providers and provider:
@@ -816,6 +822,12 @@ def summarize_outcome_feedback(
     situations = tuple(
         sorted(
             (_summarize_outcome_stats(stats) for stats in situation_stats.values()),
+            key=lambda summary: summary.key,
+        )
+    )
+    sources = tuple(
+        sorted(
+            (_summarize_outcome_stats(stats) for stats in source_stats.values()),
             key=lambda summary: summary.key,
         )
     )
@@ -872,13 +884,48 @@ def summarize_outcome_feedback(
         models=models,
         providers=providers,
         situations=situations,
+        sources=sources,
         model_scorecards=model_scorecards,
         situation_leaderboards=situation_leaderboards,
+        applied_evidence_sources=normalized_evidence_sources,
         feedback_policy_metadata=build_feedback_policy_metadata(
             policy,
             max_adjustment=max_adjustment,
         ),
     )
+
+
+def filter_outcome_feedback_records(
+    records: FeedbackAdjustmentInput,
+    *,
+    evidence_sources: Iterable[str] | None = None,
+) -> tuple[DecisionOutcomeRecord, ...]:
+    """Normalize and optionally filter feedback records by evidence source."""
+
+    normalized_records = tuple(
+        _normalize_feedback_record(raw_record, source=f"<feedback:{index}>")
+        for index, raw_record in enumerate(records, start=1)
+    )
+    normalized_sources = _normalize_evidence_source_filters(evidence_sources)
+    if not normalized_sources:
+        return normalized_records
+    allowed_sources = {value.casefold() for value in normalized_sources}
+    return tuple(
+        record
+        for record in normalized_records
+        if outcome_feedback_source(record).casefold() in allowed_sources
+    )
+
+
+def outcome_feedback_source(record: DecisionOutcomeRecord) -> str:
+    """Resolve the stable evidence-source label for one feedback record."""
+
+    metadata = record.metadata if isinstance(record.metadata, Mapping) else {}
+    for key in ("evidenceSource", "captureSource", "source"):
+        raw_value = metadata.get(key)
+        if isinstance(raw_value, str) and raw_value.strip():
+            return raw_value.strip()
+    return "manual-feedback"
 
 
 def build_feedback_policy_metadata(
@@ -1299,6 +1346,23 @@ def _parse_as_of(as_of: datetime | str | None) -> datetime | None:
     if isinstance(as_of, str):
         return _parse_feedback_datetime(as_of, source="<feedback-policy>:asOf")
     raise OutcomeFeedbackError(f"<feedback-policy>: as_of must be a datetime or ISO timestamp")
+
+
+def _normalize_evidence_source_filters(evidence_sources: Iterable[str] | None) -> tuple[str, ...]:
+    if evidence_sources is None:
+        return ()
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_value in evidence_sources:
+        value = str(raw_value).strip()
+        if not value:
+            raise OutcomeFeedbackError("<feedback-source>: evidence source must be non-empty")
+        normalized_key = value.casefold()
+        if normalized_key in seen:
+            continue
+        seen.add(normalized_key)
+        normalized.append(value)
+    return tuple(normalized)
 
 
 def _recency_weight(
