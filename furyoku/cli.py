@@ -237,11 +237,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if all(result.ready for result in results) else 2
 
     if args.command == "decide":
-        if args.decision_suite and args.task_profile:
-            parser.error("--decision-suite cannot be combined with --task-profile")
-        decision_input = load_decision_suite(args.decision_suite) if args.decision_suite else tuple(
-            load_task_profile(path) for path in args.task_profile
-        )
+        if args.decision_suite and (args.task_profile or _has_inline_decision_task_args(args)):
+            parser.error("--decision-suite cannot be combined with --task-profile or inline task arguments")
+        if args.decision_suite:
+            decision_input = load_decision_suite(args.decision_suite)
+        elif args.task_profile:
+            decision_input = tuple(load_task_profile(path) for path in args.task_profile)
+        elif _has_inline_decision_task_args(args):
+            decision_input = (_task_from_args(args, parser),)
+        else:
+            decision_input = None
         readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
         routing_policy = _routing_policy_from_args(args)
@@ -471,6 +476,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional task profile to include. Repeat for multiple situations. Defaults to built-in scenarios.",
     )
+    _add_inline_decision_task_args(decide_parser)
     decide_parser.add_argument(
         "--check-health",
         action="store_true",
@@ -687,6 +693,12 @@ def _add_common_task_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--description", default="", help="Optional task description.")
     parser.add_argument("--min-context-tokens", type=int, default=0, help="Minimum required context window.")
     parser.add_argument(
+        "--max-latency-ms",
+        type=_parse_non_negative_int_arg,
+        default=None,
+        help="Maximum average latency in milliseconds for eligible models.",
+    )
+    parser.add_argument(
         "--privacy",
         default="allow_remote",
         choices=("allow_remote", "prefer_local", "local_only"),
@@ -702,6 +714,71 @@ def _add_common_task_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--max-input-cost-per-1k", type=float, default=None, help="Maximum input cost per 1k tokens.")
     parser.add_argument("--max-output-cost-per-1k", type=float, default=None, help="Maximum output cost per 1k tokens.")
+    parser.add_argument(
+        "--max-total-cost-per-1k",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Maximum combined input plus output cost per 1k tokens.",
+    )
+    parser.add_argument(
+        "--quality-tradeoff-weight",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Task-level soft weighting applied to quality/capability and context scoring.",
+    )
+    parser.add_argument(
+        "--latency-tradeoff-weight",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Task-level soft weighting applied to latency/speed scoring.",
+    )
+    parser.add_argument(
+        "--cost-tradeoff-weight",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Task-level soft weighting applied to cost penalties.",
+    )
+
+
+def _add_inline_decision_task_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--task-id", help="Task identifier for routing evidence.")
+    parser.add_argument(
+        "--capability",
+        action="append",
+        default=[],
+        metavar="NAME=SCORE",
+        help="Required capability score from 0.0 to 1.0. Repeat for multiple capabilities.",
+    )
+    parser.add_argument("--description", default="", help="Optional task description.")
+    parser.add_argument("--min-context-tokens", type=int, default=0, help="Minimum required context window.")
+    parser.add_argument(
+        "--max-latency-ms",
+        type=_parse_non_negative_int_arg,
+        default=None,
+        help="Maximum average latency in milliseconds for eligible models.",
+    )
+    parser.add_argument(
+        "--privacy",
+        default="allow_remote",
+        choices=("allow_remote", "prefer_local", "local_only"),
+        help="Privacy requirement for model selection.",
+    )
+    parser.add_argument("--require-tools", action="store_true", help="Require tool-capable endpoints.")
+    parser.add_argument("--require-json", action="store_true", help="Require structured JSON-capable endpoints.")
+    parser.add_argument(
+        "--preferred-provider",
+        action="append",
+        default=[],
+        help="Preferred provider id. Repeat for multiple providers.",
+    )
+    parser.add_argument("--max-input-cost-per-1k", type=float, default=None, help="Maximum input cost per 1k tokens.")
+    parser.add_argument("--max-output-cost-per-1k", type=float, default=None, help="Maximum output cost per 1k tokens.")
+    parser.add_argument(
+        "--max-total-cost-per-1k",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Maximum combined input plus output cost per 1k tokens.",
+    )
     parser.add_argument(
         "--quality-tradeoff-weight",
         type=_parse_non_negative_float_arg,
@@ -733,14 +810,16 @@ def _task_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -
             required_capabilities=_parse_capabilities(args.capability) if args.capability else profile.required_capabilities,
             min_context_tokens=args.min_context_tokens or profile.min_context_tokens,
             privacy_requirement=args.privacy if args.privacy != "allow_remote" else profile.privacy_requirement,
-            max_latency_ms=profile.max_latency_ms,
+            max_latency_ms=args.max_latency_ms if args.max_latency_ms is not None else profile.max_latency_ms,
             max_input_cost_per_1k=args.max_input_cost_per_1k
             if args.max_input_cost_per_1k is not None
             else profile.max_input_cost_per_1k,
             max_output_cost_per_1k=args.max_output_cost_per_1k
             if args.max_output_cost_per_1k is not None
             else profile.max_output_cost_per_1k,
-            max_total_cost_per_1k=profile.max_total_cost_per_1k,
+            max_total_cost_per_1k=args.max_total_cost_per_1k
+            if args.max_total_cost_per_1k is not None
+            else profile.max_total_cost_per_1k,
             require_tools=args.require_tools or profile.require_tools,
             require_json=args.require_json or profile.require_json,
             preferred_providers=tuple(args.preferred_provider) or profile.preferred_providers,
@@ -765,8 +844,10 @@ def _task_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -
         required_capabilities=_parse_capabilities(args.capability),
         min_context_tokens=args.min_context_tokens,
         privacy_requirement=args.privacy,
+        max_latency_ms=args.max_latency_ms,
         max_input_cost_per_1k=args.max_input_cost_per_1k,
         max_output_cost_per_1k=args.max_output_cost_per_1k,
+        max_total_cost_per_1k=args.max_total_cost_per_1k,
         require_tools=args.require_tools,
         require_json=args.require_json,
         preferred_providers=tuple(args.preferred_provider),
@@ -783,12 +864,36 @@ def _task_profile_has_inline_overrides(args: argparse.Namespace) -> bool:
             bool(args.task_id),
             bool(args.description),
             bool(args.min_context_tokens),
+            args.max_latency_ms is not None,
             args.privacy != "allow_remote",
             args.require_tools,
             args.require_json,
             bool(args.preferred_provider),
             args.max_input_cost_per_1k is not None,
             args.max_output_cost_per_1k is not None,
+            args.max_total_cost_per_1k is not None,
+            args.quality_tradeoff_weight is not None,
+            args.latency_tradeoff_weight is not None,
+            args.cost_tradeoff_weight is not None,
+        )
+    )
+
+
+def _has_inline_decision_task_args(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            bool(args.task_id),
+            bool(args.capability),
+            bool(args.description),
+            args.min_context_tokens > 0,
+            args.max_latency_ms is not None,
+            args.privacy != "allow_remote",
+            args.require_tools,
+            args.require_json,
+            bool(args.preferred_provider),
+            args.max_input_cost_per_1k is not None,
+            args.max_output_cost_per_1k is not None,
+            args.max_total_cost_per_1k is not None,
             args.quality_tradeoff_weight is not None,
             args.latency_tradeoff_weight is not None,
             args.cost_tradeoff_weight is not None,
@@ -821,6 +926,16 @@ def _parse_non_negative_float_arg(raw_value: str) -> float:
     except ValueError as exc:
         raise argparse.ArgumentTypeError(f"value must be numeric: {raw_value}") from exc
     if value < 0.0:
+        raise argparse.ArgumentTypeError(f"value must be 0 or greater: {raw_value}")
+    return value
+
+
+def _parse_non_negative_int_arg(raw_value: str) -> int:
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"value must be an integer: {raw_value}") from exc
+    if value < 0:
         raise argparse.ArgumentTypeError(f"value must be 0 or greater: {raw_value}")
     return value
 
