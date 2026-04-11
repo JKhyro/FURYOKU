@@ -17,6 +17,7 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(payload["project"]["name"], "furyoku")
         self.assertEqual(payload["project"]["version"], "0.1.0")
         self.assertEqual(payload["project"]["scripts"]["furyoku"], "furyoku.cli:main")
+        self.assertEqual(payload["project"]["scripts"]["furyoku-service"], "furyoku.service:main")
         self.assertEqual(furyoku.__version__, payload["project"]["version"])
 
     def test_python_module_entrypoint_displays_help(self):
@@ -31,6 +32,19 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("usage:", result.stdout)
         self.assertIn("select", result.stdout)
+
+    def test_service_module_entrypoint_displays_help(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "furyoku.service", "--help"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("usage:", result.stdout)
+        self.assertIn("--registry", result.stdout)
 
 
 if __name__ == "__main__":
