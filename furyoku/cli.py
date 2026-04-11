@@ -262,11 +262,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if not report.blocked_tasks else 2
 
     if args.command == "recommend":
-        if args.decision_suite and args.task_profile:
-            parser.error("--decision-suite cannot be combined with --task-profile")
-        decision_input = load_decision_suite(args.decision_suite) if args.decision_suite else tuple(
-            load_task_profile(path) for path in args.task_profile
-        )
+        if args.decision_suite and (args.task_profile or _has_inline_decision_task_args(args)):
+            parser.error("--decision-suite cannot be combined with --task-profile or inline task arguments")
+        if args.decision_suite:
+            decision_input = load_decision_suite(args.decision_suite)
+        elif args.task_profile:
+            decision_input = tuple(load_task_profile(path) for path in args.task_profile)
+        elif _has_inline_decision_task_args(args):
+            decision_input = (_task_from_args(args, parser),)
+        else:
+            decision_input = None
         readiness = _readiness_from_args(args, models)
         feedback, feedback_policy = _feedback_from_args(args, parser)
         routing_policy = _routing_policy_from_args(args)
@@ -510,6 +515,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional task profile to include. Repeat for multiple situations. Defaults to built-in scenarios.",
     )
+    _add_inline_decision_task_args(recommend_parser)
     _add_health_decision_args(recommend_parser, "Run provider readiness checks before recommending models.")
     recommend_parser.add_argument(
         "--feedback-log",
