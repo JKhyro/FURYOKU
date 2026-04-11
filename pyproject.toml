@@ -12,6 +12,7 @@ dependencies = []
 
 [project.scripts]
 furyoku = "furyoku.cli:main"
+furyoku-service = "furyoku.service:main"
 
 [tool.setuptools]
 packages = ["furyoku"]

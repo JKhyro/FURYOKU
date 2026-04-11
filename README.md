@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#180](https://github.com/JKhyro/FURYOKU/issues/180)
+- Current active lane: [#182](https://github.com/JKhyro/FURYOKU/issues/182)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -22,8 +22,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
-- Current architecture direction: multi-model local/CLI/API selection and execution first, then an installable SDK/component surface, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: add installable package metadata and a packaged CLI entrypoint so other programs can reuse FURYOKU as a component library before a separate local service/API wrapper is introduced.
+- Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
+- Current follow-on focus: add a thin local service/API wrapper over the packaged SDK so other programs can call FURYOKU through a minimal local JSON contract without importing Python directly.
 
 ## SDK Reuse
 
@@ -31,6 +31,7 @@ FURYOKU is now intended to be consumed both as:
 
 - an importable Python package for direct library/SDK reuse
 - a packaged CLI for process-level integration
+- a thin local service/API wrapper for non-Python or process-isolated callers
 
 Local install examples:
 
@@ -38,7 +39,36 @@ Local install examples:
 python -m pip install -e .
 furyoku --help
 python -m furyoku --help
+furyoku-service --help
 ```
+
+Local service example:
+
+```powershell
+furyoku-service --registry .\examples\model_registry.example.json --host 127.0.0.1 --port 8765
+```
+
+```powershell
+$task = @{
+  schemaVersion = 1
+  taskId = "private-chat"
+  privacyRequirement = "local_only"
+  requiredCapabilities = @{
+    conversation = 0.9
+  }
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/v1/select -ContentType "application/json" -Body "{`"task`":$task}"
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/v1/run -ContentType "application/json" -Body "{`"task`":$task,`"prompt`":`"Hello`"}"
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/v1/health -ContentType "application/json" -Body "{}"
+```
+
+Initial wrapper contract:
+
+- `GET /health` returns local service status and configured default registry path.
+- `POST /v1/health` returns provider readiness for the configured or supplied registry.
+- `POST /v1/select` accepts `task` or `taskPath`, plus optional `registry` or `registryPath`, and returns a JSON selection result.
+- `POST /v1/run` accepts the same task inputs plus `prompt` and returns a JSON execution result.
 
 ## Product Direction
 
