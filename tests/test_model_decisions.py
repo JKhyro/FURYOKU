@@ -283,6 +283,27 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(situation["weight"], 2.0)
         self.assertEqual(situation["minimumScore"], 40.0)
 
+    def test_decision_output_preserves_tradeoff_weights(self):
+        task = TaskProfile(
+            task_id="tradeoff-chat",
+            required_capabilities={"conversation": 0.8},
+            quality_tradeoff_weight=0.5,
+            latency_tradeoff_weight=2.0,
+            cost_tradeoff_weight=1.5,
+        )
+
+        report = evaluate_model_decisions(sample_models(), [task])
+        payload = report.to_dict()
+        decision = payload["decisions"][0]
+        selected = next(score for score in decision["ranked"] if score["modelId"] == decision["selectedModelId"])
+
+        self.assertEqual(decision["qualityTradeoffWeight"], 0.5)
+        self.assertEqual(decision["latencyTradeoffWeight"], 2.0)
+        self.assertEqual(decision["costTradeoffWeight"], 1.5)
+        self.assertTrue(
+            any("tradeoff weights quality 0.50, latency 2.00, cost 1.50" in reason for reason in selected["reasons"])
+        )
+
     def test_feedback_adjustment_can_promote_eligible_model(self):
         task = TaskProfile(
             task_id="feedback-chat",

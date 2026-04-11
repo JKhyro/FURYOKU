@@ -202,6 +202,17 @@ class TaskProfile:
     require_tools: bool = False
     require_json: bool = False
     preferred_providers: tuple[ProviderKind, ...] = ()
+    quality_tradeoff_weight: float = 1.0
+    latency_tradeoff_weight: float = 1.0
+    cost_tradeoff_weight: float = 1.0
+
+    @property
+    def has_custom_tradeoff_weights(self) -> bool:
+        return not (
+            math.isclose(self.quality_tradeoff_weight, 1.0)
+            and math.isclose(self.latency_tradeoff_weight, 1.0)
+            and math.isclose(self.cost_tradeoff_weight, 1.0)
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -217,6 +228,9 @@ class TaskProfile:
             "requireTools": self.require_tools,
             "requireJson": self.require_json,
             "preferredProviders": list(self.preferred_providers),
+            "qualityTradeoffWeight": self.quality_tradeoff_weight,
+            "latencyTradeoffWeight": self.latency_tradeoff_weight,
+            "costTradeoffWeight": self.cost_tradeoff_weight,
         }
 
 
@@ -322,6 +336,9 @@ def score_model(
     blockers: list[str] = []
     reasons: list[str] = []
     total_cost_per_1k = model.input_cost_per_1k + model.output_cost_per_1k
+    quality_tradeoff_weight = task.quality_tradeoff_weight
+    latency_tradeoff_weight = task.latency_tradeoff_weight
+    cost_tradeoff_weight = task.cost_tradeoff_weight
 
     if not model.available:
         blockers.append("model is not currently available")
@@ -359,13 +376,21 @@ def score_model(
         blockers.append("task requires JSON output support")
 
     capability_score = _weighted_capability_score(model, task)
-    score = capability_score * resolved_policy.capability_weight
+    if task.has_custom_tradeoff_weights:
+        reasons.append(
+            "tradeoff weights "
+            f"quality {quality_tradeoff_weight:.2f}, "
+            f"latency {latency_tradeoff_weight:.2f}, "
+            f"cost {cost_tradeoff_weight:.2f}"
+        )
+    score = capability_score * resolved_policy.capability_weight * quality_tradeoff_weight
     reasons.append(f"capability fit {capability_score:.3f}")
 
     if model.context_window_tokens >= task.min_context_tokens:
         context_bonus = (
             min(model.context_window_tokens / resolved_policy.context_reference_tokens, 1.0)
             * resolved_policy.context_bonus_weight
+            * quality_tradeoff_weight
         )
         score += context_bonus
         reasons.append(f"context bonus {context_bonus:.2f}")
@@ -373,6 +398,7 @@ def score_model(
     speed_bonus = (
         max(0.0, min(1.0, 1.0 - (model.average_latency_ms / resolved_policy.speed_reference_ms)))
         * resolved_policy.speed_bonus_weight
+        * latency_tradeoff_weight
     )
     score += speed_bonus
     reasons.append(f"speed bonus {speed_bonus:.2f}")
@@ -388,7 +414,10 @@ def score_model(
         score += resolved_policy.preferred_provider_bonus
         reasons.append(f"preferred provider bonus for {model.provider}")
 
-    cost_penalty = min(total_cost_per_1k * resolved_policy.cost_penalty_multiplier, resolved_policy.max_cost_penalty)
+    cost_penalty = (
+        min(total_cost_per_1k * resolved_policy.cost_penalty_multiplier, resolved_policy.max_cost_penalty)
+        * cost_tradeoff_weight
+    )
     if cost_penalty:
         score -= cost_penalty
         reasons.append(f"cost penalty {cost_penalty:.2f}")

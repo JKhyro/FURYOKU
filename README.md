@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#167](https://github.com/JKhyro/FURYOKU/issues/167)
+- Current active lane: [#169](https://github.com/JKhyro/FURYOKU/issues/169)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: consume captured latency and cost telemetry in budget-aware and latency-aware model decision constraints.
+- Current follow-on focus: add task-level soft tradeoff weighting so otherwise-eligible model decisions can deliberately bias quality, latency, and cost without bypassing hard blockers.
 
 ## Product Direction
 
@@ -81,6 +81,7 @@ Current routing core:
 - [`examples/comparison_prompt_map.primary-routing.json`](examples/comparison_prompt_map.primary-routing.json) shows a reusable prompt-map for suite-level comparative execution batches.
 - Decision suites can weight higher-value situations and define minimum score thresholds so FURYOKU can distinguish "best available" from "good enough to use."
 - [`examples/task_profile.private-chat.json`](examples/task_profile.private-chat.json) shows reusable task profile configuration.
+- [`examples/task_profile.tradeoff-speed-chat.json`](examples/task_profile.tradeoff-speed-chat.json) shows task-level soft tradeoff weighting for a latency-sensitive chat task.
 - [`examples/character_profile.tertiary-symbiote.json`](examples/character_profile.tertiary-symbiote.json) shows a one-role tertiary Symbiote composition.
 - [`examples/character_profile.kira-array.json`](examples/character_profile.kira-array.json) shows a larger Kira-style one-primary/seven-secondary role array.
 - [`tests/test_character_profiles.py`](tests/test_character_profiles.py) verifies flexible CHARACTER profile loading and validation.

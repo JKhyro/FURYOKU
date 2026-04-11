@@ -51,7 +51,24 @@ def parse_task_profile(payload: Mapping[str, Any], *, source: str = "<memory>") 
         ),
         require_tools=bool(payload.get("requireTools", payload.get("require_tools", False))),
         require_json=bool(payload.get("requireJson", payload.get("require_json", False))),
-        preferred_providers=tuple(str(item) for item in payload.get("preferredProviders", payload.get("preferred_providers", ()))),
+        preferred_providers=tuple(
+            str(item) for item in payload.get("preferredProviders", payload.get("preferred_providers", ()))
+        ),
+        quality_tradeoff_weight=_non_negative_float(
+            payload.get("qualityTradeoffWeight", payload.get("quality_tradeoff_weight")),
+            default=1.0,
+            field_name="qualityTradeoffWeight",
+        ),
+        latency_tradeoff_weight=_non_negative_float(
+            payload.get("latencyTradeoffWeight", payload.get("latency_tradeoff_weight")),
+            default=1.0,
+            field_name="latencyTradeoffWeight",
+        ),
+        cost_tradeoff_weight=_non_negative_float(
+            payload.get("costTradeoffWeight", payload.get("cost_tradeoff_weight")),
+            default=1.0,
+            field_name="costTradeoffWeight",
+        ),
     )
 
 
@@ -71,3 +88,12 @@ def _optional_int(value: Any) -> int | None:
     if parsed < 0:
         raise TaskProfileError("optional integer fields must be 0 or greater")
     return parsed
+
+
+def _non_negative_float(value: Any, *, default: float, field_name: str) -> float:
+    if value in (None, ""):
+        return default
+    parsed = float(value)
+    if parsed < 0.0:
+        raise TaskProfileError(f"{field_name} must be 0 or greater")
+    return round(parsed, 6)
