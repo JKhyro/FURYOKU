@@ -1243,6 +1243,38 @@ class CliTests(unittest.TestCase):
             self.assertIn("outcomeSummary", payload)
             self.assertIn("reportMetadata", persisted)
 
+    def test_recommend_accepts_direct_cli_budget_and_latency_flags(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "recommend",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "bounded-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--max-latency-ms",
+                        "20",
+                        "--max-total-cost-per-1k",
+                        "0.01",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            decision = payload["decisionReport"]["decisions"][0]
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["recommendations"][0]["taskId"], "bounded-chat")
+            self.assertEqual(payload["recommendations"][0]["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(decision["maxLatencyMs"], 20)
+            self.assertEqual(decision["maxTotalCostPer1k"], 0.01)
+
     def test_example_recommendation_workflow_fixture_is_runnable(self):
         repo_root = Path(__file__).resolve().parents[1]
         registry_path = repo_root / "examples" / "model_registry.example.json"
