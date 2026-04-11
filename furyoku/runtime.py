@@ -185,6 +185,7 @@ def route_and_execute(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    evidence_sources: Iterable[str] | None = None,
     routing_policy: RoutingScorePolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> RoutedExecutionResult:
@@ -200,6 +201,7 @@ def route_and_execute(
             readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
+            evidence_sources=evidence_sources,
             routing_policy=routing_policy,
         )
         selection = report.selected_for(task.task_id)
@@ -222,6 +224,7 @@ def route_and_execute_with_fallback(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    evidence_sources: Iterable[str] | None = None,
     routing_policy: RoutingScorePolicyInput | None = None,
     max_attempts: int | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
@@ -235,6 +238,7 @@ def route_and_execute_with_fallback(
         readiness=readiness,
         feedback=feedback,
         feedback_policy=feedback_policy,
+        evidence_sources=evidence_sources,
         routing_policy=routing_policy,
     )
     decision = report.situations[task.task_id]
@@ -313,6 +317,7 @@ def execute_decision_situation(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    evidence_sources: Iterable[str] | None = None,
     routing_policy: RoutingScorePolicyInput | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
 ) -> DecisionSituationExecutionResult:
@@ -324,6 +329,7 @@ def execute_decision_situation(
         readiness=readiness,
         feedback=feedback,
         feedback_policy=feedback_policy,
+        evidence_sources=evidence_sources,
         routing_policy=routing_policy,
     )
     try:
@@ -362,6 +368,7 @@ def execute_decision_situation_with_fallback(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    evidence_sources: Iterable[str] | None = None,
     routing_policy: RoutingScorePolicyInput | None = None,
     max_attempts: int | None = None,
     adapters: Mapping[str, ProviderAdapter] | None = None,
@@ -375,6 +382,7 @@ def execute_decision_situation_with_fallback(
         readiness=readiness,
         feedback=feedback,
         feedback_policy=feedback_policy,
+        evidence_sources=evidence_sources,
         routing_policy=routing_policy,
     )
     try:

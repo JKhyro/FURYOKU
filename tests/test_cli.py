@@ -1790,6 +1790,37 @@ class CliTests(unittest.TestCase):
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
             self.assertEqual(payload["feedbackPolicy"]["source"], "default")
 
+    def test_select_filters_feedback_log_to_selected_evidence_sources(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_mixed_source_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--evidence-source",
+                        "furyoku.cli.compare-run",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-echo")
+            self.assertEqual(payload["appliedEvidenceSources"], ["furyoku.cli.compare-run"])
+            self.assertAlmostEqual(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 8.4)
+
     def test_select_feedback_policy_file_changes_adjustment(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
@@ -1945,6 +1976,39 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["selection"]["modelId"], "local-echo")
             self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
+
+    def test_run_filters_feedback_log_to_selected_evidence_sources(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_executable_character_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_mixed_source_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--prompt",
+                        "hello",
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--evidence-source",
+                        "furyoku.cli.compare-run",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["selection"]["modelId"], "local-echo")
+            self.assertEqual(payload["appliedEvidenceSources"], ["furyoku.cli.compare-run"])
+            self.assertAlmostEqual(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 8.4)
 
     def test_run_check_health_demotes_missing_cli_endpoint(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2215,6 +2279,38 @@ class CliTests(unittest.TestCase):
             self.assertGreater(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 0.0)
             self.assertEqual(payload["feedbackPolicy"]["source"], "default")
             self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank["reasons"]))
+
+    def test_decide_filters_feedback_log_to_selected_evidence_sources(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_mixed_source_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--evidence-source",
+                        "furyoku.cli.compare-run",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            decision = payload["decisions"][0]
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(decision["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["appliedEvidenceSources"], ["furyoku.cli.compare-run"])
+            self.assertAlmostEqual(payload["feedbackAdjustments"]["local-echo"]["adjustment"], 8.4)
 
     def test_decide_routing_policy_file_includes_policy_metadata(self):
         with tempfile.TemporaryDirectory() as temp_dir:
