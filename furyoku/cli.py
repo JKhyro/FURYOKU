@@ -87,6 +87,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             task,
             feedback,
             feedback_policy=feedback_policy,
+            evidence_sources=args.evidence_source,
             readiness=readiness,
             routing_policy=routing_policy,
         )
@@ -119,6 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 readiness=readiness,
                 feedback=feedback,
                 feedback_policy=feedback_policy,
+                evidence_sources=args.evidence_source,
                 routing_policy=routing_policy,
                 **({"max_attempts": args.max_attempts} if args.fallback else {}),
             )
@@ -142,6 +144,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
+            evidence_sources=args.evidence_source,
             routing_policy=routing_policy,
             **({"max_attempts": args.max_attempts} if args.fallback else {}),
         )
@@ -257,6 +260,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             readiness=readiness,
             feedback=feedback,
             feedback_policy=feedback_policy,
+            evidence_sources=args.evidence_source,
             routing_policy=routing_policy,
         )
         _write_json(_decision_report_to_dict(report, readiness=readiness), output_path=args.output)
@@ -333,6 +337,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
     )
     _add_feedback_policy_arg(select_parser)
+    _add_evidence_source_args(select_parser)
     run_parser = subparsers.add_parser("run", help="Select and execute the best eligible model for a task.")
     _add_common_task_args(run_parser)
     run_parser.add_argument(
@@ -372,6 +377,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional JSONL outcome feedback log used to adjust decision-suite execution selection.",
     )
     _add_feedback_policy_arg(run_parser)
+    _add_evidence_source_args(run_parser)
     _add_routing_policy_arg(run_parser)
     compare_parser = subparsers.add_parser(
         "compare-run",
@@ -500,6 +506,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional JSONL outcome feedback log used to adjust eligible model rankings.",
     )
     _add_feedback_policy_arg(decide_parser)
+    _add_evidence_source_args(decide_parser)
     _add_routing_policy_arg(decide_parser)
     decide_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON decision report.")
     recommend_parser = subparsers.add_parser(
@@ -967,6 +974,7 @@ def _select_with_optional_feedback(
     feedback,
     *,
     feedback_policy=None,
+    evidence_sources=None,
     readiness=None,
     routing_policy=None,
 ):
@@ -978,6 +986,7 @@ def _select_with_optional_feedback(
         readiness=readiness,
         feedback=feedback,
         feedback_policy=feedback_policy,
+        evidence_sources=evidence_sources,
         routing_policy=routing_policy,
     )
     selection = report.selected_for(task.task_id)
@@ -994,9 +1003,12 @@ def _select_with_optional_feedback(
 def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser):
     feedback_log = getattr(args, "feedback_log", None)
     feedback_policy_path = getattr(args, "feedback_policy", None)
+    evidence_sources = getattr(args, "evidence_source", [])
     if not feedback_log:
         if feedback_policy_path:
             parser.error("--feedback-policy requires --feedback-log")
+        if evidence_sources:
+            parser.error("--evidence-source requires --feedback-log")
         return None, None
     if isinstance(feedback_log, list):
         return (
@@ -1322,6 +1334,8 @@ def _add_optional_feedback_metadata(payload: dict, report: ModelDecisionReport) 
 def _add_feedback_policy_metadata(payload: dict, report: ModelDecisionReport) -> None:
     if report.feedback_policy_metadata is not None:
         payload["feedbackPolicy"] = report.feedback_policy_metadata.to_dict()
+    if report.applied_evidence_sources:
+        payload["appliedEvidenceSources"] = list(report.applied_evidence_sources)
 
 
 def _add_routing_policy_metadata(payload: dict, report: ModelDecisionReport) -> None:

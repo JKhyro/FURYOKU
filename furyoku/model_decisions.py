@@ -305,6 +305,7 @@ class ModelDecisionReport:
     feedback_adjustments: Mapping[str, ModelOutcomeFeedbackSummary] = field(default_factory=dict)
     feedback_policy_metadata: FeedbackPolicyMetadata | None = None
     routing_policy_metadata: RoutingScorePolicyMetadata | None = None
+    applied_evidence_sources: tuple[str, ...] = ()
 
     @property
     def decisions(self) -> tuple[SituationDecision, ...]:
@@ -371,6 +372,11 @@ class ModelDecisionReport:
             **(
                 {"feedbackPolicy": self.feedback_policy_metadata.to_dict()}
                 if self.feedback_policy_metadata is not None
+                else {}
+            ),
+            **(
+                {"appliedEvidenceSources": list(self.applied_evidence_sources)}
+                if self.applied_evidence_sources
                 else {}
             ),
             **(
@@ -646,6 +652,7 @@ def evaluate_model_decisions(
     readiness: ReadinessEvidenceInput | None = None,
     feedback: FeedbackAdjustmentInput | None = None,
     feedback_policy: FeedbackAdjustmentPolicyInput | None = None,
+    evidence_sources: Iterable[str] | None = None,
     routing_policy: RoutingScorePolicyInput | None = None,
     situation_weights: Mapping[str, float] | None = None,
     minimum_scores: Mapping[str, float] | None = None,
@@ -667,7 +674,13 @@ def evaluate_model_decisions(
     _validate_inputs(model_list, task_list)
     readiness_by_model = _normalize_readiness_evidence(readiness)
     _validate_readiness_evidence(readiness_by_model, model_list)
-    feedback_by_model = _feedback_for_models(feedback, model_list, feedback_policy=feedback_policy)
+    applied_evidence_sources = _normalize_applied_evidence_sources(evidence_sources)
+    resolved_feedback = (
+        filter_outcome_feedback_records(feedback, evidence_sources=applied_evidence_sources)
+        if feedback is not None
+        else None
+    )
+    feedback_by_model = _feedback_for_models(resolved_feedback, model_list, feedback_policy=feedback_policy)
     feedback_policy_metadata = (
         build_feedback_policy_metadata(feedback_policy)
         if feedback is not None
@@ -720,6 +733,7 @@ def evaluate_model_decisions(
         feedback_adjustments=feedback_by_model,
         feedback_policy_metadata=feedback_policy_metadata,
         routing_policy_metadata=routing_policy_metadata,
+        applied_evidence_sources=applied_evidence_sources,
     )
 
 
@@ -748,6 +762,7 @@ def build_model_recommendation_report(
         readiness=readiness,
         feedback=feedback_records if feedback is not None else None,
         feedback_policy=feedback_policy,
+        evidence_sources=evidence_sources,
         routing_policy=routing_policy,
         situation_weights=situation_weights,
         minimum_scores=minimum_scores,
@@ -766,6 +781,23 @@ def build_model_recommendation_report(
         outcome_summary=outcome_summary,
         applied_evidence_sources=tuple(outcome_summary.applied_evidence_sources) if outcome_summary else (),
     )
+
+
+def _normalize_applied_evidence_sources(evidence_sources: Iterable[str] | None) -> tuple[str, ...]:
+    if evidence_sources is None:
+        return ()
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_value in evidence_sources:
+        value = str(raw_value).strip()
+        if not value:
+            continue
+        normalized_key = value.casefold()
+        if normalized_key in seen:
+            continue
+        seen.add(normalized_key)
+        normalized.append(value)
+    return tuple(normalized)
 
 
 def _resolve_decision_inputs(
