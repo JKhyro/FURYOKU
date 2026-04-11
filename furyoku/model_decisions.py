@@ -22,6 +22,7 @@ from .outcome_feedback import (
     OutcomeFeedbackSummaryReport,
     build_feedback_policy_metadata,
     build_model_feedback_summaries,
+    filter_outcome_feedback_records,
     summarize_outcome_feedback,
 )
 from .provider_health import ProviderHealthCheckResult
@@ -473,6 +474,7 @@ class ModelRecommendationReport:
 
     decision_report: ModelDecisionReport
     outcome_summary: OutcomeFeedbackSummaryReport | None = None
+    applied_evidence_sources: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
         outcome_models = _outcome_models_by_id(self.outcome_summary)
@@ -480,6 +482,7 @@ class ModelRecommendationReport:
             "schemaVersion": 1,
             "ok": not self.decision_report.blocked_tasks,
             "blockedTasks": list(self.decision_report.blocked_tasks),
+            "appliedEvidenceSources": list(self.applied_evidence_sources),
             "recommendations": [
                 ModelRecommendation(
                     task_id=decision.task.task_id,
@@ -730,10 +733,15 @@ def build_model_recommendation_report(
     routing_policy: RoutingScorePolicyInput | None = None,
     situation_weights: Mapping[str, float] | None = None,
     minimum_scores: Mapping[str, float] | None = None,
+    evidence_sources: Iterable[str] | None = None,
 ) -> ModelRecommendationReport:
     """Build an operator-facing recommendation report without changing routing behavior."""
 
-    feedback_records = tuple(feedback or ())
+    feedback_records = (
+        filter_outcome_feedback_records(feedback or (), evidence_sources=evidence_sources)
+        if feedback is not None
+        else ()
+    )
     decision_report = evaluate_model_decisions(
         models,
         tasks,
@@ -745,13 +753,18 @@ def build_model_recommendation_report(
         minimum_scores=minimum_scores,
     )
     outcome_summary = (
-        summarize_outcome_feedback(feedback_records, policy=feedback_policy)
+        summarize_outcome_feedback(
+            feedback_records,
+            policy=feedback_policy,
+            evidence_sources=evidence_sources,
+        )
         if feedback is not None
         else None
     )
     return ModelRecommendationReport(
         decision_report=decision_report,
         outcome_summary=outcome_summary,
+        applied_evidence_sources=tuple(outcome_summary.applied_evidence_sources) if outcome_summary else (),
     )
 
 

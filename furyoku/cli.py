@@ -70,6 +70,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _load_feedback_logs(args.feedback_log),
             policy=feedback_policy,
             as_of=args.as_of,
+            evidence_sources=args.evidence_source,
         )
         _write_json(report.to_dict(), output_path=args.output)
         return 0
@@ -264,6 +265,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "recommend":
         if args.decision_suite and (args.task_profile or _has_inline_decision_task_args(args)):
             parser.error("--decision-suite cannot be combined with --task-profile or inline task arguments")
+        if args.evidence_source and not args.feedback_log:
+            parser.error("--evidence-source requires --feedback-log")
         if args.decision_suite:
             decision_input = load_decision_suite(args.decision_suite)
         elif args.task_profile:
@@ -282,6 +285,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             feedback=feedback,
             feedback_policy=feedback_policy,
             routing_policy=routing_policy,
+            evidence_sources=args.evidence_source,
         )
         _write_json(report.to_dict(), output_path=args.output)
         return 0 if not report.decision_report.blocked_tasks else 2
@@ -526,6 +530,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_feedback_policy_arg(recommend_parser)
     _add_routing_policy_arg(recommend_parser)
+    _add_evidence_source_args(recommend_parser)
     recommend_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON recommendation report.")
     feedback_parser = subparsers.add_parser(
         "feedback",
@@ -560,6 +565,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="JSONL outcome feedback log to summarize. Repeat to merge multiple logs.",
     )
     _add_feedback_policy_arg(feedback_summary_parser)
+    _add_evidence_source_args(feedback_summary_parser)
     feedback_summary_parser.add_argument(
         "--as-of",
         help="Optional ISO timestamp used for recency-aware feedback policy weighting.",
@@ -630,6 +636,15 @@ def _add_routing_policy_arg(parser: argparse.ArgumentParser) -> None:
         "--routing-policy",
         type=Path,
         help="Optional JSON routing score policy profile for baseline model selection.",
+    )
+
+
+def _add_evidence_source_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--evidence-source",
+        action="append",
+        default=[],
+        help="Only use feedback records from this evidence source label. Repeat to allow multiple sources.",
     )
 
 

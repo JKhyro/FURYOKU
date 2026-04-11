@@ -223,6 +223,35 @@ def write_feedback_log(path: Path) -> None:
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
+def write_mixed_source_feedback_log(path: Path) -> None:
+    payloads = [
+        {
+            "schemaVersion": 1,
+            "recordId": "feedback-1",
+            "reportPath": "decision-report.json",
+            "reportSha256": "0" * 64,
+            "generatedAt": "2026-04-10T12:00:00+00:00",
+            "selectedModelId": "local-echo",
+            "selectedProvider": "local",
+            "verdict": "success",
+            "score": 1.0,
+        },
+        {
+            "schemaVersion": 1,
+            "recordId": "feedback-2",
+            "reportPath": "compare-report.json",
+            "reportSha256": "1" * 64,
+            "generatedAt": "2026-04-10T12:01:00+00:00",
+            "selectedModelId": "local-echo",
+            "selectedProvider": "local",
+            "verdict": "success",
+            "score": 0.8,
+            "metadata": {"captureSource": "furyoku.cli.compare-run"},
+        },
+    ]
+    path.write_text("\n".join(json.dumps(payload) for payload in payloads) + "\n", encoding="utf-8")
+
+
 def write_feedback_policy(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -1206,6 +1235,30 @@ class CliTests(unittest.TestCase):
             self.assertIn("reportMetadata", persisted)
             self.assertEqual(persisted["recordCount"], 2)
 
+    def test_feedback_summary_filters_to_selected_evidence_sources(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_mixed_source_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "feedback-summary",
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--evidence-source",
+                        "furyoku.cli.compare-run",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["recordCount"], 1)
+            self.assertEqual(payload["appliedEvidenceSources"], ["furyoku.cli.compare-run"])
+            self.assertEqual(payload["sources"][0]["key"], "furyoku.cli.compare-run")
+            self.assertEqual(payload["sources"][0]["recordCount"], 1)
+
     def test_recommend_outputs_feedback_backed_model_recommendations(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
@@ -1242,6 +1295,39 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["recommendations"][0]["selectedModel"]["outcomeRecordCount"], 1)
             self.assertIn("outcomeSummary", payload)
             self.assertIn("reportMetadata", persisted)
+
+    def test_recommend_filters_feedback_to_selected_evidence_sources(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            feedback_path = Path(temp_dir) / "feedback.jsonl"
+            write_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            write_mixed_source_feedback_log(feedback_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "recommend",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--feedback-log",
+                        str(feedback_path),
+                        "--evidence-source",
+                        "furyoku.cli.compare-run",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["appliedEvidenceSources"], ["furyoku.cli.compare-run"])
+            self.assertEqual(payload["outcomeSummary"]["recordCount"], 1)
+            self.assertEqual(payload["outcomeSummary"]["sources"][0]["key"], "furyoku.cli.compare-run")
+            self.assertEqual(payload["recommendations"][0]["selectedModel"]["outcomeRecordCount"], 1)
+            self.assertAlmostEqual(payload["recommendations"][0]["selectedModel"]["feedbackAdjustment"], 8.4)
 
     def test_recommend_accepts_direct_cli_budget_and_latency_flags(self):
         with tempfile.TemporaryDirectory() as temp_dir:
