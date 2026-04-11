@@ -1456,6 +1456,35 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["taskProfile"]["maxLatencyMs"], 20)
             self.assertEqual(payload["taskProfile"]["maxTotalCostPer1k"], 0.01)
 
+    def test_select_accepts_direct_cli_budget_and_latency_flags(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "bounded-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--max-latency-ms",
+                        "20",
+                        "--max-total-cost-per-1k",
+                        "0.01",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "local-echo")
+            self.assertEqual(payload["taskProfile"]["maxLatencyMs"], 20)
+            self.assertEqual(payload["taskProfile"]["maxTotalCostPer1k"], 0.01)
+
     def test_decide_surfaces_budget_and_latency_constraint_blockers(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             registry_path = Path(temp_dir) / "models.json"
@@ -1489,6 +1518,68 @@ class CliTests(unittest.TestCase):
                 any("average latency 100ms exceeds task limit 20ms" in blocker for blocker in remote_rank["blockers"])
             )
             self.assertEqual(remote_rank["totalCostPer1k"], 0.016)
+
+    def test_decide_accepts_direct_cli_budget_and_latency_flags(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            write_registry(registry_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "decide",
+                        "--registry",
+                        str(registry_path),
+                        "--task-id",
+                        "bounded-chat",
+                        "--capability",
+                        "conversation=0.8",
+                        "--max-latency-ms",
+                        "20",
+                        "--max-total-cost-per-1k",
+                        "0.01",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            decision = payload["decisions"][0]
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(decision["taskId"], "bounded-chat")
+            self.assertEqual(decision["maxLatencyMs"], 20)
+            self.assertEqual(decision["maxTotalCostPer1k"], 0.01)
+            self.assertEqual(decision["selectedModel"]["modelId"], "local-echo")
+
+    def test_run_task_profile_cli_constraint_flags_override_profile_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "budget-task.json"
+            write_executable_character_registry(registry_path)
+            write_budget_latency_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--max-latency-ms",
+                        "50",
+                        "--max-total-cost-per-1k",
+                        "0.02",
+                        "--prompt",
+                        "hello",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["selection"]["modelId"], "cli-coder")
+            self.assertEqual(payload["taskProfile"]["maxLatencyMs"], 50)
+            self.assertEqual(payload["taskProfile"]["maxTotalCostPer1k"], 0.02)
 
     def test_select_output_surfaces_tradeoff_weights_from_task_profile(self):
         with tempfile.TemporaryDirectory() as temp_dir:
