@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#177](https://github.com/JKhyro/FURYOKU/issues/177)
+- Current active lane: [#180](https://github.com/JKhyro/FURYOKU/issues/180)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -22,8 +22,23 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local primary lane: `gemma3-heretic:4b-q4km`
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
-- Current architecture direction: multi-model local/CLI/API selection and execution first, with flexible CHARACTER/MOA role composition layered on top.
-- Current follow-on focus: extend evidence-source filtering into live `select`, `run`, and `decide` feedback-backed routing so operators can control which evidence shapes actual model choice.
+- Current architecture direction: multi-model local/CLI/API selection and execution first, then an installable SDK/component surface, with flexible CHARACTER/MOA role composition layered on top.
+- Current follow-on focus: add installable package metadata and a packaged CLI entrypoint so other programs can reuse FURYOKU as a component library before a separate local service/API wrapper is introduced.
+
+## SDK Reuse
+
+FURYOKU is now intended to be consumed both as:
+
+- an importable Python package for direct library/SDK reuse
+- a packaged CLI for process-level integration
+
+Local install examples:
+
+```powershell
+python -m pip install -e .
+furyoku --help
+python -m furyoku --help
+```
 
 ## Product Direction
 
