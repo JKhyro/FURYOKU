@@ -196,6 +196,82 @@ class ModelRouterTests(unittest.TestCase):
         self.assertEqual(default_selected.model.model_id, "expensive-api")
         self.assertEqual(cheap_selected.model.model_id, "cheap-local")
 
+    def test_default_tradeoff_weights_preserve_selection_and_reasons(self):
+        models = [
+            ModelEndpoint(
+                model_id="fast-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=100,
+                capabilities={"conversation": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="slow-remote",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=5000,
+                input_cost_per_1k=0.004,
+                output_cost_per_1k=0.012,
+                capabilities={"conversation": 0.95},
+            ),
+        ]
+        default_task = TaskProfile(task_id="chat", required_capabilities={"conversation": 0.8})
+        explicit_task = TaskProfile(
+            task_id="chat",
+            required_capabilities={"conversation": 0.8},
+            quality_tradeoff_weight=1.0,
+            latency_tradeoff_weight=1.0,
+            cost_tradeoff_weight=1.0,
+        )
+
+        default_selected = select_model(models, default_task)
+        explicit_selected = select_model(models, explicit_task)
+
+        self.assertEqual(explicit_selected.model.model_id, default_selected.model.model_id)
+        self.assertEqual(explicit_selected.score, default_selected.score)
+        self.assertEqual(explicit_selected.reasons, default_selected.reasons)
+
+    def test_tradeoff_weights_can_change_eligible_ranking(self):
+        models = [
+            ModelEndpoint(
+                model_id="fast-local",
+                provider="local",
+                privacy_level="local",
+                context_window_tokens=4096,
+                average_latency_ms=100,
+                capabilities={"conversation": 0.82},
+            ),
+            ModelEndpoint(
+                model_id="slow-remote",
+                provider="api",
+                privacy_level="remote",
+                context_window_tokens=128000,
+                average_latency_ms=5000,
+                input_cost_per_1k=0.004,
+                output_cost_per_1k=0.012,
+                capabilities={"conversation": 0.95},
+            ),
+        ]
+        default_task = TaskProfile(task_id="chat", required_capabilities={"conversation": 0.8})
+        tradeoff_task = TaskProfile(
+            task_id="chat",
+            required_capabilities={"conversation": 0.8},
+            quality_tradeoff_weight=0.4,
+            latency_tradeoff_weight=3.0,
+            cost_tradeoff_weight=3.0,
+        )
+
+        default_selected = select_model(models, default_task)
+        tradeoff_selected = select_model(models, tradeoff_task)
+
+        self.assertEqual(default_selected.model.model_id, "slow-remote")
+        self.assertEqual(tradeoff_selected.model.model_id, "fast-local")
+        self.assertTrue(
+            any("tradeoff weights quality 0.40, latency 3.00, cost 3.00" in reason for reason in tradeoff_selected.reasons)
+        )
+
     def test_latency_ceiling_blocks_slow_models(self):
         models = [
             ModelEndpoint(
@@ -282,6 +358,27 @@ class ModelRouterTests(unittest.TestCase):
             if score.model.model_id == "local-gemma3-heretic-q4"
         )
 
+        self.assertFalse(local_rank.eligible)
+        self.assertTrue(any("tool support" in blocker for blocker in local_rank.blockers))
+
+    def test_tradeoff_weights_do_not_bypass_hard_blockers(self):
+        task = TaskProfile(
+            task_id="tool-chat",
+            required_capabilities={"conversation": 0.8},
+            require_tools=True,
+            quality_tradeoff_weight=0.2,
+            latency_tradeoff_weight=5.0,
+            cost_tradeoff_weight=5.0,
+        )
+
+        ranked = rank_models(sample_models(), task)
+        local_rank = next(
+            score
+            for score in ranked
+            if score.model.model_id == "local-gemma3-heretic-q4"
+        )
+
+        self.assertEqual(select_model(sample_models(), task).model.model_id, "cli-codex-high")
         self.assertFalse(local_rank.eligible)
         self.assertTrue(any("tool support" in blocker for blocker in local_rank.blockers))
 

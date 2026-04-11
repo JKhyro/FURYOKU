@@ -17,6 +17,9 @@ class TaskProfileTests(unittest.TestCase):
         self.assertEqual(profile.task_id, "private-chat")
         self.assertEqual(profile.privacy_requirement, "local_only")
         self.assertEqual(profile.required_capabilities["conversation"], 0.8)
+        self.assertEqual(profile.quality_tradeoff_weight, 1.0)
+        self.assertEqual(profile.latency_tradeoff_weight, 1.0)
+        self.assertEqual(profile.cost_tradeoff_weight, 1.0)
 
     def test_load_task_profile_accepts_utf8_bom_file(self):
         payload = {
@@ -49,6 +52,35 @@ class TaskProfileTests(unittest.TestCase):
         self.assertEqual(profile.max_input_cost_per_1k, 0.01)
         self.assertEqual(profile.max_output_cost_per_1k, 0.02)
         self.assertEqual(profile.max_total_cost_per_1k, 0.025)
+
+    def test_parse_task_profile_accepts_tradeoff_weights(self):
+        profile = parse_task_profile(
+            {
+                "schemaVersion": 1,
+                "taskId": "tradeoff-task",
+                "requiredCapabilities": {"conversation": 0.8},
+                "qualityTradeoffWeight": 0.5,
+                "latencyTradeoffWeight": 2.0,
+                "costTradeoffWeight": 1.5,
+            }
+        )
+
+        self.assertEqual(profile.quality_tradeoff_weight, 0.5)
+        self.assertEqual(profile.latency_tradeoff_weight, 2.0)
+        self.assertEqual(profile.cost_tradeoff_weight, 1.5)
+
+    def test_parse_task_profile_rejects_negative_tradeoff_weight(self):
+        with self.assertRaises(TaskProfileError) as error:
+            parse_task_profile(
+                {
+                    "schemaVersion": 1,
+                    "taskId": "broken-tradeoff-task",
+                    "requiredCapabilities": {"conversation": 0.8},
+                    "latencyTradeoffWeight": -1.0,
+                }
+            )
+
+        self.assertIn("latencyTradeoffWeight", str(error.exception))
 
     def test_missing_capabilities_are_rejected(self):
         with self.assertRaises(TaskProfileError) as error:

@@ -702,12 +702,30 @@ def _add_common_task_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--max-input-cost-per-1k", type=float, default=None, help="Maximum input cost per 1k tokens.")
     parser.add_argument("--max-output-cost-per-1k", type=float, default=None, help="Maximum output cost per 1k tokens.")
+    parser.add_argument(
+        "--quality-tradeoff-weight",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Task-level soft weighting applied to quality/capability and context scoring.",
+    )
+    parser.add_argument(
+        "--latency-tradeoff-weight",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Task-level soft weighting applied to latency/speed scoring.",
+    )
+    parser.add_argument(
+        "--cost-tradeoff-weight",
+        type=_parse_non_negative_float_arg,
+        default=None,
+        help="Task-level soft weighting applied to cost penalties.",
+    )
 
 
 def _task_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> TaskProfile:
     if args.task_profile:
         profile = load_task_profile(args.task_profile)
-        if not args.capability and not args.task_id:
+        if not _task_profile_has_inline_overrides(args):
             return profile
         return TaskProfile(
             task_id=args.task_id or profile.task_id,
@@ -715,15 +733,26 @@ def _task_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -
             required_capabilities=_parse_capabilities(args.capability) if args.capability else profile.required_capabilities,
             min_context_tokens=args.min_context_tokens or profile.min_context_tokens,
             privacy_requirement=args.privacy if args.privacy != "allow_remote" else profile.privacy_requirement,
+            max_latency_ms=profile.max_latency_ms,
             max_input_cost_per_1k=args.max_input_cost_per_1k
             if args.max_input_cost_per_1k is not None
             else profile.max_input_cost_per_1k,
             max_output_cost_per_1k=args.max_output_cost_per_1k
             if args.max_output_cost_per_1k is not None
             else profile.max_output_cost_per_1k,
+            max_total_cost_per_1k=profile.max_total_cost_per_1k,
             require_tools=args.require_tools or profile.require_tools,
             require_json=args.require_json or profile.require_json,
             preferred_providers=tuple(args.preferred_provider) or profile.preferred_providers,
+            quality_tradeoff_weight=args.quality_tradeoff_weight
+            if args.quality_tradeoff_weight is not None
+            else profile.quality_tradeoff_weight,
+            latency_tradeoff_weight=args.latency_tradeoff_weight
+            if args.latency_tradeoff_weight is not None
+            else profile.latency_tradeoff_weight,
+            cost_tradeoff_weight=args.cost_tradeoff_weight
+            if args.cost_tradeoff_weight is not None
+            else profile.cost_tradeoff_weight,
         )
 
     if not args.task_id:
@@ -741,6 +770,29 @@ def _task_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -
         require_tools=args.require_tools,
         require_json=args.require_json,
         preferred_providers=tuple(args.preferred_provider),
+        quality_tradeoff_weight=args.quality_tradeoff_weight or 1.0,
+        latency_tradeoff_weight=args.latency_tradeoff_weight or 1.0,
+        cost_tradeoff_weight=args.cost_tradeoff_weight or 1.0,
+    )
+
+
+def _task_profile_has_inline_overrides(args: argparse.Namespace) -> bool:
+    return any(
+        (
+            bool(args.capability),
+            bool(args.task_id),
+            bool(args.description),
+            bool(args.min_context_tokens),
+            args.privacy != "allow_remote",
+            args.require_tools,
+            args.require_json,
+            bool(args.preferred_provider),
+            args.max_input_cost_per_1k is not None,
+            args.max_output_cost_per_1k is not None,
+            args.quality_tradeoff_weight is not None,
+            args.latency_tradeoff_weight is not None,
+            args.cost_tradeoff_weight is not None,
+        )
     )
 
 
@@ -761,6 +813,16 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
             raise argparse.ArgumentTypeError(f"capability score must be between 0.0 and 1.0: {raw_value}")
         capabilities[name] = score
     return capabilities
+
+
+def _parse_non_negative_float_arg(raw_value: str) -> float:
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"value must be numeric: {raw_value}") from exc
+    if value < 0.0:
+        raise argparse.ArgumentTypeError(f"value must be 0 or greater: {raw_value}")
+    return value
 
 
 def _select_with_optional_feedback(

@@ -196,6 +196,18 @@ def write_budget_latency_task_profile(path: Path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def write_tradeoff_task_profile(path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "taskId": "tradeoff-chat",
+        "requiredCapabilities": {"conversation": 0.8},
+        "qualityTradeoffWeight": 0.4,
+        "latencyTradeoffWeight": 3.0,
+        "costTradeoffWeight": 3.0,
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def write_feedback_log(path: Path) -> None:
     payload = {
         "schemaVersion": 1,
@@ -1477,6 +1489,68 @@ class CliTests(unittest.TestCase):
                 any("average latency 100ms exceeds task limit 20ms" in blocker for blocker in remote_rank["blockers"])
             )
             self.assertEqual(remote_rank["totalCostPer1k"], 0.016)
+
+    def test_select_output_surfaces_tradeoff_weights_from_task_profile(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "tradeoff-task.json"
+            write_routing_policy_registry(registry_path)
+            write_tradeoff_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "fast-local")
+            self.assertEqual(payload["taskProfile"]["qualityTradeoffWeight"], 0.4)
+            self.assertEqual(payload["taskProfile"]["latencyTradeoffWeight"], 3.0)
+            self.assertEqual(payload["taskProfile"]["costTradeoffWeight"], 3.0)
+            self.assertTrue(
+                any("tradeoff weights quality 0.40, latency 3.00, cost 3.00" in reason for reason in payload["reasons"])
+            )
+
+    def test_select_task_profile_tradeoff_flags_override_profile_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            task_path = Path(temp_dir) / "task.json"
+            write_routing_policy_registry(registry_path)
+            write_feedback_task_profile(task_path)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "select",
+                        "--registry",
+                        str(registry_path),
+                        "--task-profile",
+                        str(task_path),
+                        "--quality-tradeoff-weight",
+                        "0.4",
+                        "--latency-tradeoff-weight",
+                        "3.0",
+                        "--cost-tradeoff-weight",
+                        "3.0",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["modelId"], "fast-local")
+            self.assertEqual(payload["taskProfile"]["taskId"], "feedback-chat")
+            self.assertEqual(payload["taskProfile"]["qualityTradeoffWeight"], 0.4)
+            self.assertEqual(payload["taskProfile"]["latencyTradeoffWeight"], 3.0)
+            self.assertEqual(payload["taskProfile"]["costTradeoffWeight"], 3.0)
 
     def test_select_feedback_log_adjusts_single_task_ranking(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "taskId": "tradeoff-speed-chat",
+  "description": "Conversational task that still values quality, but deliberately prefers lower latency among otherwise eligible models.",
+  "privacyRequirement": "allow_remote",
+  "requiredCapabilities": {
+    "conversation": 0.8,
+    "instruction_following": 0.75
+  },
+  "qualityTradeoffWeight": 1.0,
+  "latencyTradeoffWeight": 2.5,
+  "costTradeoffWeight": 1.0
+}
