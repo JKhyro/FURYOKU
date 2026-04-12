@@ -195,6 +195,28 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_exposes_live_run_endpoint_with_task_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            task_path = temp_path / "task.json"
+            self._write_task_fixture(task_path)
+            try:
+                self._wait_for_service_health(process, base_url)
+                payload = self._request_json(
+                    base_url + "/v1/run",
+                    {
+                        "taskPath": str(task_path),
+                        "prompt": "hello",
+                    },
+                )
+
+                self.assertTrue(payload["ok"])
+                self.assertEqual(payload["selection"]["modelId"], "local-echo")
+                self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            finally:
+                self._stop_process(process)
+
     def _install_editable_package(self, venv_dir: Path) -> None:
         subprocess.run(
             [sys.executable, "-m", "venv", str(venv_dir)],
