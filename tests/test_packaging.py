@@ -149,6 +149,21 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_exposes_service_error_payload_for_invalid_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(base_url + "/v1/run", {})
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn("task or taskPath is required", error["payload"]["error"]["message"])
+            finally:
+                self._stop_process(process)
+
     def _install_editable_package(self, venv_dir: Path) -> None:
         subprocess.run(
             [sys.executable, "-m", "venv", str(venv_dir)],
