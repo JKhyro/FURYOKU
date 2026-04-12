@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#191](https://github.com/JKhyro/FURYOKU/issues/191)
+- Current active lane: [#193](https://github.com/JKhyro/FURYOKU/issues/193)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: none currently open
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: prove that an installed `furyoku-service` entrypoint can complete the remaining first-contract `POST /v1/health` provider-readiness call from a fresh environment.
+- Current follow-on focus: prove that an installed `furyoku-service` entrypoint returns the expected thin-wrapper JSON error payload for an invalid external request, not only successful responses.
 
 ## SDK Reuse
 
