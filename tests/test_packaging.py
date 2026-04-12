@@ -134,6 +134,21 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_exposes_service_error_payload_for_invalid_select(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(base_url + "/v1/select", {})
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn("task or taskPath is required", error["payload"]["error"]["message"])
+            finally:
+                self._stop_process(process)
+
     def _install_editable_package(self, venv_dir: Path) -> None:
         subprocess.run(
             [sys.executable, "-m", "venv", str(venv_dir)],
@@ -246,6 +261,25 @@ class PackagingTests(unittest.TestCase):
         )
         with urllib.request.urlopen(request, timeout=1) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    def _request_http_error(self, url: str, payload: dict | None = None) -> dict:
+        data = None if payload is None else json.dumps(payload).encode("utf-8")
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST" if payload is not None else "GET",
+        )
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            urllib.request.urlopen(request, timeout=1)
+        response = context.exception
+        try:
+            return {
+                "status": response.code,
+                "payload": json.loads(response.read().decode("utf-8")),
+            }
+        finally:
+            response.close()
 
     def _wait_for_service_health(self, process: subprocess.Popen[str], base_url: str) -> dict:
         deadline = time.monotonic() + 15
