@@ -86,6 +86,21 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_exposes_live_provider_health_endpoint(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            try:
+                self._wait_for_service_health(process, base_url)
+                payload = self._request_json(base_url + "/v1/health", {})
+
+                self.assertFalse(payload["ok"])
+                self.assertEqual(len(payload["providers"]), 2)
+                self.assertTrue(payload["providers"][0]["ready"])
+                self.assertEqual(payload["providers"][1]["status"], "missing-transport")
+            finally:
+                self._stop_process(process)
+
     def test_editable_install_exposes_live_select_and_run_endpoints(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -202,7 +217,19 @@ class PackagingTests(unittest.TestCase):
                             "capabilities": {
                                 "conversation": 0.95,
                             },
-                        }
+                        },
+                        {
+                            "modelId": "remote-coder",
+                            "provider": "api",
+                            "privacyLevel": "remote",
+                            "contextWindowTokens": 128000,
+                            "averageLatencyMs": 100,
+                            "supportsTools": True,
+                            "capabilities": {
+                                "conversation": 0.8,
+                                "coding": 0.98,
+                            },
+                        },
                     ],
                 }
             ),
