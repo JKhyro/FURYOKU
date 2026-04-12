@@ -1,0 +1,29 @@
+name: Benchmark Truth Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark-truth:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run benchmark contract reporter tests
+        run: python -m unittest benchmarks.openclaw-local-llm.test_benchmark_contract_report -q
+
+      - name: Verify checked-in compare truth freshness
+        run: powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\check_compare_truth_fresh.ps1

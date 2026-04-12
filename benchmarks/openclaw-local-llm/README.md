@@ -34,7 +34,7 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 - The benchmark outputs now also attach a machine-readable `promotionVerdict` per model so candidate promotion can be gated mechanically
 - The benchmark outputs now also attach a machine-readable `resourceFitVerdict` so local RAM, GPU, and latency regressions can be gated mechanically against the 32 GB RAM / 4 GB VRAM target profile
 - Compare reports now also attach a machine-readable `compareDecision` so the deployed baseline and each comparison candidate can be evaluated with explicit roles and with contract-versus-machine-fit blocker reasons
-- The benchmark lane now supports both direct machine-profile overrides and reusable preset selection, and the active follow-on is to add a one-command compare publish helper for the summary plus current-baseline manifest
+- The benchmark lane now supports both direct machine-profile overrides and reusable preset selection, and the current support follow-on is to keep the compare-truth report plus current-baseline manifest mechanically enforced in CI
 - `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
 - `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
 - `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
@@ -64,6 +64,8 @@ Verify checked-in compare truth is fresh:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\check_compare_truth_fresh.ps1
 ```
+
+GitHub Actions also runs the benchmark contract reporter tests plus this compare-truth freshness check on pull requests and pushes to `main` through [`.github/workflows/benchmark-truth-gate.yml`](../../.github/workflows/benchmark-truth-gate.yml).
 
 Publish an alternate compare set:
 

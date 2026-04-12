@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#182](https://github.com/JKhyro/FURYOKU/issues/182)
+- Current active lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: [#73](https://github.com/JKhyro/FURYOKU/issues/73)
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: none configured
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: add a thin local service/API wrapper over the packaged SDK so other programs can call FURYOKU through a minimal local JSON contract without importing Python directly.
+- Current follow-on focus: add CI enforcement for benchmark contract tests and checked-in compare-truth freshness on pull requests and pushes to `main`.
 
 ## SDK Reuse
 
@@ -182,5 +182,6 @@ python -m furyoku.cli character-run --registry .\examples\model_registry.example
 - Current deployed-baseline manifest: [2026-04-09 Gemma Heretic current-baseline manifest](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-current-baseline.json)
 - Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Current comparison-candidate evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
+- GitHub Actions now enforces the benchmark contract reporter tests plus checked-in compare-truth freshness through [`.github/workflows/benchmark-truth-gate.yml`](.github/workflows/benchmark-truth-gate.yml) on pull requests and pushes to `main`
 - The current benchmark evidence now carries mechanical hard-check scoring, machine-readable `promotionVerdict` and `resourceFitVerdict` outputs, and role-aware `compareDecision` statuses that can distinguish contract blockers from machine-fit blockers
-- The benchmark report and both local benchmark entrypoints now accept machine-profile overrides and reusable preset selection, and the active follow-on is to add a one-command compare publish helper that emits both the summary and current-baseline manifest together
+- The benchmark report and both local benchmark entrypoints now accept machine-profile overrides and reusable preset selection, and the current support follow-on is to keep the compare-truth summary plus current-baseline manifest mechanically enforced in CI
