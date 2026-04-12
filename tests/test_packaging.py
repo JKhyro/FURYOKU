@@ -75,63 +75,47 @@ class PackagingTests(unittest.TestCase):
     def test_editable_install_exposes_live_service_health_endpoint(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            venv_dir = temp_path / "venv"
-            self._install_editable_package(venv_dir)
-
-            service_entrypoint = self._venv_service_entrypoint(venv_dir)
-            self.assertTrue(service_entrypoint.exists(), msg=f"missing installed entrypoint: {service_entrypoint}")
-
-            registry_path = temp_path / "registry.json"
-            registry_path.write_text(
-                json.dumps(
-                    {
-                        "schemaVersion": 1,
-                        "models": [
-                            {
-                                "modelId": "local-echo",
-                                "provider": "local",
-                                "privacyLevel": "local",
-                                "contextWindowTokens": 4096,
-                                "averageLatencyMs": 10,
-                                "invocation": [
-                                    sys.executable,
-                                    "-c",
-                                    "import sys; print('echo:' + sys.stdin.read())",
-                                ],
-                                "capabilities": {
-                                    "conversation": 0.95,
-                                },
-                            }
-                        ],
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            port = self._find_free_port()
-            process = subprocess.Popen(
-                [
-                    str(service_entrypoint),
-                    "--host",
-                    "127.0.0.1",
-                    "--port",
-                    str(port),
-                    "--registry",
-                    str(registry_path),
-                    "--quiet",
-                ],
-                cwd=ROOT,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            process, base_url, registry_path = self._start_installed_service(temp_path)
             try:
-                payload = self._wait_for_service_health(process, port)
+                payload = self._wait_for_service_health(process, base_url)
 
                 self.assertTrue(payload["ok"])
                 self.assertEqual(payload["service"], "furyoku-service")
                 self.assertEqual(payload["defaultRegistryPath"], str(registry_path.resolve()))
                 self.assertEqual(payload["endpoints"]["serviceHealth"]["path"], "/health")
+            finally:
+                self._stop_process(process)
+
+    def test_editable_install_exposes_live_select_and_run_endpoints(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            task = {
+                "schemaVersion": 1,
+                "taskId": "private-chat",
+                "privacyRequirement": "local_only",
+                "requiredCapabilities": {
+                    "conversation": 0.9,
+                },
+            }
+            try:
+                self._wait_for_service_health(process, base_url)
+                select_payload = self._request_json(base_url + "/v1/select", {"task": task})
+                run_payload = self._request_json(
+                    base_url + "/v1/run",
+                    {
+                        "task": task,
+                        "prompt": "hello",
+                    },
+                )
+
+                self.assertTrue(select_payload["ok"])
+                self.assertEqual(select_payload["selection"]["modelId"], "local-echo")
+                self.assertEqual(select_payload["taskProfile"]["taskId"], "private-chat")
+
+                self.assertTrue(run_payload["ok"])
+                self.assertEqual(run_payload["selection"]["modelId"], "local-echo")
+                self.assertEqual(run_payload["execution"]["responseText"].strip(), "echo:hello")
             finally:
                 self._stop_process(process)
 
@@ -154,6 +138,35 @@ class PackagingTests(unittest.TestCase):
         )
         self.assertEqual(install_result.returncode, 0, msg=install_result.stderr)
 
+    def _start_installed_service(self, temp_path: Path) -> tuple[subprocess.Popen[str], str, Path]:
+        venv_dir = temp_path / "venv"
+        self._install_editable_package(venv_dir)
+
+        service_entrypoint = self._venv_service_entrypoint(venv_dir)
+        self.assertTrue(service_entrypoint.exists(), msg=f"missing installed entrypoint: {service_entrypoint}")
+
+        registry_path = temp_path / "registry.json"
+        self._write_registry_fixture(registry_path)
+
+        port = self._find_free_port()
+        process = subprocess.Popen(
+            [
+                str(service_entrypoint),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+                "--registry",
+                str(registry_path),
+                "--quiet",
+            ],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        return process, f"http://127.0.0.1:{port}", registry_path
+
     def _venv_python(self, venv_dir: Path) -> Path:
         if sys.platform == "win32":
             return venv_dir / "Scripts" / "python.exe"
@@ -169,9 +182,46 @@ class PackagingTests(unittest.TestCase):
             sock.bind(("127.0.0.1", 0))
             return sock.getsockname()[1]
 
-    def _wait_for_service_health(self, process: subprocess.Popen[str], port: int) -> dict:
+    def _write_registry_fixture(self, registry_path: Path) -> None:
+        registry_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "models": [
+                        {
+                            "modelId": "local-echo",
+                            "provider": "local",
+                            "privacyLevel": "local",
+                            "contextWindowTokens": 4096,
+                            "averageLatencyMs": 10,
+                            "invocation": [
+                                sys.executable,
+                                "-c",
+                                "import sys; print('echo:' + sys.stdin.read())",
+                            ],
+                            "capabilities": {
+                                "conversation": 0.95,
+                            },
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def _request_json(self, url: str, payload: dict | None = None) -> dict:
+        data = None if payload is None else json.dumps(payload).encode("utf-8")
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST" if payload is not None else "GET",
+        )
+        with urllib.request.urlopen(request, timeout=1) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    def _wait_for_service_health(self, process: subprocess.Popen[str], base_url: str) -> dict:
         deadline = time.monotonic() + 15
-        url = f"http://127.0.0.1:{port}/health"
         while time.monotonic() < deadline:
             if process.poll() is not None:
                 stdout, stderr = process.communicate()
@@ -180,8 +230,7 @@ class PackagingTests(unittest.TestCase):
                     f"returncode={process.returncode}\nstdout={stdout}\nstderr={stderr}"
                 )
             try:
-                with urllib.request.urlopen(url, timeout=1) as response:
-                    return json.loads(response.read().decode("utf-8"))
+                return self._request_json(base_url + "/health")
             except urllib.error.URLError:
                 time.sleep(0.1)
 
