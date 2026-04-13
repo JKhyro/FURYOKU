@@ -38,6 +38,20 @@ class BenchmarkContractReportTests(unittest.TestCase):
     def load_payload(self, name: str) -> dict:
         return self.report.load_json(RESULTS_DIR / name)
 
+    def test_candidate_registry_infers_roles_from_priority_when_role_is_missing(self):
+        registry = self.report.build_candidate_registry(
+            {
+                "candidates": [
+                    {"model": "gemma4-e4b-ultra-heretic:q8_0", "priority": 1},
+                    {"model": "gemma4-e4b-hauhau-aggressive:q8kp", "priority": 2},
+                ]
+            },
+            self.args,
+        )
+
+        self.assertEqual(registry["gemma4-e4b-ultra-heretic:q8_0"]["role"], "baseline")
+        self.assertEqual(registry["gemma4-e4b-hauhau-aggressive:q8kp"]["role"], "candidate")
+
     def test_response_suite_exposes_composite_resource_fit_block(self):
         payload = self.load_payload("2026-04-09-gemma3-heretic-compare-response-suite.json")
         evaluated = self.report.evaluate_results(payload, "response-suite.json", self.args)
