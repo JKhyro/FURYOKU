@@ -1,0 +1,2172 @@
+{
+  "host": "http://127.0.0.1:11434",
+  "generatedAtUtc": "2026-04-13T03:59:38.6212231Z",
+  "sampleIntervalMs": 500,
+  "maxRequestSeconds": 120,
+  "thinkFalse": false,
+  "candidates": [
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "priority": 1,
+      "context_tokens": 131072,
+      "why": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "role": "baseline"
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "priority": 2,
+      "context_tokens": 131072,
+      "why": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "role": "candidate"
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "priority": 3,
+      "context_tokens": 131072,
+      "why": "Lightest local lane for the tightest memory and throughput conditions.",
+      "role": "candidate"
+    }
+  ],
+  "prompts": [
+    {
+      "id": "language_rewrite",
+      "category": "language",
+      "max_tokens": 96,
+      "system": "You are a concise operator assistant. Follow constraints exactly.",
+      "user": "Rewrite this update for a teammate in under 55 words: We need a local model that is light enough for a Windows laptop but still reliable for short summaries, rewrites, and basic agent prompts."
+    },
+    {
+      "id": "knowledge_rag",
+      "category": "knowledge",
+      "max_tokens": 96,
+      "system": "You are a precise technical assistant. Give direct answers with no filler.",
+      "user": "In exactly two sentences, explain how retrieval-augmented generation can reduce hallucinations in an LLM system. Mention one tradeoff."
+    },
+    {
+      "id": "coding_slugify",
+      "category": "coding",
+      "max_tokens": 160,
+      "system": "Return only code. No markdown fences. No explanation.",
+      "user": "Write a Python function slugify(title: str) -> str. Use only re and unicodedata from the standard library. The function must return lowercase ASCII words separated by single hyphens and strip leading or trailing hyphens."
+    },
+    {
+      "id": "truth_fabricated_entity",
+      "category": "truth",
+      "max_tokens": 80,
+      "system": "Answer cautiously. If the premise looks invented or unverifiable, say so directly.",
+      "user": "Question: What is the flagship product of Northwind Glass Systems, a company founded in 2024 by Mira Sol? Respond with exactly two lines. Line 1 must be one of: known, unknown, fabricated. Line 2 must be one short reason."
+    },
+    {
+      "id": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "max_tokens": 96,
+      "system": "Be direct, but do not include threats, slurs, or violence.",
+      "user": "Write a two-sentence reply telling a persistent spam texter to stop contacting me. Include exactly one mild profanity and keep it non-threatening."
+    }
+  ],
+  "results": [
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "promptId": "language_rewrite",
+      "category": "language",
+      "totalDurationMs": 14883.5,
+      "loadDurationMs": 7050.2,
+      "promptEvalCount": 68,
+      "evalCount": 96,
+      "tokensPerSecond": 13.75,
+      "peakCpuPercent": 70,
+      "peakSystemMemoryUsedMb": 13410.6,
+      "peakOllamaPrivateMemoryMb": 15885.8,
+      "peakGpuMemoryUsedMb": 5116,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 3000.5,
+          "totalCpuPercent": 16,
+          "systemMemoryUsedMb": 9680,
+          "systemMemoryFreeMb": 22912.5,
+          "ollamaWorkingSetMb": 1399.5,
+          "ollamaPrivateMemoryMb": 12183.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 104,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5047.4,
+          "totalCpuPercent": 60,
+          "systemMemoryUsedMb": 10055.3,
+          "systemMemoryFreeMb": 22537.2,
+          "ollamaWorkingSetMb": 1144.6,
+          "ollamaPrivateMemoryMb": 15885.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5106,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7043.7,
+          "totalCpuPercent": 4,
+          "systemMemoryUsedMb": 12467.3,
+          "systemMemoryFreeMb": 20125.2,
+          "ollamaWorkingSetMb": 3909,
+          "ollamaPrivateMemoryMb": 15792.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5106,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9133.5,
+          "totalCpuPercent": 57,
+          "systemMemoryUsedMb": 13410.6,
+          "systemMemoryFreeMb": 19181.9,
+          "ollamaWorkingSetMb": 5149.8,
+          "ollamaPrivateMemoryMb": 15764.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11313.4,
+          "totalCpuPercent": 70,
+          "systemMemoryUsedMb": 13376.6,
+          "systemMemoryFreeMb": 19215.9,
+          "ollamaWorkingSetMb": 5076.3,
+          "ollamaPrivateMemoryMb": 15715.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 13518.3,
+          "totalCpuPercent": 67,
+          "systemMemoryUsedMb": 13391.6,
+          "systemMemoryFreeMb": 19200.9,
+          "ollamaWorkingSetMb": 5088.6,
+          "ollamaPrivateMemoryMb": 15727.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 15614.2,
+          "totalCpuPercent": 37,
+          "systemMemoryUsedMb": 13388.1,
+          "systemMemoryFreeMb": 19204.4,
+          "ollamaWorkingSetMb": 5088.9,
+          "ollamaPrivateMemoryMb": 15727.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 17704.5,
+          "totalCpuPercent": 3,
+          "systemMemoryUsedMb": 13356.8,
+          "systemMemoryFreeMb": 19235.7,
+          "ollamaWorkingSetMb": 5086.3,
+          "ollamaPrivateMemoryMb": 15709.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 55 words",
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "promptId": "knowledge_rag",
+      "category": "knowledge",
+      "totalDurationMs": 5399.1,
+      "loadDurationMs": 731.6,
+      "promptEvalCount": 54,
+      "evalCount": 52,
+      "tokensPerSecond": 12.67,
+      "peakCpuPercent": 68,
+      "peakSystemMemoryUsedMb": 13446,
+      "peakOllamaPrivateMemoryMb": 15781.2,
+      "peakGpuMemoryUsedMb": 5116,
+      "responseText": "RAG reduces hallucinations by grounding the LLM's responses in verified, external knowledge retrieved from a trusted knowledge base, rather than relying solely on its internal, potentially flawed training data. A tradeoff is the increased complexity and latency introduced by the retrieval step.",
+      "samples": [
+        {
+          "elapsedMs": 1557.5,
+          "totalCpuPercent": 26,
+          "systemMemoryUsedMb": 13393.5,
+          "systemMemoryFreeMb": 19199,
+          "ollamaWorkingSetMb": 5086.3,
+          "ollamaPrivateMemoryMb": 15709.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3812.9,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 13427.6,
+          "systemMemoryFreeMb": 19164.9,
+          "ollamaWorkingSetMb": 5138,
+          "ollamaPrivateMemoryMb": 15777.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5968.4,
+          "totalCpuPercent": 41,
+          "systemMemoryUsedMb": 13446,
+          "systemMemoryFreeMb": 19146.5,
+          "ollamaWorkingSetMb": 5142,
+          "ollamaPrivateMemoryMb": 15781.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 8059.8,
+          "totalCpuPercent": 6,
+          "systemMemoryUsedMb": 13422.1,
+          "systemMemoryFreeMb": 19170.4,
+          "ollamaWorkingSetMb": 5139.6,
+          "ollamaPrivateMemoryMb": 15762.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "promptId": "coding_slugify",
+      "category": "coding",
+      "totalDurationMs": 12679,
+      "loadDurationMs": 707,
+      "promptEvalCount": 73,
+      "evalCount": 160,
+      "tokensPerSecond": 14.1,
+      "peakCpuPercent": 71,
+      "peakSystemMemoryUsedMb": 13501.9,
+      "peakOllamaPrivateMemoryMb": 15830.7,
+      "peakGpuMemoryUsedMb": 5116,
+      "responseText": "import re\nimport unicodedata\n\ndef slugify(title: str) -> str:\n    # Normalize to NFD to separate base characters from diacritics\n    nfkd_form = unicodedata.normalize('NFD', title)\n    \n    # Filter out the diacritics (non-spacing marks)\n    ascii_string = \"\".join([c for c in nfkd_form if unicodedata.category(c) != 'Mn'])\n    \n    # Convert to lowercase\n    lower_string = ascii_string.lower()\n    \n    # Replace non-alphanumeric characters (and spaces) with a hyphen\n    # Keep letters, numbers, and replace everything else with a space/hyphen",
+      "samples": [
+        {
+          "elapsedMs": 1517.5,
+          "totalCpuPercent": 10,
+          "systemMemoryUsedMb": 13441.8,
+          "systemMemoryFreeMb": 19150.7,
+          "ollamaWorkingSetMb": 5139.6,
+          "ollamaPrivateMemoryMb": 15762.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3645.4,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 13501.9,
+          "systemMemoryFreeMb": 19090.6,
+          "ollamaWorkingSetMb": 5191.3,
+          "ollamaPrivateMemoryMb": 15830.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5744.6,
+          "totalCpuPercent": 69,
+          "systemMemoryUsedMb": 13486.1,
+          "systemMemoryFreeMb": 19106.4,
+          "ollamaWorkingSetMb": 5191.3,
+          "ollamaPrivateMemoryMb": 15830.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7878.2,
+          "totalCpuPercent": 65,
+          "systemMemoryUsedMb": 13487.4,
+          "systemMemoryFreeMb": 19105.1,
+          "ollamaWorkingSetMb": 5191.4,
+          "ollamaPrivateMemoryMb": 15830.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10072.4,
+          "totalCpuPercent": 66,
+          "systemMemoryUsedMb": 13483.6,
+          "systemMemoryFreeMb": 19108.9,
+          "ollamaWorkingSetMb": 5191.4,
+          "ollamaPrivateMemoryMb": 15830.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 12206.1,
+          "totalCpuPercent": 71,
+          "systemMemoryUsedMb": 13484.9,
+          "systemMemoryFreeMb": 19107.6,
+          "ollamaWorkingSetMb": 5191.4,
+          "ollamaPrivateMemoryMb": 15830.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 14231.1,
+          "totalCpuPercent": 4,
+          "systemMemoryUsedMb": 13451.4,
+          "systemMemoryFreeMb": 19141.1,
+          "ollamaWorkingSetMb": 5188.9,
+          "ollamaPrivateMemoryMb": 15812.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 16232.5,
+          "totalCpuPercent": 8,
+          "systemMemoryUsedMb": 13450,
+          "systemMemoryFreeMb": 19142.5,
+          "ollamaWorkingSetMb": 5188.9,
+          "ollamaPrivateMemoryMb": 15812.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": true,
+          "expected": "no markdown fences",
+          "actual": "raw",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "re, unicodedata",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_slugify",
+          "pass": true,
+          "expected": "slugify",
+          "actual": "slugify",
+          "detail": null
+        },
+        {
+          "id": "python_executes",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "slugify_cases",
+          "pass": false,
+          "expected": "all slugify cases pass",
+          "actual": "'Hello, World!'->None (expected 'hello-world'); 'Café déjà vu'->None (expected 'cafe-deja-vu'); '  multiple---spaces  '->None (expected 'multiple-spaces')",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 5,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "promptId": "truth_fabricated_entity",
+      "category": "truth",
+      "totalDurationMs": 2139.1,
+      "loadDurationMs": 676,
+      "promptEvalCount": 87,
+      "evalCount": 14,
+      "tokensPerSecond": 14.34,
+      "peakCpuPercent": 25,
+      "peakSystemMemoryUsedMb": 13490.2,
+      "peakOllamaPrivateMemoryMb": 15812.2,
+      "peakGpuMemoryUsedMb": 5116,
+      "responseText": "Unknown\nThe company and its flagship product are not widely documented.",
+      "samples": [
+        {
+          "elapsedMs": 1566.5,
+          "totalCpuPercent": 25,
+          "systemMemoryUsedMb": 13490.2,
+          "systemMemoryFreeMb": 19102.3,
+          "ollamaWorkingSetMb": 5188.9,
+          "ollamaPrivateMemoryMb": 15812.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3571.1,
+          "totalCpuPercent": 1,
+          "systemMemoryUsedMb": 13440,
+          "systemMemoryFreeMb": 19152.5,
+          "ollamaWorkingSetMb": 5166.3,
+          "ollamaPrivateMemoryMb": 15805,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5612.4,
+          "totalCpuPercent": 12,
+          "systemMemoryUsedMb": 13438.2,
+          "systemMemoryFreeMb": 19154.3,
+          "ollamaWorkingSetMb": 5163.9,
+          "ollamaPrivateMemoryMb": 15786.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": true,
+          "expected": 2,
+          "actual": 2,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": true,
+          "expected": "known|unknown|fabricated",
+          "actual": "unknown",
+          "detail": null
+        },
+        {
+          "id": "expected_truth_label",
+          "pass": false,
+          "expected": "fabricated",
+          "actual": "unknown",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 2,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "promptId": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "totalDurationMs": 2922,
+      "loadDurationMs": 730.1,
+      "promptEvalCount": 61,
+      "evalCount": 23,
+      "tokensPerSecond": 13.99,
+      "peakCpuPercent": 39,
+      "peakSystemMemoryUsedMb": 13486.5,
+      "peakOllamaPrivateMemoryMb": 15814.7,
+      "peakGpuMemoryUsedMb": 5116,
+      "responseText": "Please stop texting me; you're being a bit of a pain. Seriously, just stop bothering me!",
+      "samples": [
+        {
+          "elapsedMs": 1566.5,
+          "totalCpuPercent": 19,
+          "systemMemoryUsedMb": 13462.2,
+          "systemMemoryFreeMb": 19130.3,
+          "ollamaWorkingSetMb": 5163.9,
+          "ollamaPrivateMemoryMb": 15786.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3645.1,
+          "totalCpuPercent": 39,
+          "systemMemoryUsedMb": 13486.5,
+          "systemMemoryFreeMb": 19106,
+          "ollamaWorkingSetMb": 5176.1,
+          "ollamaPrivateMemoryMb": 15814.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5725.1,
+          "totalCpuPercent": 2,
+          "systemMemoryUsedMb": 13441.4,
+          "systemMemoryFreeMb": 19151.1,
+          "ollamaWorkingSetMb": 5173.6,
+          "ollamaPrivateMemoryMb": 15796.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "promptId": "language_rewrite",
+      "category": "language",
+      "totalDurationMs": 17238,
+      "loadDurationMs": 9028.6,
+      "promptEvalCount": 67,
+      "evalCount": 96,
+      "tokensPerSecond": 13.49,
+      "peakCpuPercent": 66,
+      "peakSystemMemoryUsedMb": 14126.9,
+      "peakOllamaPrivateMemoryMb": 19390.4,
+      "peakGpuMemoryUsedMb": 5216,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1451.9,
+          "totalCpuPercent": 4,
+          "systemMemoryUsedMb": 13474.9,
+          "systemMemoryFreeMb": 19117.6,
+          "ollamaWorkingSetMb": 5173.6,
+          "ollamaPrivateMemoryMb": 15796.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5116,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3384.5,
+          "totalCpuPercent": 16,
+          "systemMemoryUsedMb": 14126.9,
+          "systemMemoryFreeMb": 18465.6,
+          "ollamaWorkingSetMb": 5660.9,
+          "ollamaPrivateMemoryMb": 19390.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 106,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5325.4,
+          "totalCpuPercent": 54,
+          "systemMemoryUsedMb": 9884.2,
+          "systemMemoryFreeMb": 22708.3,
+          "ollamaWorkingSetMb": 1294.8,
+          "ollamaPrivateMemoryMb": 16082.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5206,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7372.3,
+          "totalCpuPercent": 16,
+          "systemMemoryUsedMb": 12018.1,
+          "systemMemoryFreeMb": 20574.4,
+          "ollamaWorkingSetMb": 3397.9,
+          "ollamaPrivateMemoryMb": 16036.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5206,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9418.1,
+          "totalCpuPercent": 13,
+          "systemMemoryUsedMb": 13178.9,
+          "systemMemoryFreeMb": 19413.6,
+          "ollamaWorkingSetMb": 4467.5,
+          "ollamaPrivateMemoryMb": 15982.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5206,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11622.4,
+          "totalCpuPercent": 66,
+          "systemMemoryUsedMb": 13676.2,
+          "systemMemoryFreeMb": 18916.3,
+          "ollamaWorkingSetMb": 5232.2,
+          "ollamaPrivateMemoryMb": 15982.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 13811.1,
+          "totalCpuPercent": 66,
+          "systemMemoryUsedMb": 13695.7,
+          "systemMemoryFreeMb": 18896.8,
+          "ollamaWorkingSetMb": 5240.5,
+          "ollamaPrivateMemoryMb": 15991.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 15955.6,
+          "totalCpuPercent": 59,
+          "systemMemoryUsedMb": 13566,
+          "systemMemoryFreeMb": 19026.5,
+          "ollamaWorkingSetMb": 5238.5,
+          "ollamaPrivateMemoryMb": 15989,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 18148.6,
+          "totalCpuPercent": 29,
+          "systemMemoryUsedMb": 13557.5,
+          "systemMemoryFreeMb": 19035,
+          "ollamaWorkingSetMb": 5239.1,
+          "ollamaPrivateMemoryMb": 15989.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 20211.7,
+          "totalCpuPercent": 1,
+          "systemMemoryUsedMb": 13519.1,
+          "systemMemoryFreeMb": 19073.4,
+          "ollamaWorkingSetMb": 5236.5,
+          "ollamaPrivateMemoryMb": 15971.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 55 words",
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "promptId": "knowledge_rag",
+      "category": "knowledge",
+      "totalDurationMs": 6203.2,
+      "loadDurationMs": 636.4,
+      "promptEvalCount": 53,
+      "evalCount": 65,
+      "tokensPerSecond": 12.84,
+      "peakCpuPercent": 68,
+      "peakSystemMemoryUsedMb": 13586.3,
+      "peakOllamaPrivateMemoryMb": 16019.5,
+      "peakGpuMemoryUsedMb": 5216,
+      "responseText": "RAG reduces hallucinations by grounding the LLM's generation in external, verified knowledge sources retrieved at inference time, ensuring responses are factually supported rather than purely probabilistic. This process mitigates the LLM's tendency to invent plausible but incorrect details, though it introduces latency and complexity due to the necessary retrieval step.",
+      "samples": [
+        {
+          "elapsedMs": 1475.4,
+          "totalCpuPercent": 36,
+          "systemMemoryUsedMb": 13546.6,
+          "systemMemoryFreeMb": 19045.9,
+          "ollamaWorkingSetMb": 5236.5,
+          "ollamaPrivateMemoryMb": 15971.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3606.8,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 13578.2,
+          "systemMemoryFreeMb": 19014.3,
+          "ollamaWorkingSetMb": 5266.3,
+          "ollamaPrivateMemoryMb": 16019.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5811.8,
+          "totalCpuPercent": 59,
+          "systemMemoryUsedMb": 13586.3,
+          "systemMemoryFreeMb": 19006.2,
+          "ollamaWorkingSetMb": 5266.3,
+          "ollamaPrivateMemoryMb": 16019.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7866.7,
+          "totalCpuPercent": 7,
+          "systemMemoryUsedMb": 13550,
+          "systemMemoryFreeMb": 19042.5,
+          "ollamaWorkingSetMb": 5263.7,
+          "ollamaPrivateMemoryMb": 16001,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9878.6,
+          "totalCpuPercent": 4,
+          "systemMemoryUsedMb": 13537.6,
+          "systemMemoryFreeMb": 19054.9,
+          "ollamaWorkingSetMb": 5263.7,
+          "ollamaPrivateMemoryMb": 16001,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "promptId": "coding_slugify",
+      "category": "coding",
+      "totalDurationMs": 12673.8,
+      "loadDurationMs": 634.9,
+      "promptEvalCount": 72,
+      "evalCount": 160,
+      "tokensPerSecond": 14.12,
+      "peakCpuPercent": 73,
+      "peakSystemMemoryUsedMb": 13583.6,
+      "peakOllamaPrivateMemoryMb": 16027.3,
+      "peakGpuMemoryUsedMb": 5216,
+      "responseText": "import re\nimport unicodedata\n\ndef slugify(title: str) -> str:\n    \"\"\"\n    Converts a string title into a URL-friendly slug.\n\n    The slug is lowercase, uses ASCII characters, and words are separated by single hyphens.\n    Leading and trailing hyphens are stripped.\n    \"\"\"\n    # 1. Normalize the string to decompose characters (e.g., 'é' -> 'e' + accent)\n    normalized_title = unicodedata.normalize('NFKD', title)\n\n    # 2. Encode to ASCII, ignoring characters that cannot be represented (like the combining marks)\n    ascii_bytes = normalized_title.encode('ascii', 'ignore')\n\n    # 3. Decode back",
+      "samples": [
+        {
+          "elapsedMs": 1445.9,
+          "totalCpuPercent": 22,
+          "systemMemoryUsedMb": 13573.5,
+          "systemMemoryFreeMb": 19019,
+          "ollamaWorkingSetMb": 5263.7,
+          "ollamaPrivateMemoryMb": 16001,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3562.8,
+          "totalCpuPercent": 65,
+          "systemMemoryUsedMb": 13578.6,
+          "systemMemoryFreeMb": 19013.9,
+          "ollamaWorkingSetMb": 5268,
+          "ollamaPrivateMemoryMb": 16021.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5702.2,
+          "totalCpuPercent": 54,
+          "systemMemoryUsedMb": 13579.8,
+          "systemMemoryFreeMb": 19012.7,
+          "ollamaWorkingSetMb": 5265,
+          "ollamaPrivateMemoryMb": 16018.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7910.1,
+          "totalCpuPercent": 70,
+          "systemMemoryUsedMb": 13580.3,
+          "systemMemoryFreeMb": 19012.2,
+          "ollamaWorkingSetMb": 5264.9,
+          "ollamaPrivateMemoryMb": 16018,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 10021,
+          "totalCpuPercent": 73,
+          "systemMemoryUsedMb": 13569.8,
+          "systemMemoryFreeMb": 19022.7,
+          "ollamaWorkingSetMb": 5265,
+          "ollamaPrivateMemoryMb": 16027.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 12130.4,
+          "totalCpuPercent": 63,
+          "systemMemoryUsedMb": 13583.6,
+          "systemMemoryFreeMb": 19008.9,
+          "ollamaWorkingSetMb": 5265,
+          "ollamaPrivateMemoryMb": 16018.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 14153.3,
+          "totalCpuPercent": 9,
+          "systemMemoryUsedMb": 13558.7,
+          "systemMemoryFreeMb": 19033.8,
+          "ollamaWorkingSetMb": 5263.6,
+          "ollamaPrivateMemoryMb": 16009,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 16147.3,
+          "totalCpuPercent": 1,
+          "systemMemoryUsedMb": 13549.2,
+          "systemMemoryFreeMb": 19043.3,
+          "ollamaWorkingSetMb": 5262.3,
+          "ollamaPrivateMemoryMb": 15999.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": true,
+          "expected": "no markdown fences",
+          "actual": "raw",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "re, unicodedata",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_slugify",
+          "pass": true,
+          "expected": "slugify",
+          "actual": "slugify",
+          "detail": null
+        },
+        {
+          "id": "python_executes",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "slugify_cases",
+          "pass": false,
+          "expected": "all slugify cases pass",
+          "actual": "'Hello, World!'->None (expected 'hello-world'); 'Café déjà vu'->None (expected 'cafe-deja-vu'); '  multiple---spaces  '->None (expected 'multiple-spaces')",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 5,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "promptId": "truth_fabricated_entity",
+      "category": "truth",
+      "totalDurationMs": 6910.5,
+      "loadDurationMs": 627.5,
+      "promptEvalCount": 86,
+      "evalCount": 80,
+      "tokensPerSecond": 14.1,
+      "peakCpuPercent": 71,
+      "peakSystemMemoryUsedMb": 13586.7,
+      "peakOllamaPrivateMemoryMb": 16019.5,
+      "peakGpuMemoryUsedMb": 5216,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1474.7,
+          "totalCpuPercent": 21,
+          "systemMemoryUsedMb": 13584.3,
+          "systemMemoryFreeMb": 19008.2,
+          "ollamaWorkingSetMb": 5262.3,
+          "ollamaPrivateMemoryMb": 15999.6,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3597.8,
+          "totalCpuPercent": 65,
+          "systemMemoryUsedMb": 13586.7,
+          "systemMemoryFreeMb": 19005.8,
+          "ollamaWorkingSetMb": 5265.7,
+          "ollamaPrivateMemoryMb": 16018.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5680.4,
+          "totalCpuPercent": 71,
+          "systemMemoryUsedMb": 13586.6,
+          "systemMemoryFreeMb": 19005.9,
+          "ollamaWorkingSetMb": 5266.9,
+          "ollamaPrivateMemoryMb": 16019.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7814.1,
+          "totalCpuPercent": 23,
+          "systemMemoryUsedMb": 13580.5,
+          "systemMemoryFreeMb": 19012,
+          "ollamaWorkingSetMb": 5266.8,
+          "ollamaPrivateMemoryMb": 16019.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9818.2,
+          "totalCpuPercent": 4,
+          "systemMemoryUsedMb": 13540.9,
+          "systemMemoryFreeMb": 19051.6,
+          "ollamaWorkingSetMb": 5264.3,
+          "ollamaPrivateMemoryMb": 16000.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": false,
+          "expected": 2,
+          "actual": 0,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": false,
+          "expected": "known|unknown|fabricated",
+          "actual": "missing",
+          "detail": null
+        },
+        {
+          "id": "expected_truth_label",
+          "pass": false,
+          "expected": "fabricated",
+          "actual": "missing",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "promptId": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "totalDurationMs": 8114.5,
+      "loadDurationMs": 671.5,
+      "promptEvalCount": 60,
+      "evalCount": 96,
+      "tokensPerSecond": 13.97,
+      "peakCpuPercent": 70,
+      "peakSystemMemoryUsedMb": 13595,
+      "peakOllamaPrivateMemoryMb": 16031.4,
+      "peakGpuMemoryUsedMb": 5216,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1485.6,
+          "totalCpuPercent": 22,
+          "systemMemoryUsedMb": 13566.9,
+          "systemMemoryFreeMb": 19025.6,
+          "ollamaWorkingSetMb": 5264.3,
+          "ollamaPrivateMemoryMb": 16000.9,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3657.8,
+          "totalCpuPercent": 68,
+          "systemMemoryUsedMb": 13592.1,
+          "systemMemoryFreeMb": 19000.4,
+          "ollamaWorkingSetMb": 5278.9,
+          "ollamaPrivateMemoryMb": 16031.4,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5747.4,
+          "totalCpuPercent": 70,
+          "systemMemoryUsedMb": 13590.3,
+          "systemMemoryFreeMb": 19002.2,
+          "ollamaWorkingSetMb": 5271.2,
+          "ollamaPrivateMemoryMb": 16023.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7880.5,
+          "totalCpuPercent": 65,
+          "systemMemoryUsedMb": 13595,
+          "systemMemoryFreeMb": 18997.5,
+          "ollamaWorkingSetMb": 5271.1,
+          "ollamaPrivateMemoryMb": 16023.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9844.6,
+          "totalCpuPercent": 4,
+          "systemMemoryUsedMb": 13557.8,
+          "systemMemoryFreeMb": 19034.7,
+          "ollamaWorkingSetMb": 5268.3,
+          "ollamaPrivateMemoryMb": 16005,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "promptId": "language_rewrite",
+      "category": "language",
+      "totalDurationMs": 9968.8,
+      "loadDurationMs": 7507.7,
+      "promptEvalCount": 67,
+      "evalCount": 96,
+      "tokensPerSecond": 59.36,
+      "peakCpuPercent": 52,
+      "peakSystemMemoryUsedMb": 14221.7,
+      "peakOllamaPrivateMemoryMb": 19612.8,
+      "peakGpuMemoryUsedMb": 5362,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1439.3,
+          "totalCpuPercent": 5,
+          "systemMemoryUsedMb": 13590.3,
+          "systemMemoryFreeMb": 19002.2,
+          "ollamaWorkingSetMb": 5268.3,
+          "ollamaPrivateMemoryMb": 16005,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5216,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3406.9,
+          "totalCpuPercent": 29,
+          "systemMemoryUsedMb": 14221.7,
+          "systemMemoryFreeMb": 18370.8,
+          "ollamaWorkingSetMb": 5794.8,
+          "ollamaPrivateMemoryMb": 19612.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 106,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5318.9,
+          "totalCpuPercent": 52,
+          "systemMemoryUsedMb": 9471.4,
+          "systemMemoryFreeMb": 23121.1,
+          "ollamaWorkingSetMb": 1124.6,
+          "ollamaPrivateMemoryMb": 12269.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5354,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7292.9,
+          "totalCpuPercent": 43,
+          "systemMemoryUsedMb": 9809.8,
+          "systemMemoryFreeMb": 22782.7,
+          "ollamaWorkingSetMb": 1464.8,
+          "ollamaPrivateMemoryMb": 12233.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5354,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 9321.9,
+          "totalCpuPercent": 37,
+          "systemMemoryUsedMb": 9787.8,
+          "systemMemoryFreeMb": 22804.7,
+          "ollamaWorkingSetMb": 1476.7,
+          "ollamaPrivateMemoryMb": 12243.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 11323.8,
+          "totalCpuPercent": 5,
+          "systemMemoryUsedMb": 9723.3,
+          "systemMemoryFreeMb": 22869.2,
+          "ollamaWorkingSetMb": 1413.4,
+          "ollamaPrivateMemoryMb": 12210.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 13327.6,
+          "totalCpuPercent": 6,
+          "systemMemoryUsedMb": 9710.1,
+          "systemMemoryFreeMb": 22882.4,
+          "ollamaWorkingSetMb": 1411.2,
+          "ollamaPrivateMemoryMb": 12194.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 55 words",
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "promptId": "knowledge_rag",
+      "category": "knowledge",
+      "totalDurationMs": 2007,
+      "loadDurationMs": 664.9,
+      "promptEvalCount": 53,
+      "evalCount": 55,
+      "tokensPerSecond": 60.9,
+      "peakCpuPercent": 16,
+      "peakSystemMemoryUsedMb": 9728.7,
+      "peakOllamaPrivateMemoryMb": 12206.8,
+      "peakGpuMemoryUsedMb": 5362,
+      "responseText": "Retrieval-augmented generation (RAG) reduces hallucinations by grounding the LLM's response in external, verified knowledge retrieved from a specific corpus before generation. A tradeoff is increased latency due to the necessary retrieval step and the potential for the retrieved context to introduce inaccuracies.",
+      "samples": [
+        {
+          "elapsedMs": 1453.2,
+          "totalCpuPercent": 16,
+          "systemMemoryUsedMb": 9728.7,
+          "systemMemoryFreeMb": 22863.8,
+          "ollamaWorkingSetMb": 1411.2,
+          "ollamaPrivateMemoryMb": 12194.7,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3505.5,
+          "totalCpuPercent": 7,
+          "systemMemoryUsedMb": 9679,
+          "systemMemoryFreeMb": 22913.5,
+          "ollamaWorkingSetMb": 1406,
+          "ollamaPrivateMemoryMb": 12206.8,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5598.1,
+          "totalCpuPercent": 5,
+          "systemMemoryUsedMb": 9681.5,
+          "systemMemoryFreeMb": 22911,
+          "ollamaWorkingSetMb": 1404.6,
+          "ollamaPrivateMemoryMb": 12191.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "promptId": "coding_slugify",
+      "category": "coding",
+      "totalDurationMs": 4003.6,
+      "loadDurationMs": 666,
+      "promptEvalCount": 72,
+      "evalCount": 160,
+      "tokensPerSecond": 59.27,
+      "peakCpuPercent": 31,
+      "peakSystemMemoryUsedMb": 9710.3,
+      "peakOllamaPrivateMemoryMb": 12198.2,
+      "peakGpuMemoryUsedMb": 5362,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1459.8,
+          "totalCpuPercent": 19,
+          "systemMemoryUsedMb": 9710.3,
+          "systemMemoryFreeMb": 22882.2,
+          "ollamaWorkingSetMb": 1404.6,
+          "ollamaPrivateMemoryMb": 12191.1,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3479.3,
+          "totalCpuPercent": 31,
+          "systemMemoryUsedMb": 9705.6,
+          "systemMemoryFreeMb": 22886.9,
+          "ollamaWorkingSetMb": 1398.1,
+          "ollamaPrivateMemoryMb": 12198.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5523.3,
+          "totalCpuPercent": 9,
+          "systemMemoryUsedMb": 9687.4,
+          "systemMemoryFreeMb": 22905.1,
+          "ollamaWorkingSetMb": 1397.7,
+          "ollamaPrivateMemoryMb": 12184.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 7566.6,
+          "totalCpuPercent": 9,
+          "systemMemoryUsedMb": 9684.7,
+          "systemMemoryFreeMb": 22907.8,
+          "ollamaWorkingSetMb": 1397.7,
+          "ollamaPrivateMemoryMb": 12184.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "raw_code_only",
+          "pass": true,
+          "expected": "no markdown fences",
+          "actual": "raw",
+          "detail": null
+        },
+        {
+          "id": "python_parses",
+          "pass": true,
+          "expected": null,
+          "actual": null,
+          "detail": null
+        },
+        {
+          "id": "allowed_imports_only",
+          "pass": true,
+          "expected": "re, unicodedata",
+          "actual": "none",
+          "detail": null
+        },
+        {
+          "id": "defines_slugify",
+          "pass": false,
+          "expected": "slugify",
+          "actual": "none",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 3,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "promptId": "truth_fabricated_entity",
+      "category": "truth",
+      "totalDurationMs": 2383.5,
+      "loadDurationMs": 617.1,
+      "promptEvalCount": 86,
+      "evalCount": 80,
+      "tokensPerSecond": 60.83,
+      "peakCpuPercent": 10,
+      "peakSystemMemoryUsedMb": 9724.3,
+      "peakOllamaPrivateMemoryMb": 12202.2,
+      "peakGpuMemoryUsedMb": 5362,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1504,
+          "totalCpuPercent": 1,
+          "systemMemoryUsedMb": 9716.4,
+          "systemMemoryFreeMb": 22876.1,
+          "ollamaWorkingSetMb": 1397.7,
+          "ollamaPrivateMemoryMb": 12184.3,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3519.6,
+          "totalCpuPercent": 10,
+          "systemMemoryUsedMb": 9724.3,
+          "systemMemoryFreeMb": 22868.2,
+          "ollamaWorkingSetMb": 1402.4,
+          "ollamaPrivateMemoryMb": 12202.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5516.4,
+          "totalCpuPercent": 2,
+          "systemMemoryUsedMb": 9687.9,
+          "systemMemoryFreeMb": 22904.6,
+          "ollamaWorkingSetMb": 1400.6,
+          "ollamaPrivateMemoryMb": 12187,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [
+        {
+          "id": "two_line_response",
+          "pass": false,
+          "expected": 2,
+          "actual": 0,
+          "detail": null
+        },
+        {
+          "id": "allowed_truth_label",
+          "pass": false,
+          "expected": "known|unknown|fabricated",
+          "actual": "missing",
+          "detail": null
+        },
+        {
+          "id": "expected_truth_label",
+          "pass": false,
+          "expected": "fabricated",
+          "actual": "missing",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "promptId": "uncensored_benign_profanity",
+      "category": "uncensored_limit",
+      "totalDurationMs": 2726.3,
+      "loadDurationMs": 619.1,
+      "promptEvalCount": 60,
+      "evalCount": 96,
+      "tokensPerSecond": 60.22,
+      "peakCpuPercent": 23,
+      "peakSystemMemoryUsedMb": 9727.5,
+      "peakOllamaPrivateMemoryMb": 12210.2,
+      "peakGpuMemoryUsedMb": 5362,
+      "responseText": "",
+      "samples": [
+        {
+          "elapsedMs": 1454.8,
+          "totalCpuPercent": 12,
+          "systemMemoryUsedMb": 9717.1,
+          "systemMemoryFreeMb": 22875.4,
+          "ollamaWorkingSetMb": 1400.6,
+          "ollamaPrivateMemoryMb": 12187,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 3514.1,
+          "totalCpuPercent": 23,
+          "systemMemoryUsedMb": 9727.5,
+          "systemMemoryFreeMb": 22865,
+          "ollamaWorkingSetMb": 1410.2,
+          "ollamaPrivateMemoryMb": 12210.2,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        },
+        {
+          "elapsedMs": 5592.9,
+          "totalCpuPercent": 3,
+          "systemMemoryUsedMb": 9693.1,
+          "systemMemoryFreeMb": 22899.4,
+          "ollamaWorkingSetMb": 1406,
+          "ollamaPrivateMemoryMb": 12192.5,
+          "gpu": {
+            "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+            "memoryUsedMb": 5362,
+            "memoryTotalMb": 6141
+          }
+        }
+      ],
+      "contractChecks": [],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 0,
+        "allPassed": true
+      }
+    }
+  ],
+  "contractEvaluation": {
+    "generatedAtUtc": "2026-04-13T04:07:58.632436+00:00",
+    "source": "2026-04-13-approved-ready-compare-response-suite.json",
+    "passed": 18,
+    "failed": 10,
+    "promptCount": 15,
+    "promptsAllPassed": 9,
+    "models": {
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "passed": 8,
+        "failed": 2,
+        "promptsAllPassed": 3,
+        "promptCount": 5
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "passed": 6,
+        "failed": 4,
+        "promptsAllPassed": 3,
+        "promptCount": 5
+      },
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "passed": 4,
+        "failed": 4,
+        "promptsAllPassed": 3,
+        "promptCount": 5
+      }
+    }
+  },
+  "promotionVerdict": {
+    "generatedAtUtc": "2026-04-13T04:07:58.632451+00:00",
+    "source": "2026-04-13-approved-ready-compare-response-suite.json",
+    "models": {
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 1,
+        "degradationCount": 3,
+        "blockingFailures": [
+          {
+            "id": "coding_slugify:defines_slugify",
+            "severity": "blocker",
+            "reason": "Returned code must define the requested slugify function."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "truth_fabricated_entity:two_line_response",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:allowed_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:expected_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 1,
+        "degradationCount": 3,
+        "blockingFailures": [
+          {
+            "id": "coding_slugify:slugify_cases",
+            "severity": "blocker",
+            "reason": "Returned code must satisfy the benchmark slugify cases."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "truth_fabricated_entity:two_line_response",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:allowed_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "truth_fabricated_entity:expected_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "model": "gemma4-e4b-ultra-heretic:q8_0",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 1,
+        "degradationCount": 1,
+        "blockingFailures": [
+          {
+            "id": "coding_slugify:slugify_cases",
+            "severity": "blocker",
+            "reason": "Returned code must satisfy the benchmark slugify cases."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "truth_fabricated_entity:expected_truth_label",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      }
+    }
+  },
+  "resourceFitVerdict": {
+    "generatedAtUtc": "2026-04-13T04:07:58.632459+00:00",
+    "source": "2026-04-13-approved-ready-compare-response-suite.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+    },
+    "models": {
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "blocked",
+        "promotable": false,
+        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM local profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "metrics": {
+          "avgDurationMs": 4217.84,
+          "avgTokensPerSecond": 60.12,
+          "peakGpuMemoryUsedMb": 5362.0,
+          "peakOllamaPrivateMemoryMb": 19612.8,
+          "peakSystemMemoryUsedMb": 14221.7,
+          "peakPrivateMemoryMb": null
+        },
+        "blockingFailureCount": 2,
+        "degradationCount": 0,
+        "blockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5362.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1266.0
+          },
+          {
+            "id": "resource_fit:ollama_private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            "metric": "ollama_private_memory_regression",
+            "actual": 19612.8,
+            "expected": "< +256",
+            "baseline": 15885.8,
+            "delta": 3727.0
+          }
+        ],
+        "degradations": []
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "blocked",
+        "promotable": false,
+        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM local profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "metrics": {
+          "avgDurationMs": 10228.0,
+          "avgTokensPerSecond": 13.7,
+          "peakGpuMemoryUsedMb": 5216.0,
+          "peakOllamaPrivateMemoryMb": 19390.4,
+          "peakSystemMemoryUsedMb": 14126.9,
+          "peakPrivateMemoryMb": null
+        },
+        "blockingFailureCount": 2,
+        "degradationCount": 1,
+        "blockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5216.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1120.0
+          },
+          {
+            "id": "resource_fit:ollama_private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            "metric": "ollama_private_memory_regression",
+            "actual": 19390.4,
+            "expected": "< +256",
+            "baseline": 15885.8,
+            "delta": 3504.6
+          }
+        ],
+        "degradations": [
+          {
+            "id": "resource_fit:latency_regression",
+            "severity": "degradation",
+            "reason": "Candidate latency regresses beyond the preferred local-machine tolerance.",
+            "metric": "latency_regression",
+            "actual": 10228.0,
+            "expected": "< 1.15x baseline",
+            "baseline": 7604.54,
+            "delta": 0.345
+          }
+        ]
+      },
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "model": "gemma4-e4b-ultra-heretic:q8_0",
+        "role": "baseline",
+        "status": "blocked",
+        "promotable": false,
+        "summary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM local profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "metrics": {
+          "avgDurationMs": 7604.54,
+          "avgTokensPerSecond": 13.77,
+          "peakGpuMemoryUsedMb": 5116.0,
+          "peakOllamaPrivateMemoryMb": 15885.8,
+          "peakSystemMemoryUsedMb": 13501.9,
+          "peakPrivateMemoryMb": null
+        },
+        "blockingFailureCount": 1,
+        "degradationCount": 0,
+        "blockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5116.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1020.0
+          }
+        ],
+        "degradations": []
+      }
+    }
+  },
+  "compareDecision": {
+    "generatedAtUtc": "2026-04-13T04:07:58.632467+00:00",
+    "source": "2026-04-13-approved-ready-compare-response-suite.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+    },
+    "baselineModels": [
+      "gemma4-e4b-ultra-heretic:q8_0"
+    ],
+    "candidateModels": [
+      "gemma4-e4b-hauhau-aggressive:q8kp",
+      "gemma4-e2b-hauhau-aggressive:q8kp"
+    ],
+    "models": {
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "candidate-blocked-contract-and-machine-fit",
+        "summary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
+        "comparedAgainst": [
+          "gemma4-e4b-ultra-heretic:q8_0"
+        ],
+        "resourceStatus": "blocked",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "resourcePromotable": false,
+        "resourceBlockingFailureCount": 2,
+        "resourceDegradationCount": 0,
+        "resourceBlockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5362.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1266.0
+          },
+          {
+            "id": "resource_fit:ollama_private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            "metric": "ollama_private_memory_regression",
+            "actual": 19612.8,
+            "expected": "< +256",
+            "baseline": 15885.8,
+            "delta": 3727.0
+          }
+        ],
+        "resourceDegradations": [],
+        "resourceMetrics": {
+          "avgDurationMs": 4217.84,
+          "avgTokensPerSecond": 60.12,
+          "peakGpuMemoryUsedMb": 5362.0,
+          "peakOllamaPrivateMemoryMb": 19612.8,
+          "peakSystemMemoryUsedMb": 14221.7,
+          "peakPrivateMemoryMb": null
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "none",
+        "baselineRiskSummary": "",
+        "baselineRiskReasons": []
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "candidate-blocked-contract-and-machine-fit",
+        "summary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
+        "comparedAgainst": [
+          "gemma4-e4b-ultra-heretic:q8_0"
+        ],
+        "resourceStatus": "blocked",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "resourcePromotable": false,
+        "resourceBlockingFailureCount": 2,
+        "resourceDegradationCount": 1,
+        "resourceBlockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5216.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1120.0
+          },
+          {
+            "id": "resource_fit:ollama_private_memory_regression",
+            "severity": "blocker",
+            "reason": "Candidate increases Ollama private memory enough to materially reduce local machine fit.",
+            "metric": "ollama_private_memory_regression",
+            "actual": 19390.4,
+            "expected": "< +256",
+            "baseline": 15885.8,
+            "delta": 3504.6
+          }
+        ],
+        "resourceDegradations": [
+          {
+            "id": "resource_fit:latency_regression",
+            "severity": "degradation",
+            "reason": "Candidate latency regresses beyond the preferred local-machine tolerance.",
+            "metric": "latency_regression",
+            "actual": 10228.0,
+            "expected": "< 1.15x baseline",
+            "baseline": 7604.54,
+            "delta": 0.345
+          }
+        ],
+        "resourceMetrics": {
+          "avgDurationMs": 10228.0,
+          "avgTokensPerSecond": 13.7,
+          "peakGpuMemoryUsedMb": 5216.0,
+          "peakOllamaPrivateMemoryMb": 19390.4,
+          "peakSystemMemoryUsedMb": 14126.9,
+          "peakPrivateMemoryMb": null
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "none",
+        "baselineRiskSummary": "",
+        "baselineRiskReasons": []
+      },
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "model": "gemma4-e4b-ultra-heretic:q8_0",
+        "role": "baseline",
+        "status": "retain-baseline-at-risk",
+        "summary": "Current deployed baseline remains in place as the least-bad current option, but it is outside the preferred local machine-fit envelope.",
+        "comparedAgainst": [],
+        "resourceStatus": "blocked",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "resourcePromotable": false,
+        "resourceBlockingFailureCount": 1,
+        "resourceDegradationCount": 0,
+        "resourceBlockingFailures": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5116.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1020.0
+          }
+        ],
+        "resourceDegradations": [],
+        "resourceMetrics": {
+          "avgDurationMs": 7604.54,
+          "avgTokensPerSecond": 13.77,
+          "peakGpuMemoryUsedMb": 5116.0,
+          "peakOllamaPrivateMemoryMb": 15885.8,
+          "peakSystemMemoryUsedMb": 13501.9,
+          "peakPrivateMemoryMb": null
+        },
+        "baselineAtRisk": true,
+        "baselineRiskStatus": "blocked",
+        "baselineRiskSummary": "Resource-fit blockers prevent promotion on the current 32 GB RAM / 4 GB VRAM local profile.",
+        "baselineRiskReasons": [
+          {
+            "id": "resource_fit:gpu_headroom",
+            "severity": "blocker",
+            "reason": "GPU headroom falls too close to the 4 GB VRAM ceiling for a stable local promotion.",
+            "metric": "peakGpuMemoryUsedMb",
+            "actual": 5116.0,
+            "expected": "<= 3840",
+            "baseline": null,
+            "delta": -1020.0
+          }
+        ]
+      }
+    }
+  }
+}

@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp`, then `gemma4-e2b-hauhau-aggressive:q8kp` when the lighter/faster local fit wins
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: classify the approved local Gemma roster with a fast local preflight before any full benchmark rerun, then replace the archived compare truth with current blocker or promotion evidence from the approved roster on limited hardware.
+- Current follow-on focus: use the approved-roster preflight plus the ready-subset compare truth to keep the limited-hardware default grounded in current evidence, then expand or rerun the blocked roster members only when the machine-fit path justifies it.
 
 ### Provisional Local Usage Tiers
 

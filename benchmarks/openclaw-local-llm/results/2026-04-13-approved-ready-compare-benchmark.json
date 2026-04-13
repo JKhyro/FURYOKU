@@ -1,0 +1,1300 @@
+{
+  "host": "http://127.0.0.1:11434",
+  "generatedAtUtc": "2026-04-13T03:56:43.5521075Z",
+  "runsPerPrompt": 1,
+  "candidates": [
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "priority": 1,
+      "context_tokens": 131072,
+      "why": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "role": "baseline"
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "priority": 2,
+      "context_tokens": 131072,
+      "why": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "role": "candidate"
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "priority": 3,
+      "context_tokens": 131072,
+      "why": "Lightest local lane for the tightest memory and throughput conditions.",
+      "role": "candidate"
+    }
+  ],
+  "results": [
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "promptId": "rewrite_short",
+      "task": "rewrite",
+      "totalDurationMs": 28164.2,
+      "loadDurationMs": 11179.4,
+      "promptEvalCount": 75,
+      "evalCount": 220,
+      "tokensPerSecond": 13.9,
+      "responseText": "Keep the local model lightweight for Windows laptops. It must reliably handle short summaries, rewrites,",
+      "run": 1,
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "processBefore": {
+        "workingSetMb": 23742.5,
+        "privateMemoryMb": 35007
+      },
+      "processAfter": {
+        "workingSetMb": 5122,
+        "privateMemoryMb": 15748.9
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5322,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 70 words",
+          "actual": 15,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "promptId": "summarize_status",
+      "task": "summary",
+      "totalDurationMs": 17354.5,
+      "loadDurationMs": 724,
+      "promptEvalCount": 96,
+      "evalCount": 220,
+      "tokensPerSecond": 13.48,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "processBefore": {
+        "workingSetMb": 5122,
+        "privateMemoryMb": 15748.9
+      },
+      "processAfter": {
+        "workingSetMb": 5154.2,
+        "privateMemoryMb": 15788.7
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "bullet_count",
+          "pass": false,
+          "expected": 3,
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "promptId": "route_decision",
+      "task": "classification",
+      "totalDurationMs": 9188.5,
+      "loadDurationMs": 698.6,
+      "promptEvalCount": 76,
+      "evalCount": 120,
+      "tokensPerSecond": 14.53,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "processBefore": {
+        "workingSetMb": 5153,
+        "privateMemoryMb": 15779.5
+      },
+      "processAfter": {
+        "workingSetMb": 5162.5,
+        "privateMemoryMb": 15796.9
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "allowed_route_token",
+          "pass": false,
+          "expected": "yes|no|defer",
+          "actual": "",
+          "detail": null
+        },
+        {
+          "id": "expected_route_decision",
+          "pass": false,
+          "expected": "no",
+          "actual": "",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 2,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "promptId": "instruction_following",
+      "task": "instruction",
+      "totalDurationMs": 13151.5,
+      "loadDurationMs": 649,
+      "promptEvalCount": 57,
+      "evalCount": 180,
+      "tokensPerSecond": 14.65,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "processBefore": {
+        "workingSetMb": 5161.2,
+        "privateMemoryMb": 15787.7
+      },
+      "processAfter": {
+        "workingSetMb": 5166.2,
+        "privateMemoryMb": 15800.2
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "two_sentences",
+          "pass": false,
+          "expected": 2,
+          "actual": 0,
+          "detail": null
+        },
+        {
+          "id": "first_mentions_context_window",
+          "pass": false,
+          "expected": "contains 'context window'",
+          "actual": "missing",
+          "detail": null
+        },
+        {
+          "id": "second_avoids_safety",
+          "pass": true,
+          "expected": "no 'safety' in second sentence",
+          "actual": "missing",
+          "detail": null
+        },
+        {
+          "id": "second_has_recommendation",
+          "pass": false,
+          "expected": "recommendation cue in second sentence",
+          "actual": "missing",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "promptId": "tool_style_json",
+      "task": "structured_output",
+      "totalDurationMs": 13248.8,
+      "loadDurationMs": 643.6,
+      "promptEvalCount": 53,
+      "evalCount": 180,
+      "tokensPerSecond": 14.54,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "baseline",
+      "candidatePriority": 1,
+      "candidateWhy": "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+      "processBefore": {
+        "workingSetMb": 5165,
+        "privateMemoryMb": 15791
+      },
+      "processAfter": {
+        "workingSetMb": 5170.5,
+        "privateMemoryMb": 15804.3
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "raw_json_only",
+          "pass": false,
+          "expected": "raw JSON object",
+          "actual": "raw",
+          "detail": null
+        },
+        {
+          "id": "valid_json",
+          "pass": false,
+          "expected": null,
+          "actual": null,
+          "detail": "Expecting value: line 1 column 1 (char 0)"
+        },
+        {
+          "id": "required_json_keys",
+          "pass": false,
+          "expected": "model_class, priority_reason, risk",
+          "actual": "unavailable",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "promptId": "rewrite_short",
+      "task": "rewrite",
+      "totalDurationMs": 24066.9,
+      "loadDurationMs": 7606.5,
+      "promptEvalCount": 74,
+      "evalCount": 220,
+      "tokensPerSecond": 14.12,
+      "responseText": "Keep the local model lightweight for Windows laptops. It needs to reliably handle core tasks: short summaries, rewrites, and basic agent prompts. Focus on efficiency without sacrificing performance",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "processBefore": {
+        "workingSetMb": 5169.3,
+        "privateMemoryMb": 15795.1
+      },
+      "processAfter": {
+        "workingSetMb": 5205.6,
+        "privateMemoryMb": 15949.9
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5116,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 70 words",
+          "actual": 28,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "promptId": "summarize_status",
+      "task": "summary",
+      "totalDurationMs": 16735.3,
+      "loadDurationMs": 697.2,
+      "promptEvalCount": 95,
+      "evalCount": 220,
+      "tokensPerSecond": 13.98,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "processBefore": {
+        "workingSetMb": 5204.2,
+        "privateMemoryMb": 15940.7
+      },
+      "processAfter": {
+        "workingSetMb": 5267,
+        "privateMemoryMb": 16011.2
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "bullet_count",
+          "pass": false,
+          "expected": 3,
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "promptId": "route_decision",
+      "task": "classification",
+      "totalDurationMs": 8937.3,
+      "loadDurationMs": 505.1,
+      "promptEvalCount": 75,
+      "evalCount": 120,
+      "tokensPerSecond": 14.63,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "processBefore": {
+        "workingSetMb": 5265.8,
+        "privateMemoryMb": 16002
+      },
+      "processAfter": {
+        "workingSetMb": 5263.2,
+        "privateMemoryMb": 16007.4
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "allowed_route_token",
+          "pass": false,
+          "expected": "yes|no|defer",
+          "actual": "",
+          "detail": null
+        },
+        {
+          "id": "expected_route_decision",
+          "pass": false,
+          "expected": "no",
+          "actual": "",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 2,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "promptId": "instruction_following",
+      "task": "instruction",
+      "totalDurationMs": 13830.5,
+      "loadDurationMs": 638.8,
+      "promptEvalCount": 56,
+      "evalCount": 180,
+      "tokensPerSecond": 13.94,
+      "responseText": "Optimizing the prompt structure is crucial for effectively managing the limitations of the context window. Therefore, always prefix complex queries with a concise summary of the required output",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "processBefore": {
+        "workingSetMb": 5262,
+        "privateMemoryMb": 15998.2
+      },
+      "processAfter": {
+        "workingSetMb": 5265.1,
+        "privateMemoryMb": 16011.6
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "two_sentences",
+          "pass": true,
+          "expected": 2,
+          "actual": 2,
+          "detail": null
+        },
+        {
+          "id": "first_mentions_context_window",
+          "pass": true,
+          "expected": "contains 'context window'",
+          "actual": "Optimizing the prompt structure is crucial for effectively managing the limitations of the context window.",
+          "detail": null
+        },
+        {
+          "id": "second_avoids_safety",
+          "pass": true,
+          "expected": "no 'safety' in second sentence",
+          "actual": "Therefore, always prefix complex queries with a concise summary of the required output",
+          "detail": null
+        },
+        {
+          "id": "second_has_recommendation",
+          "pass": false,
+          "expected": "recommendation cue in second sentence",
+          "actual": "Therefore, always prefix complex queries with a concise summary of the required output",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 3,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "promptId": "tool_style_json",
+      "task": "structured_output",
+      "totalDurationMs": 13398.7,
+      "loadDurationMs": 646.3,
+      "promptEvalCount": 52,
+      "evalCount": 180,
+      "tokensPerSecond": 14.37,
+      "responseText": "```json\n{\n  \"model_class\": \"Compact Local Model (e.g., quantized LLM, small BERT variant)\",\n  \"priority_reason\": \"Low Latency & Offline Capability for Core Functionality\",\n  \"risk\": \"Limited Context Window & Domain Specificity\",\n  \"description\": \"A compact local model is highly useful for OpenClaw's basic tasks because it enables near-instantaneous inference directly on the edge device (or local server) without requiring constant, high-bandwidth communication with a remote cloud API. This is critical for real-time operations like immediate threat classification, basic log parsing, or simple command interpretation. The primary benefits are: 1. **Low Latency:** Responses are immediate, crucial for time-sensitive security events. 2. **Offline Operation:** The system remains fully functional even if network connectivity is lost (",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 2,
+      "candidateWhy": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+      "processBefore": {
+        "workingSetMb": 5263.8,
+        "privateMemoryMb": 16002.4
+      },
+      "processAfter": {
+        "workingSetMb": 5277.8,
+        "privateMemoryMb": 16024.2
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "raw_json_only",
+          "pass": false,
+          "expected": "raw JSON object",
+          "actual": "raw",
+          "detail": null
+        },
+        {
+          "id": "valid_json",
+          "pass": false,
+          "expected": null,
+          "actual": null,
+          "detail": "Expecting value: line 1 column 1 (char 0)"
+        },
+        {
+          "id": "required_json_keys",
+          "pass": false,
+          "expected": "model_class, priority_reason, risk",
+          "actual": "unavailable",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "promptId": "rewrite_short",
+      "task": "rewrite",
+      "totalDurationMs": 11453.6,
+      "loadDurationMs": 7071,
+      "promptEvalCount": 74,
+      "evalCount": 220,
+      "tokensPerSecond": 59.27,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "processBefore": {
+        "workingSetMb": 5276.5,
+        "privateMemoryMb": 16015
+      },
+      "processAfter": {
+        "workingSetMb": 1327.4,
+        "privateMemoryMb": 12116.1
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5216,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "word_limit",
+          "pass": true,
+          "expected": "<= 70 words",
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 0,
+        "allPassed": true
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "promptId": "summarize_status",
+      "task": "summary",
+      "totalDurationMs": 4759.6,
+      "loadDurationMs": 726.9,
+      "promptEvalCount": 95,
+      "evalCount": 220,
+      "tokensPerSecond": 59.42,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "processBefore": {
+        "workingSetMb": 1326.3,
+        "privateMemoryMb": 12108.3
+      },
+      "processAfter": {
+        "workingSetMb": 1392.8,
+        "privateMemoryMb": 12181.6
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "bullet_count",
+          "pass": false,
+          "expected": 3,
+          "actual": 0,
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 1,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "promptId": "route_decision",
+      "task": "classification",
+      "totalDurationMs": 2794.8,
+      "loadDurationMs": 579.4,
+      "promptEvalCount": 75,
+      "evalCount": 120,
+      "tokensPerSecond": 59.32,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "processBefore": {
+        "workingSetMb": 1391.5,
+        "privateMemoryMb": 12173.8
+      },
+      "processAfter": {
+        "workingSetMb": 1400.8,
+        "privateMemoryMb": 12189.8
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "allowed_route_token",
+          "pass": false,
+          "expected": "yes|no|defer",
+          "actual": "",
+          "detail": null
+        },
+        {
+          "id": "expected_route_decision",
+          "pass": false,
+          "expected": "no",
+          "actual": "",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 2,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "promptId": "instruction_following",
+      "task": "instruction",
+      "totalDurationMs": 3924.9,
+      "loadDurationMs": 623.2,
+      "promptEvalCount": 56,
+      "evalCount": 180,
+      "tokensPerSecond": 59.57,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "processBefore": {
+        "workingSetMb": 1399.8,
+        "privateMemoryMb": 12182
+      },
+      "processAfter": {
+        "workingSetMb": 1402,
+        "privateMemoryMb": 12186.4
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "two_sentences",
+          "pass": false,
+          "expected": 2,
+          "actual": 0,
+          "detail": null
+        },
+        {
+          "id": "first_mentions_context_window",
+          "pass": false,
+          "expected": "contains 'context window'",
+          "actual": "missing",
+          "detail": null
+        },
+        {
+          "id": "second_avoids_safety",
+          "pass": true,
+          "expected": "no 'safety' in second sentence",
+          "actual": "missing",
+          "detail": null
+        },
+        {
+          "id": "second_has_recommendation",
+          "pass": false,
+          "expected": "recommendation cue in second sentence",
+          "actual": "missing",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 1,
+        "failed": 3,
+        "allPassed": false
+      }
+    },
+    {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "promptId": "tool_style_json",
+      "task": "structured_output",
+      "totalDurationMs": 3903.9,
+      "loadDurationMs": 633.3,
+      "promptEvalCount": 52,
+      "evalCount": 180,
+      "tokensPerSecond": 59.71,
+      "responseText": "",
+      "run": 1,
+      "candidateRole": "candidate",
+      "candidatePriority": 3,
+      "candidateWhy": "Lightest local lane for the tightest memory and throughput conditions.",
+      "processBefore": {
+        "workingSetMb": 1402,
+        "privateMemoryMb": 12186.4
+      },
+      "processAfter": {
+        "workingSetMb": 1400.5,
+        "privateMemoryMb": 12191.7
+      },
+      "gpuBefore": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "gpuAfter": {
+        "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "memoryUsedMb": 5362,
+        "memoryTotalMb": 6141
+      },
+      "contractChecks": [
+        {
+          "id": "raw_json_only",
+          "pass": false,
+          "expected": "raw JSON object",
+          "actual": "raw",
+          "detail": null
+        },
+        {
+          "id": "valid_json",
+          "pass": false,
+          "expected": null,
+          "actual": null,
+          "detail": "Expecting value: line 1 column 1 (char 0)"
+        },
+        {
+          "id": "required_json_keys",
+          "pass": false,
+          "expected": "model_class, priority_reason, risk",
+          "actual": "unavailable",
+          "detail": null
+        }
+      ],
+      "contractSummary": {
+        "passed": 0,
+        "failed": 3,
+        "allPassed": false
+      }
+    }
+  ],
+  "contractEvaluation": {
+    "generatedAtUtc": "2026-04-13T04:07:58.624443+00:00",
+    "source": "2026-04-13-approved-ready-compare-benchmark.json",
+    "passed": 8,
+    "failed": 25,
+    "promptCount": 15,
+    "promptsAllPassed": 3,
+    "models": {
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "passed": 2,
+        "failed": 9,
+        "promptsAllPassed": 1,
+        "promptCount": 5
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "passed": 4,
+        "failed": 7,
+        "promptsAllPassed": 1,
+        "promptCount": 5
+      },
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "passed": 2,
+        "failed": 9,
+        "promptsAllPassed": 1,
+        "promptCount": 5
+      }
+    }
+  },
+  "promotionVerdict": {
+    "generatedAtUtc": "2026-04-13T04:07:58.624462+00:00",
+    "source": "2026-04-13-approved-ready-compare-benchmark.json",
+    "models": {
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 5,
+        "degradationCount": 4,
+        "blockingFailures": [
+          {
+            "id": "route_decision:allowed_route_token",
+            "severity": "blocker",
+            "reason": "Route output must stay within the supported decision tokens."
+          },
+          {
+            "id": "route_decision:expected_route_decision",
+            "severity": "blocker",
+            "reason": "Route decision correctness is a promotion blocker for the benchmark lane."
+          },
+          {
+            "id": "tool_style_json:raw_json_only",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must return raw JSON without markdown fencing."
+          },
+          {
+            "id": "tool_style_json:valid_json",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must produce valid machine-readable JSON."
+          },
+          {
+            "id": "tool_style_json:required_json_keys",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must keep the expected JSON contract keys."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "summarize_status:bullet_count",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:two_sentences",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:first_mentions_context_window",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:second_has_recommendation",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 5,
+        "degradationCount": 2,
+        "blockingFailures": [
+          {
+            "id": "route_decision:allowed_route_token",
+            "severity": "blocker",
+            "reason": "Route output must stay within the supported decision tokens."
+          },
+          {
+            "id": "route_decision:expected_route_decision",
+            "severity": "blocker",
+            "reason": "Route decision correctness is a promotion blocker for the benchmark lane."
+          },
+          {
+            "id": "tool_style_json:raw_json_only",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must return raw JSON without markdown fencing."
+          },
+          {
+            "id": "tool_style_json:valid_json",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must produce valid machine-readable JSON."
+          },
+          {
+            "id": "tool_style_json:required_json_keys",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must keep the expected JSON contract keys."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "summarize_status:bullet_count",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:second_has_recommendation",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      },
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "model": "gemma4-e4b-ultra-heretic:q8_0",
+        "status": "blocked",
+        "promotable": false,
+        "promptCount": 5,
+        "blockingFailureCount": 5,
+        "degradationCount": 4,
+        "blockingFailures": [
+          {
+            "id": "route_decision:allowed_route_token",
+            "severity": "blocker",
+            "reason": "Route output must stay within the supported decision tokens."
+          },
+          {
+            "id": "route_decision:expected_route_decision",
+            "severity": "blocker",
+            "reason": "Route decision correctness is a promotion blocker for the benchmark lane."
+          },
+          {
+            "id": "tool_style_json:raw_json_only",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must return raw JSON without markdown fencing."
+          },
+          {
+            "id": "tool_style_json:valid_json",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must produce valid machine-readable JSON."
+          },
+          {
+            "id": "tool_style_json:required_json_keys",
+            "severity": "blocker",
+            "reason": "Tool-style prompts must keep the expected JSON contract keys."
+          }
+        ],
+        "degradations": [
+          {
+            "id": "summarize_status:bullet_count",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:two_sentences",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:first_mentions_context_window",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          },
+          {
+            "id": "instruction_following:second_has_recommendation",
+            "severity": "degradation",
+            "reason": "Non-blocking contract-discipline regression that still warrants review before promotion."
+          }
+        ],
+        "summary": "Blocked from promotion by hard-check failures."
+      }
+    }
+  },
+  "resourceFitVerdict": {
+    "generatedAtUtc": "2026-04-13T04:07:58.624472+00:00",
+    "source": "2026-04-13-approved-ready-compare-benchmark.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+    },
+    "models": {
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "fit",
+        "promotable": true,
+        "summary": "Resource-fit checks are within the current 32 GB RAM / 4 GB VRAM local profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "metrics": {
+          "avgDurationMs": 5367.36,
+          "avgTokensPerSecond": 59.46,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 12191.7
+        },
+        "blockingFailureCount": 0,
+        "degradationCount": 0,
+        "blockingFailures": [],
+        "degradations": []
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "review",
+        "promotable": false,
+        "summary": "Resource-fit degradations need review before promotion on the current 32 GB RAM / 4 GB VRAM local profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "metrics": {
+          "avgDurationMs": 15393.74,
+          "avgTokensPerSecond": 14.21,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 16024.2
+        },
+        "blockingFailureCount": 0,
+        "degradationCount": 1,
+        "blockingFailures": [],
+        "degradations": [
+          {
+            "id": "resource_fit:private_memory_regression",
+            "severity": "degradation",
+            "reason": "Candidate increases benchmark-process private memory versus the deployed baseline.",
+            "metric": "private_memory_regression",
+            "actual": 16024.2,
+            "expected": "< +128",
+            "baseline": 15804.3,
+            "delta": 219.9
+          }
+        ]
+      },
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "model": "gemma4-e4b-ultra-heretic:q8_0",
+        "role": "baseline",
+        "status": "fit",
+        "promotable": true,
+        "summary": "Resource-fit checks are within the current 32 GB RAM / 4 GB VRAM local profile.",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "metrics": {
+          "avgDurationMs": 16221.5,
+          "avgTokensPerSecond": 14.22,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 15804.3
+        },
+        "blockingFailureCount": 0,
+        "degradationCount": 0,
+        "blockingFailures": [],
+        "degradations": []
+      }
+    }
+  },
+  "compareDecision": {
+    "generatedAtUtc": "2026-04-13T04:07:58.624479+00:00",
+    "source": "2026-04-13-approved-ready-compare-benchmark.json",
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+    },
+    "baselineModels": [
+      "gemma4-e4b-ultra-heretic:q8_0"
+    ],
+    "candidateModels": [
+      "gemma4-e4b-hauhau-aggressive:q8kp",
+      "gemma4-e2b-hauhau-aggressive:q8kp"
+    ],
+    "models": {
+      "gemma4-e2b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "candidate-blocked-contract",
+        "summary": "Candidate does not clear the current contract/promotion gates and cannot be promoted yet.",
+        "comparedAgainst": [
+          "gemma4-e4b-ultra-heretic:q8_0"
+        ],
+        "resourceStatus": "fit",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "resourcePromotable": true,
+        "resourceBlockingFailureCount": 0,
+        "resourceDegradationCount": 0,
+        "resourceBlockingFailures": [],
+        "resourceDegradations": [],
+        "resourceMetrics": {
+          "avgDurationMs": 5367.36,
+          "avgTokensPerSecond": 59.46,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 12191.7
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "none",
+        "baselineRiskSummary": "",
+        "baselineRiskReasons": []
+      },
+      "gemma4-e4b-hauhau-aggressive:q8kp": {
+        "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+        "role": "candidate",
+        "status": "candidate-blocked-contract-and-machine-fit",
+        "summary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
+        "comparedAgainst": [
+          "gemma4-e4b-ultra-heretic:q8_0"
+        ],
+        "resourceStatus": "review",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "resourcePromotable": false,
+        "resourceBlockingFailureCount": 0,
+        "resourceDegradationCount": 1,
+        "resourceBlockingFailures": [],
+        "resourceDegradations": [
+          {
+            "id": "resource_fit:private_memory_regression",
+            "severity": "degradation",
+            "reason": "Candidate increases benchmark-process private memory versus the deployed baseline.",
+            "metric": "private_memory_regression",
+            "actual": 16024.2,
+            "expected": "< +128",
+            "baseline": 15804.3,
+            "delta": 219.9
+          }
+        ],
+        "resourceMetrics": {
+          "avgDurationMs": 15393.74,
+          "avgTokensPerSecond": 14.21,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 16024.2
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "none",
+        "baselineRiskSummary": "",
+        "baselineRiskReasons": []
+      },
+      "gemma4-e4b-ultra-heretic:q8_0": {
+        "model": "gemma4-e4b-ultra-heretic:q8_0",
+        "role": "baseline",
+        "status": "retain-baseline",
+        "summary": "Current deployed baseline remains in place until a candidate clears the contract and machine-fit gates.",
+        "comparedAgainst": [],
+        "resourceStatus": "fit",
+        "machineProfile": {
+          "label": "32 GB RAM / 4 GB VRAM local profile",
+          "systemMemoryMb": 32768,
+          "gpuMemoryMb": 4096,
+          "presetName": "default-32gb-4gb",
+          "presetSource": "preset-file",
+          "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+        },
+        "resourcePromotable": true,
+        "resourceBlockingFailureCount": 0,
+        "resourceDegradationCount": 0,
+        "resourceBlockingFailures": [],
+        "resourceDegradations": [],
+        "resourceMetrics": {
+          "avgDurationMs": 16221.5,
+          "avgTokensPerSecond": 14.22,
+          "peakGpuMemoryUsedMb": null,
+          "peakOllamaPrivateMemoryMb": null,
+          "peakSystemMemoryUsedMb": null,
+          "peakPrivateMemoryMb": 15804.3
+        },
+        "baselineAtRisk": false,
+        "baselineRiskStatus": "fit",
+        "baselineRiskSummary": "Resource-fit checks are within the current 32 GB RAM / 4 GB VRAM local profile.",
+        "baselineRiskReasons": []
+      }
+    }
+  }
+}
