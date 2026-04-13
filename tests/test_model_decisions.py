@@ -22,7 +22,7 @@ from furyoku import (
 def sample_models():
     return [
         ModelEndpoint(
-            model_id="local-gemma3-heretic",
+            model_id="local-gemma4-e4b-ultra-q8",
             provider="local",
             privacy_level="local",
             context_window_tokens=8192,
@@ -144,12 +144,12 @@ class ModelDecisionTests(unittest.TestCase):
     def test_evaluate_model_decisions_selects_best_model_per_situation(self):
         report = evaluate_model_decisions(sample_models(), sample_tasks())
 
-        self.assertEqual(report.selected_for("private-chat").model.model_id, "local-gemma3-heretic")
+        self.assertEqual(report.selected_for("private-chat").model.model_id, "local-gemma4-e4b-ultra-q8")
         self.assertEqual(report.selected_for("hard-coding").model.model_id, "cli-codex-high")
         self.assertEqual(report.selected_for("long-memory").model.model_id, "api-long-context-memory")
         self.assertEqual(
             report.aggregate.selected_model_ids,
-            ("api-long-context-memory", "cli-codex-high", "local-gemma3-heretic"),
+            ("api-long-context-memory", "cli-codex-high", "local-gemma4-e4b-ultra-q8"),
         )
         self.assertEqual(report.aggregate.selected_providers, ("api", "cli", "local"))
 
@@ -249,7 +249,7 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(decision["taskId"], "bounded-chat")
         self.assertEqual(decision["maxLatencyMs"], 2000)
         self.assertEqual(decision["maxTotalCostPer1k"], 0.03)
-        self.assertEqual(decision["selectedModelId"], "local-gemma3-heretic")
+        self.assertEqual(decision["selectedModelId"], "local-gemma4-e4b-ultra-q8")
         self.assertFalse(blocked["eligible"])
         self.assertTrue(
             any("average latency 6000ms exceeds task limit 2000ms" in blocker for blocker in blocked["blockers"])
@@ -319,7 +319,7 @@ class ModelDecisionTests(unittest.TestCase):
                     report_path="decision-report.json",
                     report_sha256="0" * 64,
                     generated_at="2026-04-10T12:00:00+00:00",
-                    selected_model_id="local-gemma3-heretic",
+                    selected_model_id="local-gemma4-e4b-ultra-q8",
                     selected_provider="local",
                     verdict="success",
                     score=1.0,
@@ -328,10 +328,10 @@ class ModelDecisionTests(unittest.TestCase):
         )
 
         selected = report.selected_for("feedback-chat")
-        local_rank = next(score for score in report.situations["feedback-chat"].ranked if score.model.model_id == "local-gemma3-heretic")
+        local_rank = next(score for score in report.situations["feedback-chat"].ranked if score.model.model_id == "local-gemma4-e4b-ultra-q8")
 
-        self.assertEqual(selected.model.model_id, "local-gemma3-heretic")
-        self.assertIn("local-gemma3-heretic", report.feedback_adjustments)
+        self.assertEqual(selected.model.model_id, "local-gemma4-e4b-ultra-q8")
+        self.assertIn("local-gemma4-e4b-ultra-q8", report.feedback_adjustments)
         self.assertIsNotNone(report.feedback_policy_metadata)
         self.assertEqual(report.feedback_policy_metadata.source, "default")
         self.assertTrue(any("outcome feedback adjustment" in reason for reason in local_rank.reasons))
@@ -351,7 +351,7 @@ class ModelDecisionTests(unittest.TestCase):
                     report_path="decision-report.json",
                     report_sha256="0" * 64,
                     generated_at="2026-04-10T12:00:00+00:00",
-                    selected_model_id="local-gemma3-heretic",
+                    selected_model_id="local-gemma4-e4b-ultra-q8",
                     selected_provider="local",
                     verdict="success",
                     score=1.0,
@@ -367,7 +367,7 @@ class ModelDecisionTests(unittest.TestCase):
                     report_path="decision-report.json",
                     report_sha256="0" * 64,
                     generated_at="2026-04-10T12:00:00+00:00",
-                    selected_model_id="local-gemma3-heretic",
+                    selected_model_id="local-gemma4-e4b-ultra-q8",
                     selected_provider="local",
                     verdict="success",
                     score=1.0,
@@ -380,8 +380,8 @@ class ModelDecisionTests(unittest.TestCase):
             ),
         )
 
-        self.assertEqual(default_report.feedback_adjustments["local-gemma3-heretic"].adjustment, 10.0)
-        self.assertEqual(policy_report.feedback_adjustments["local-gemma3-heretic"].adjustment, 1.5)
+        self.assertEqual(default_report.feedback_adjustments["local-gemma4-e4b-ultra-q8"].adjustment, 10.0)
+        self.assertEqual(policy_report.feedback_adjustments["local-gemma4-e4b-ultra-q8"].adjustment, 1.5)
         self.assertEqual(default_report.feedback_policy_metadata.source, "default")
         self.assertEqual(policy_report.feedback_policy_metadata.source, "custom")
         self.assertEqual(
@@ -398,7 +398,7 @@ class ModelDecisionTests(unittest.TestCase):
                 report_sha256="0" * 64,
                 generated_at="2026-04-10T12:00:00+00:00",
                 situation_id="feedback-chat",
-                selected_model_id="local-gemma3-heretic",
+                selected_model_id="local-gemma4-e4b-ultra-q8",
                 selected_provider="local",
                 verdict="success",
                 score=1.0,
@@ -413,7 +413,7 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertTrue(payload["recommendations"][0]["recommended"])
         selected = payload["recommendations"][0]["selectedModel"]
         confidence = payload["recommendations"][0]["confidence"]
-        self.assertEqual(selected["modelId"], "local-gemma3-heretic")
+        self.assertEqual(selected["modelId"], "local-gemma4-e4b-ultra-q8")
         self.assertGreater(selected["feedbackAdjustment"], 0.0)
         self.assertEqual(selected["outcomeRecordCount"], 1)
         self.assertEqual(confidence["level"], "medium")
@@ -439,7 +439,7 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertIsNone(payload["recommendations"][0]["selectedModel"])
         self.assertEqual(payload["recommendations"][0]["confidence"]["level"], "blocked")
         self.assertEqual(payload["recommendations"][0]["confidence"]["evidenceQuality"], "blocked")
-        self.assertIn("local-gemma3-heretic", payload["recommendations"][0]["blockers"])
+        self.assertIn("local-gemma4-e4b-ultra-q8", payload["recommendations"][0]["blockers"])
 
     def test_recommendation_confidence_drops_for_negative_outcome_evidence(self):
         task = TaskProfile(task_id="feedback-chat", required_capabilities={"conversation": 0.8})
@@ -450,7 +450,7 @@ class ModelDecisionTests(unittest.TestCase):
                 report_sha256="0" * 64,
                 generated_at="2026-04-10T12:00:00+00:00",
                 situation_id="feedback-chat",
-                selected_model_id="local-gemma3-heretic",
+                selected_model_id="local-gemma4-e4b-ultra-q8",
                 selected_provider="local",
                 verdict="success",
                 score=1.0,
@@ -463,7 +463,7 @@ class ModelDecisionTests(unittest.TestCase):
                 report_sha256="1" * 64,
                 generated_at="2026-04-10T12:00:00+00:00",
                 situation_id="feedback-chat",
-                selected_model_id="local-gemma3-heretic",
+                selected_model_id="local-gemma4-e4b-ultra-q8",
                 selected_provider="local",
                 verdict="failure",
                 score=0.0,
@@ -502,7 +502,7 @@ class ModelDecisionTests(unittest.TestCase):
                     report_path="decision-report.json",
                     report_sha256="0" * 64,
                     generated_at="2026-04-10T12:00:00+00:00",
-                    selected_model_id="local-gemma3-heretic",
+                    selected_model_id="local-gemma4-e4b-ultra-q8",
                     selected_provider="local",
                     verdict="success",
                     score=1.0,
@@ -510,7 +510,7 @@ class ModelDecisionTests(unittest.TestCase):
             ],
         )
 
-        local_rank = next(score for score in report.situations["feedback-coding"].ranked if score.model.model_id == "local-gemma3-heretic")
+        local_rank = next(score for score in report.situations["feedback-coding"].ranked if score.model.model_id == "local-gemma4-e4b-ultra-q8")
 
         self.assertFalse(local_rank.eligible)
         self.assertEqual(report.selected_for("feedback-coding").model.model_id, "cli-codex-high")
@@ -532,7 +532,7 @@ class ModelDecisionTests(unittest.TestCase):
                     report_path="decision-report.json",
                     report_sha256="0" * 64,
                     generated_at="2026-04-10T12:00:00+00:00",
-                    selected_model_id="local-gemma3-heretic",
+                    selected_model_id="local-gemma4-e4b-ultra-q8",
                     selected_provider="local",
                     verdict="failure",
                 )
@@ -603,7 +603,7 @@ class ModelDecisionTests(unittest.TestCase):
     def test_report_surfaces_per_model_and_provider_coverage(self):
         report = evaluate_model_decisions(sample_models(), sample_tasks())
 
-        local_coverage = report.aggregate.model_coverage["local-gemma3-heretic"]
+        local_coverage = report.aggregate.model_coverage["local-gemma4-e4b-ultra-q8"]
         cli_coverage = report.aggregate.model_coverage["cli-codex-high"]
         api_coverage = report.aggregate.provider_coverage["api"]
 
@@ -629,7 +629,7 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertEqual(report.aggregate.total_weight, 8.0)
         self.assertEqual(report.aggregate.selected_weight, 8.0)
         self.assertEqual(report.situations["private-chat"].weight, 5.0)
-        self.assertEqual(report.aggregate.model_coverage["local-gemma3-heretic"].selected_weight, 5.0)
+        self.assertEqual(report.aggregate.model_coverage["local-gemma4-e4b-ultra-q8"].selected_weight, 5.0)
         self.assertEqual(report.aggregate.model_coverage["cli-codex-high"].selected_weight, 2.0)
         self.assertEqual(report.aggregate.provider_coverage["local"].selected_weight, 5.0)
         self.assertGreater(report.summaries[0].selected_weight, report.summaries[-1].selected_weight)
@@ -654,7 +654,7 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertTrue(
             any(
                 "below minimum score 120.00" in blocker
-                for blocker in decision.blockers["local-gemma3-heretic"]
+                for blocker in decision.blockers["local-gemma4-e4b-ultra-q8"]
             )
         )
 
@@ -670,8 +670,8 @@ class ModelDecisionTests(unittest.TestCase):
 
         self.assertFalse(decision.eligible)
         self.assertIsNone(report.selected_for("impossible-local-coder"))
-        self.assertIn("local-gemma3-heretic", decision.blockers)
-        self.assertTrue(any("coding capability" in blocker for blocker in decision.blockers["local-gemma3-heretic"]))
+        self.assertIn("local-gemma4-e4b-ultra-q8", decision.blockers)
+        self.assertTrue(any("coding capability" in blocker for blocker in decision.blockers["local-gemma4-e4b-ultra-q8"]))
         self.assertTrue(any("uncovered situations" in reason for reason in report.aggregate.rationale))
 
     def test_report_serializes_stable_json_ready_shape(self):
@@ -683,7 +683,7 @@ class ModelDecisionTests(unittest.TestCase):
         self.assertNotIn("feedbackPolicy", payload)
         self.assertIsNone(report.routing_policy_metadata)
         self.assertNotIn("routingPolicy", payload)
-        self.assertEqual(payload["situations"]["private-chat"]["selectedModelId"], "local-gemma3-heretic")
+        self.assertEqual(payload["situations"]["private-chat"]["selectedModelId"], "local-gemma4-e4b-ultra-q8")
         self.assertEqual(payload["aggregate"]["modelCount"], 3)
         self.assertEqual(payload["aggregate"]["situationCount"], 3)
         self.assertIn("providerCoverage", payload["aggregate"])
@@ -700,7 +700,7 @@ class ModelDecisionTests(unittest.TestCase):
                     report_path="decision-report.json",
                     report_sha256="0" * 64,
                     generated_at="2026-04-10T12:00:00+00:00",
-                    selected_model_id="local-gemma3-heretic",
+                    selected_model_id="local-gemma4-e4b-ultra-q8",
                     selected_provider="local",
                     verdict="success",
                     score=1.0,

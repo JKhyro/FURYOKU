@@ -33,7 +33,7 @@ def write_execution_report(path: Path) -> None:
         "ok": True,
         "situationId": "decision.private-chat",
         "selectedModel": {
-            "modelId": "local-gemma3-heretic-q4",
+            "modelId": "local-gemma4-e4b-ultra-q8",
             "provider": "local",
             "inputCostPer1k": 0.0015,
             "outputCostPer1k": 0.0045,
@@ -240,7 +240,7 @@ class OutcomeFeedbackTests(unittest.TestCase):
         payload = record.to_dict()
         self.assertEqual(payload["reportGeneratedAt"], "2026-04-10T12:00:00+00:00")
         self.assertEqual(payload["situationId"], "decision.private-chat")
-        self.assertEqual(payload["selectedModelId"], "local-gemma3-heretic-q4")
+        self.assertEqual(payload["selectedModelId"], "local-gemma4-e4b-ultra-q8")
         self.assertEqual(payload["selectedProvider"], "local")
         self.assertEqual(payload["executionStatus"], "ok")
         self.assertEqual(payload["latencyMs"], 1200.0)
@@ -287,7 +287,7 @@ class OutcomeFeedbackTests(unittest.TestCase):
         self.assertEqual(record.score, 0.97)
         self.assertEqual(record.reason, "accepted generated answer")
         self.assertEqual(record.tags, ("auto-capture",))
-        self.assertEqual(record.selected_model_id, "local-gemma3-heretic-q4")
+        self.assertEqual(record.selected_model_id, "local-gemma4-e4b-ultra-q8")
         self.assertEqual(record.execution_status, "ok")
 
     def test_capture_execution_outcome_appends_inferred_failure(self):
