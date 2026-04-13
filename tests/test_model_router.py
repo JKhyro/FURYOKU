@@ -18,7 +18,7 @@ from furyoku import (
 def sample_models():
     return [
         ModelEndpoint(
-            model_id="local-gemma3-heretic-q4",
+            model_id="local-gemma4-e4b-ultra-q8",
             provider="local",
             privacy_level="local",
             context_window_tokens=8192,
@@ -92,7 +92,7 @@ class ModelRouterTests(unittest.TestCase):
 
         selected = select_model(sample_models(), task)
 
-        self.assertEqual(selected.model.model_id, "local-gemma3-heretic-q4")
+        self.assertEqual(selected.model.model_id, "local-gemma4-e4b-ultra-q8")
         self.assertTrue(selected.eligible)
 
     def test_select_model_uses_cli_for_hard_coding_reasoning(self):
@@ -355,7 +355,7 @@ class ModelRouterTests(unittest.TestCase):
         local_rank = next(
             score
             for score in rank_models(sample_models(), task, policy=policy)
-            if score.model.model_id == "local-gemma3-heretic-q4"
+            if score.model.model_id == "local-gemma4-e4b-ultra-q8"
         )
 
         self.assertFalse(local_rank.eligible)
@@ -375,7 +375,7 @@ class ModelRouterTests(unittest.TestCase):
         local_rank = next(
             score
             for score in ranked
-            if score.model.model_id == "local-gemma3-heretic-q4"
+            if score.model.model_id == "local-gemma4-e4b-ultra-q8"
         )
 
         self.assertEqual(select_model(sample_models(), task).model.model_id, "cli-codex-high")
@@ -405,7 +405,7 @@ class ModelRouterTests(unittest.TestCase):
         )
 
         ranked = rank_models(sample_models(), task)
-        local_score = next(score for score in ranked if score.model.model_id == "local-gemma3-heretic-q4")
+        local_score = next(score for score in ranked if score.model.model_id == "local-gemma4-e4b-ultra-q8")
 
         self.assertFalse(local_score.eligible)
         self.assertTrue(any("context window" in blocker for blocker in local_score.blockers))
@@ -415,7 +415,7 @@ class ModelRouterTests(unittest.TestCase):
 
         self.assertEqual(panel.face.model.model_id, "cli-codex-high")
         self.assertEqual(panel.memory.model.model_id, "api-long-context-memory")
-        self.assertEqual(panel.reasoning.model.model_id, "local-gemma3-heretic-q4")
+        self.assertEqual(panel.reasoning.model.model_id, "local-gemma4-e4b-ultra-q8")
         self.assertEqual(len({score.model.model_id for score in panel.as_dict().values()}), 3)
 
     def test_character_composition_supports_single_role_tertiary_symbiote(self):
@@ -439,7 +439,7 @@ class ModelRouterTests(unittest.TestCase):
 
         self.assertEqual(composition.primary_role, "primary")
         self.assertEqual(list(composition.roles), ["primary"])
-        self.assertEqual(composition.roles["primary"].model.model_id, "local-gemma3-heretic-q4")
+        self.assertEqual(composition.roles["primary"].model.model_id, "local-gemma4-e4b-ultra-q8")
         self.assertEqual(composition.max_subagents_for("primary"), 0)
 
     def test_character_composition_supports_large_reused_role_arrays(self):

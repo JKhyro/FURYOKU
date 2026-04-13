@@ -13,17 +13,24 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#201](https://github.com/JKhyro/FURYOKU/issues/201)
+- Current active lane: [#204](https://github.com/JKhyro/FURYOKU/issues/204)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: none currently open
 
 ## Current Baseline
 
-- Local primary lane: `gemma3-heretic:4b-q4km`
-- Local fallback lane: none configured
+- Local primary lane: `gemma4-e4b-ultra-heretic:q8_0` as the provisional balanced local default on limited hardware
+- Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp`, then `gemma4-e2b-hauhau-aggressive:q8kp` when the lighter/faster local fit wins
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: prove that an installed `furyoku-service` entrypoint accepts a `taskPath` file input for `POST /v1/run` from a fresh editable-install environment, not only inline task payloads.
+- Current follow-on focus: refresh the local model roster and provisional usage tiers so FURYOKU only references the approved local Gemma set and stages heavier models behind limited-hardware guidance instead of treating the old Gemma3 baseline as active truth.
+
+### Provisional Local Usage Tiers
+
+- Fast/light local lane: `gemma4-e2b-hauhau-aggressive:q8kp`, `gemma4-e4b-hauhau-aggressive:q8kp`
+- Balanced local default: `gemma4-e4b-ultra-heretic:q8_0`, with `gemma3-12b-ultra-heretic:q8_0` as the deeper local reasoning step-up
+- Heavy local quality lane, opt-in or health-gated on this machine: `gemma4-26b-a4b-heretic:q4_k_m`, `gemma4-26b-a4b-ultra-heretic:q4_k_m`, `gemma4-31b-heretic:q4_k_m`
+- Very heavy local variants to keep registered but not default on limited hardware unless evidence says otherwise: `gemma4-26b-a4b-heretic:q8_0`, `gemma4-26b-a4b-ultra-heretic:q8_0`
 
 ## SDK Reuse
 

@@ -1392,7 +1392,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(summary["total"]["manualOverrideCount"], 1)
             self.assertEqual(
                 {model["key"] for model in summary["models"]},
-                {"local-gemma3-heretic-q4", "cli-codex-high", "api-long-context-memory"},
+                {"local-gemma4-e4b-ultra-q8", "cli-codex-high", "api-long-context-memory"},
             )
             self.assertEqual(persisted_summary["recordCount"], 5)
 
@@ -1427,7 +1427,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(report["blockedTasks"], [])
             self.assertEqual(report["outcomeSummary"]["recordCount"], 5)
             self.assertEqual(len(report["recommendations"]), 6)
-            self.assertEqual(selected_by_task["decision.private-chat"]["modelId"], "local-gemma3-heretic-q4")
+            self.assertEqual(selected_by_task["decision.private-chat"]["modelId"], "local-gemma4-e4b-ultra-q8")
             self.assertEqual(selected_by_task["decision.tool-heavy-coding"]["modelId"], "cli-codex-high")
             self.assertEqual(selected_by_task["decision.long-context-memory"]["modelId"], "api-long-context-memory")
             self.assertEqual(selected_by_task["decision.structured-json"]["modelId"], "cli-codex-high")

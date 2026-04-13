@@ -23,21 +23,20 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 
 ## Current Runtime Truth
 
-- Current bounded follow-on: [#68](https://github.com/JKhyro/FURYOKU/issues/68)
-- Local primary lane: `gemma3-heretic:4b-q4km`
-- Local fallback lane: none configured
+- Current bounded follow-on: [#204](https://github.com/JKhyro/FURYOKU/issues/204)
+- Local primary lane: `gemma4-e4b-ultra-heretic:q8_0` as the provisional balanced local default
+- Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp`, then `gemma4-e2b-hauhau-aggressive:q8kp` under tighter hardware pressure
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
-- Current deployed-baseline manifest: [2026-04-09 Gemma Heretic current-baseline manifest](results/2026-04-09-gemma3-heretic-current-baseline.json)
-- Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
-- Current direct comparison evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
+- The active candidate roster now lives in `candidates.json` and only uses the currently approved local Gemma set for this lane
+- Archived April 9 compare manifest: [2026-04-09 Gemma Heretic current-baseline manifest](results/2026-04-09-gemma3-heretic-current-baseline.json)
+- Archived April 9 compare evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
+- Current direct comparison evidence remains the April 9 compare summary until the approved Gemma roster is re-benchmarked on the target machine profile
 - Those April 9 summaries now include mechanical hard-check scoring for route decisions, JSON/code output contracts, fabricated-entity skepticism, and sexual-boundary classifier shape
 - The benchmark outputs now also attach a machine-readable `promotionVerdict` per model so candidate promotion can be gated mechanically
 - The benchmark outputs now also attach a machine-readable `resourceFitVerdict` so local RAM, GPU, and latency regressions can be gated mechanically against the 32 GB RAM / 4 GB VRAM target profile
 - Compare reports now also attach a machine-readable `compareDecision` so the deployed baseline and each comparison candidate can be evaluated with explicit roles and with contract-versus-machine-fit blocker reasons
-- The benchmark lane now supports both direct machine-profile overrides and reusable preset selection, and the current support follow-on is to keep the compare-truth report plus current-baseline manifest mechanically enforced in CI
-- `qwen3.5:4b` remains an upgrade candidate only if the runtime can force `think:false` cleanly
-- `gemma3-heretic:4b-q5km` remains a comparison candidate, not the active deployed lane
-- `qwen35-hauhaucs:9b-q4km` remains a tested but non-recommended heavy/undisciplined candidate for this machine profile
+- The benchmark lane now supports both direct machine-profile overrides and reusable preset selection, and the current support follow-on is to keep the archived compare-truth report mechanically reproducible in CI while fresh approved-roster evidence is gathered
+- Older Gemma3 and Qwen comparison lanes remain archived evidence only; they are not the active approved local runtime roster for this lane
 
 ## Usage
 

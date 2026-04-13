@@ -2,24 +2,24 @@
   "schemaVersion": 1,
   "models": [
     {
-      "modelId": "local-gemma3-heretic-q4",
+      "modelId": "local-gemma4-e4b-ultra-q8",
       "provider": "local",
       "privacyLevel": "local",
       "contextWindowTokens": 8192,
-      "averageLatencyMs": 1800,
+      "averageLatencyMs": 2200,
       "supportsJson": true,
-      "invocation": ["ollama", "run", "gemma3-heretic:4b-q4km"],
+      "invocation": ["ollama", "run", "gemma4-e4b-ultra-heretic:q8_0"],
       "capabilities": {
-        "conversation": 0.84,
-        "instruction_following": 0.84,
-        "safety": 0.74,
-        "speed": 0.95,
-        "retrieval": 0.64,
-        "summarization": 0.72,
+        "conversation": 0.86,
+        "instruction_following": 0.87,
+        "safety": 0.78,
+        "speed": 0.91,
+        "retrieval": 0.7,
+        "summarization": 0.76,
         "reasoning": 0.91,
-        "coding": 0.82
+        "coding": 0.83
       },
-      "tags": ["local", "private", "baseline"]
+      "tags": ["local", "private", "provisional-default", "balanced"]
     },
     {
       "modelId": "cli-codex-high",

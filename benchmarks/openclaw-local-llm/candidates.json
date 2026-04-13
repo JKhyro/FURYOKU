@@ -1,44 +1,56 @@
-﻿[
+[
   {
-    "model": "gemma3-heretic:4b-q4km",
+    "model": "gemma4-e4b-ultra-heretic:q8_0",
     "priority": 1,
     "context_tokens": 131072,
-    "why": "Current deployed local primary lane for FURYOKU. Keep it at the top of the active comparison set."
+    "why": "Provisional balanced local default for limited hardware until stronger evidence says otherwise."
   },
   {
-    "model": "gemma3:4b-it-qat",
+    "model": "gemma4-e4b-hauhau-aggressive:q8kp",
     "priority": 2,
     "context_tokens": 131072,
-    "why": "Historical 2026-03-24 benchmark winner. Keep available for comparison against the current deployed heretic lane."
+    "why": "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning."
   },
   {
-    "model": "qwen2.5:7b",
+    "model": "gemma4-e2b-hauhau-aggressive:q8kp",
     "priority": 3,
-    "context_tokens": 128000,
-    "why": "Historical comparison candidate only. Not the active deployed local fallback lane."
+    "context_tokens": 131072,
+    "why": "Lightest local lane for the tightest memory and throughput conditions."
   },
   {
-    "model": "phi4-mini",
+    "model": "gemma3-12b-ultra-heretic:q8_0",
     "priority": 4,
-    "context_tokens": 128000,
-    "why": "Acceptable latency and footprint, but answer fidelity was weaker and more hallucinatory on the benchmark prompts."
+    "context_tokens": 131072,
+    "why": "Deeper local reasoning step-up when the machine can tolerate more latency and memory pressure."
   },
   {
-    "model": "qwen3.5:4b",
+    "model": "gemma4-26b-a4b-heretic:q4_k_m",
     "priority": 5,
-    "context_tokens": 262144,
-    "why": "Theoretical upside is high, but the current Ollama run path on this machine produced pathological token counts and unusably high latency for lightweight OpenClaw tasks."
+    "context_tokens": 131072,
+    "why": "Heavy local quality lane to evaluate only when the limited hardware budget still fits."
   },
   {
-    "model": "huihui_ai/qwen3-abliterated:4b",
+    "model": "gemma4-26b-a4b-ultra-heretic:q4_k_m",
     "priority": 6,
-    "context_tokens": 40000,
-    "why": "Benchmarked as an uncensored option, but too slow and too unreliable to justify using as the lightweight lane."
+    "context_tokens": 131072,
+    "why": "Heavier uncapped-quality local candidate for opt-in or health-gated use."
   },
   {
-    "model": "huihui_ai/qwen3-abliterated:8b",
+    "model": "gemma4-31b-heretic:q4_k_m",
     "priority": 7,
-    "context_tokens": 40000,
-    "why": "Slowest practical uncensored option tested and not competitive for this machine profile."
+    "context_tokens": 131072,
+    "why": "Heaviest q4 local reasoning lane to keep available only when the machine-fit budget allows it."
+  },
+  {
+    "model": "gemma4-26b-a4b-heretic:q8_0",
+    "priority": 8,
+    "context_tokens": 131072,
+    "why": "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+  },
+  {
+    "model": "gemma4-26b-a4b-ultra-heretic:q8_0",
+    "priority": 9,
+    "context_tokens": 131072,
+    "why": "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
   }
 ]
