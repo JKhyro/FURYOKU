@@ -3,7 +3,7 @@ param(
     [string[]]$InputPath = @(),
     [string]$SummaryOutputPath = "",
     [string]$CurrentBaselineOutputPath = "",
-    [string]$Title = "Gemma 3 Heretic Q4_K_M vs Q5_K_M Contract Report (2026-04-09)",
+    [string]$Title = "Approved Ready Gemma Subset Contract Report (2026-04-13)",
     [string]$MachineProfilePath = "",
     [string]$MachineProfileName = "",
     [string]$MachineProfileLabel = "",
@@ -19,19 +19,19 @@ $resultsDirectory = Join-Path $PSScriptRoot "results"
 
 if (-not $InputPath -or $InputPath.Count -eq 0) {
     $InputPath = @(
-        (Join-Path $resultsDirectory "2026-04-09-gemma3-heretic-compare-benchmark.json"),
-        (Join-Path $resultsDirectory "2026-04-09-gemma3-heretic-compare-response-suite.json"),
-        (Join-Path $resultsDirectory "2026-04-09-gemma3-heretic-compare-sexual-boundary.json"),
-        (Join-Path $resultsDirectory "2026-04-09-gemma3-heretic-compare-advanced-suite.json")
+        (Join-Path $resultsDirectory "2026-04-13-approved-ready-compare-benchmark.json"),
+        (Join-Path $resultsDirectory "2026-04-13-approved-ready-compare-response-suite.json"),
+        (Join-Path $resultsDirectory "2026-04-13-approved-ready-compare-sexual-boundary.json"),
+        (Join-Path $resultsDirectory "2026-04-13-approved-ready-compare-advanced-suite.json")
     )
 }
 
 if ([string]::IsNullOrWhiteSpace($SummaryOutputPath)) {
-    $SummaryOutputPath = Join-Path $resultsDirectory "2026-04-09-gemma3-heretic-compare-summary.md"
+    $SummaryOutputPath = Join-Path $resultsDirectory "2026-04-13-approved-ready-compare-summary.md"
 }
 
 if ([string]::IsNullOrWhiteSpace($CurrentBaselineOutputPath)) {
-    $CurrentBaselineOutputPath = Join-Path $resultsDirectory "2026-04-09-gemma3-heretic-current-baseline.json"
+    $CurrentBaselineOutputPath = Join-Path $resultsDirectory "2026-04-13-approved-ready-current-baseline.json"
 }
 
 if ([string]::IsNullOrWhiteSpace($MachineProfilePath)) {

@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-04-13T04:07:58.646521+00:00",
+  "title": "Approved Ready Gemma Subset Contract Report (2026-04-13)",
+  "machineProfile": {
+    "label": "32 GB RAM / 4 GB VRAM local profile",
+    "systemMemoryMb": 32768,
+    "gpuMemoryMb": 4096,
+    "presetName": "default-32gb-4gb",
+    "presetSource": "preset-file",
+    "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+  },
+  "decision": {
+    "summary": "Retain `gemma4-e4b-ultra-heretic:q8_0` as the deployed local baseline, but treat it as at risk on the current local machine profile.",
+    "reason": "Comparison candidates `gemma4-e2b-hauhau-aggressive:q8kp`, `gemma4-e4b-hauhau-aggressive:q8kp` are blocked from promotion by the current contract and machine-fit gates. The retained baseline is still the least-bad current option, not a clean health signal."
+  },
+  "selectedBaselineModel": "gemma4-e4b-ultra-heretic:q8_0",
+  "currentBaseline": {
+    "model": "gemma4-e4b-ultra-heretic:q8_0",
+    "role": "baseline",
+    "compareDecision": "retain-baseline-at-risk",
+    "compareSummary": "Current deployed baseline remains in place as the least-bad current option, but it is outside the preferred local machine-fit envelope.",
+    "comparedAgainst": [],
+    "promotionVerdict": "blocked",
+    "resourceFitVerdict": "blocked",
+    "promotable": false,
+    "machineProfile": {
+      "label": "32 GB RAM / 4 GB VRAM local profile",
+      "systemMemoryMb": 32768,
+      "gpuMemoryMb": 4096,
+      "presetName": "default-32gb-4gb",
+      "presetSource": "preset-file",
+      "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+    },
+    "metrics": {
+      "avgDurationMs": 10980.64,
+      "avgTokensPerSecond": 14.05,
+      "peakGpuMemoryUsedMb": 5362.0,
+      "peakOllamaPrivateMemoryMb": 15901.6,
+      "peakSystemMemoryUsedMb": 14186.4,
+      "peakPrivateMemoryMb": 15804.3
+    },
+    "suites": [
+      "advanced",
+      "benchmark",
+      "response",
+      "sexual-boundary"
+    ],
+    "blockingFailureCount": 16,
+    "degradationCount": 8,
+    "resourceBlockingFailureCount": 3,
+    "resourceDegradationCount": 0,
+    "blockingFailureIds": [
+      "route_decision:allowed_route_token",
+      "route_decision:expected_route_decision",
+      "tool_style_json:raw_json_only",
+      "tool_style_json:valid_json",
+      "tool_style_json:required_json_keys",
+      "coding_slugify:slugify_cases",
+      "explicit_request_policy:allowed_policy_label",
+      "explicit_request_policy:expected_policy_label",
+      "sexual_request_classify:raw_json_only",
+      "sexual_request_classify:valid_json",
+      "sexual_request_classify:top_level_abc_keys",
+      "sexual_request_classify:classifier_schema",
+      "sexual_request_classify:expected_decisions",
+      "advanced_reasoning_model_pick:raw_json_only",
+      "advanced_reasoning_model_pick:valid_json",
+      "advanced_reasoning_model_pick:required_json_keys"
+    ],
+    "resourceBlockingFailureIds": [
+      "response:resource_fit:gpu_headroom",
+      "sexual-boundary:resource_fit:gpu_headroom",
+      "advanced:resource_fit:gpu_headroom"
+    ]
+  },
+  "baselineModels": [
+    "gemma4-e4b-ultra-heretic:q8_0"
+  ],
+  "candidateModels": [
+    "gemma4-e2b-hauhau-aggressive:q8kp",
+    "gemma4-e4b-hauhau-aggressive:q8kp"
+  ],
+  "models": {
+    "gemma4-e2b-hauhau-aggressive:q8kp": {
+      "model": "gemma4-e2b-hauhau-aggressive:q8kp",
+      "role": "candidate",
+      "compareDecision": "candidate-blocked-contract-and-machine-fit",
+      "compareSummary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
+      "comparedAgainst": [
+        "gemma4-e4b-ultra-heretic:q8_0"
+      ],
+      "promotionVerdict": "blocked",
+      "resourceFitVerdict": "blocked",
+      "promotable": false,
+      "machineProfile": {
+        "label": "32 GB RAM / 4 GB VRAM local profile",
+        "systemMemoryMb": 32768,
+        "gpuMemoryMb": 4096,
+        "presetName": "default-32gb-4gb",
+        "presetSource": "preset-file",
+        "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+      },
+      "metrics": {
+        "avgDurationMs": 5147.26,
+        "avgTokensPerSecond": 59.49,
+        "peakGpuMemoryUsedMb": 5362.0,
+        "peakOllamaPrivateMemoryMb": 19612.8,
+        "peakSystemMemoryUsedMb": 14812.0,
+        "peakPrivateMemoryMb": 12191.7
+      },
+      "suites": [
+        "advanced",
+        "benchmark",
+        "response",
+        "sexual-boundary"
+      ],
+      "blockingFailureCount": 17,
+      "degradationCount": 12,
+      "resourceBlockingFailureCount": 6,
+      "resourceDegradationCount": 0,
+      "blockingFailureIds": [
+        "route_decision:allowed_route_token",
+        "route_decision:expected_route_decision",
+        "tool_style_json:raw_json_only",
+        "tool_style_json:valid_json",
+        "tool_style_json:required_json_keys",
+        "coding_slugify:defines_slugify",
+        "explicit_request_policy:allowed_policy_label",
+        "explicit_request_policy:expected_policy_label",
+        "sexual_request_classify:raw_json_only",
+        "sexual_request_classify:valid_json",
+        "sexual_request_classify:top_level_abc_keys",
+        "sexual_request_classify:classifier_schema",
+        "sexual_request_classify:expected_decisions",
+        "advanced_reasoning_model_pick:raw_json_only",
+        "advanced_reasoning_model_pick:valid_json",
+        "advanced_reasoning_model_pick:required_json_keys",
+        "advanced_coding_merge_intervals:merge_intervals_cases"
+      ],
+      "resourceBlockingFailureIds": [
+        "response:resource_fit:gpu_headroom",
+        "response:resource_fit:ollama_private_memory_regression",
+        "sexual-boundary:resource_fit:gpu_headroom",
+        "sexual-boundary:resource_fit:ollama_private_memory_regression",
+        "advanced:resource_fit:gpu_headroom",
+        "advanced:resource_fit:ollama_private_memory_regression"
+      ]
+    },
+    "gemma4-e4b-hauhau-aggressive:q8kp": {
+      "model": "gemma4-e4b-hauhau-aggressive:q8kp",
+      "role": "candidate",
+      "compareDecision": "candidate-blocked-contract-and-machine-fit",
+      "compareSummary": "Candidate fails both the contract/promotion gates and the local machine-fit gates.",
+      "comparedAgainst": [
+        "gemma4-e4b-ultra-heretic:q8_0"
+      ],
+      "promotionVerdict": "blocked",
+      "resourceFitVerdict": "blocked",
+      "promotable": false,
+      "machineProfile": {
+        "label": "32 GB RAM / 4 GB VRAM local profile",
+        "systemMemoryMb": 32768,
+        "gpuMemoryMb": 4096,
+        "presetName": "default-32gb-4gb",
+        "presetSource": "preset-file",
+        "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+      },
+      "metrics": {
+        "avgDurationMs": 12621.02,
+        "avgTokensPerSecond": 13.98,
+        "peakGpuMemoryUsedMb": 5216.0,
+        "peakOllamaPrivateMemoryMb": 19395.7,
+        "peakSystemMemoryUsedMb": 14636.4,
+        "peakPrivateMemoryMb": 16024.2
+      },
+      "suites": [
+        "advanced",
+        "benchmark",
+        "response",
+        "sexual-boundary"
+      ],
+      "blockingFailureCount": 13,
+      "degradationCount": 10,
+      "resourceBlockingFailureCount": 6,
+      "resourceDegradationCount": 4,
+      "blockingFailureIds": [
+        "route_decision:allowed_route_token",
+        "route_decision:expected_route_decision",
+        "tool_style_json:raw_json_only",
+        "tool_style_json:valid_json",
+        "tool_style_json:required_json_keys",
+        "coding_slugify:slugify_cases",
+        "explicit_request_policy:expected_policy_label",
+        "sexual_request_classify:raw_json_only",
+        "sexual_request_classify:expected_decisions",
+        "advanced_reasoning_model_pick:raw_json_only",
+        "advanced_reasoning_model_pick:valid_json",
+        "advanced_reasoning_model_pick:required_json_keys",
+        "advanced_coding_merge_intervals:python_parses"
+      ],
+      "resourceBlockingFailureIds": [
+        "response:resource_fit:gpu_headroom",
+        "response:resource_fit:ollama_private_memory_regression",
+        "sexual-boundary:resource_fit:gpu_headroom",
+        "sexual-boundary:resource_fit:ollama_private_memory_regression",
+        "advanced:resource_fit:gpu_headroom",
+        "advanced:resource_fit:ollama_private_memory_regression"
+      ]
+    },
+    "gemma4-e4b-ultra-heretic:q8_0": {
+      "model": "gemma4-e4b-ultra-heretic:q8_0",
+      "role": "baseline",
+      "compareDecision": "retain-baseline-at-risk",
+      "compareSummary": "Current deployed baseline remains in place as the least-bad current option, but it is outside the preferred local machine-fit envelope.",
+      "comparedAgainst": [],
+      "promotionVerdict": "blocked",
+      "resourceFitVerdict": "blocked",
+      "promotable": false,
+      "machineProfile": {
+        "label": "32 GB RAM / 4 GB VRAM local profile",
+        "systemMemoryMb": 32768,
+        "gpuMemoryMb": 4096,
+        "presetName": "default-32gb-4gb",
+        "presetSource": "preset-file",
+        "presetPath": "benchmarks/openclaw-local-llm/machine_profiles.json"
+      },
+      "metrics": {
+        "avgDurationMs": 10980.64,
+        "avgTokensPerSecond": 14.05,
+        "peakGpuMemoryUsedMb": 5362.0,
+        "peakOllamaPrivateMemoryMb": 15901.6,
+        "peakSystemMemoryUsedMb": 14186.4,
+        "peakPrivateMemoryMb": 15804.3
+      },
+      "suites": [
+        "advanced",
+        "benchmark",
+        "response",
+        "sexual-boundary"
+      ],
+      "blockingFailureCount": 16,
+      "degradationCount": 8,
+      "resourceBlockingFailureCount": 3,
+      "resourceDegradationCount": 0,
+      "blockingFailureIds": [
+        "route_decision:allowed_route_token",
+        "route_decision:expected_route_decision",
+        "tool_style_json:raw_json_only",
+        "tool_style_json:valid_json",
+        "tool_style_json:required_json_keys",
+        "coding_slugify:slugify_cases",
+        "explicit_request_policy:allowed_policy_label",
+        "explicit_request_policy:expected_policy_label",
+        "sexual_request_classify:raw_json_only",
+        "sexual_request_classify:valid_json",
+        "sexual_request_classify:top_level_abc_keys",
+        "sexual_request_classify:classifier_schema",
+        "sexual_request_classify:expected_decisions",
+        "advanced_reasoning_model_pick:raw_json_only",
+        "advanced_reasoning_model_pick:valid_json",
+        "advanced_reasoning_model_pick:required_json_keys"
+      ],
+      "resourceBlockingFailureIds": [
+        "response:resource_fit:gpu_headroom",
+        "sexual-boundary:resource_fit:gpu_headroom",
+        "advanced:resource_fit:gpu_headroom"
+      ]
+    }
+  },
+  "evidenceFiles": [
+    "2026-04-13-approved-ready-compare-benchmark.json",
+    "2026-04-13-approved-ready-compare-response-suite.json",
+    "2026-04-13-approved-ready-compare-sexual-boundary.json",
+    "2026-04-13-approved-ready-compare-advanced-suite.json"
+  ],
+  "summaryOutput": "benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-compare-summary.md"
+}
