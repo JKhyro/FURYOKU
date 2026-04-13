@@ -20,17 +20,17 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 ## Current Baseline
 
 - Local primary lane: `gemma4-e4b-ultra-heretic:q8_0` as the provisional balanced local default on limited hardware
-- Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp`, then `gemma4-e2b-hauhau-aggressive:q8kp` when the lighter/faster local fit wins
+- Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp` first when latency or memory pressure rises, then `gemma4-e2b-hauhau-aggressive:q8kp` only for the tightest local fit, but neither is promoted over the current balanced default on this machine yet
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: use the approved-roster preflight plus the ready-subset compare truth to keep the limited-hardware default grounded in current evidence, then expand or rerun the blocked roster members only when the machine-fit path justifies it.
+- Current follow-on focus: keep the limited-hardware default grounded in the approved-ready compare truth, keep `gemma3-12b-ultra-heretic:q8_0` out of the active path until it is installed, and keep the heavier 26B/31B approved variants out of the active path until their empty-response behavior is resolved on this machine.
 
 ### Provisional Local Usage Tiers
 
-- Fast/light local lane: `gemma4-e2b-hauhau-aggressive:q8kp`, `gemma4-e4b-hauhau-aggressive:q8kp`
-- Balanced local default: `gemma4-e4b-ultra-heretic:q8_0`, with `gemma3-12b-ultra-heretic:q8_0` as the deeper local reasoning step-up
-- Heavy local quality lane, opt-in or health-gated on this machine: `gemma4-26b-a4b-heretic:q4_k_m`, `gemma4-26b-a4b-ultra-heretic:q4_k_m`, `gemma4-31b-heretic:q4_k_m`
-- Very heavy local variants to keep registered but not default on limited hardware unless evidence says otherwise: `gemma4-26b-a4b-heretic:q8_0`, `gemma4-26b-a4b-ultra-heretic:q8_0`
+- Fast/light local lane: `gemma4-e4b-hauhau-aggressive:q8kp` first, then `gemma4-e2b-hauhau-aggressive:q8kp` only when the tighter memory/latency fit matters more than answer quality margin
+- Balanced local default: `gemma4-e4b-ultra-heretic:q8_0`
+- Deferred deeper local lane: `gemma3-12b-ultra-heretic:q8_0` only after it is installed and benchmarked on this machine
+- Currently excluded on this 32 GB RAM / 4 GB VRAM machine because they returned empty final content in the blocked-roster probe: `gemma4-26b-a4b-heretic:q4_k_m`, `gemma4-26b-a4b-ultra-heretic:q4_k_m`, `gemma4-31b-heretic:q4_k_m`, `gemma4-26b-a4b-heretic:q8_0`, `gemma4-26b-a4b-ultra-heretic:q8_0`
 
 ## SDK Reuse
 
@@ -186,9 +186,9 @@ python -m furyoku.cli character-run --registry .\examples\model_registry.example
 ## Benchmark Evidence Lane
 
 - Local OpenClaw model benchmark: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)
-- Current deployed-baseline manifest: [2026-04-09 Gemma Heretic current-baseline manifest](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-current-baseline.json)
-- Current deployed-baseline evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
-- Current comparison-candidate evidence: [2026-04-09 Gemma Heretic compare summary](benchmarks/openclaw-local-llm/results/2026-04-09-gemma3-heretic-compare-summary.md)
+- Current deployed-baseline manifest: [2026-04-13 approved-ready current-baseline manifest](benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-current-baseline.json)
+- Current deployed-baseline evidence: [2026-04-13 approved-ready compare summary](benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-compare-summary.md)
+- Current blocked-roster evidence: [2026-04-13 approved blocked-roster probe](benchmarks/openclaw-local-llm/results/2026-04-13-approved-blocked-roster-probe.json)
 - GitHub Actions now enforces the benchmark contract reporter tests plus checked-in compare-truth freshness through [`.github/workflows/benchmark-truth-gate.yml`](.github/workflows/benchmark-truth-gate.yml) on pull requests and pushes to `main`
 - The current benchmark evidence now carries mechanical hard-check scoring, machine-readable `promotionVerdict` and `resourceFitVerdict` outputs, and role-aware `compareDecision` statuses that can distinguish contract blockers from machine-fit blockers
-- The benchmark report and both local benchmark entrypoints now accept machine-profile overrides and reusable preset selection, and the current support follow-on is to keep the compare-truth summary plus current-baseline manifest mechanically enforced in CI
+- The benchmark report and local benchmark entrypoints now accept machine-profile overrides and reusable preset selection, and the current support follow-on is to keep both the compare-truth surfaces and the blocked-roster machine-fit classification mechanically current

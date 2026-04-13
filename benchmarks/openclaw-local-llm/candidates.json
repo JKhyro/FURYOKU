@@ -21,36 +21,36 @@
     "model": "gemma3-12b-ultra-heretic:q8_0",
     "priority": 4,
     "context_tokens": 131072,
-    "why": "Deeper local reasoning step-up when the machine can tolerate more latency and memory pressure."
+    "why": "Deeper local reasoning step-up only after the approved model is installed and benchmarked on this machine."
   },
   {
     "model": "gemma4-26b-a4b-heretic:q4_k_m",
     "priority": 5,
     "context_tokens": 131072,
-    "why": "Heavy local quality lane to evaluate only when the limited hardware budget still fits."
+    "why": "Heavy local quality lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved."
   },
   {
     "model": "gemma4-26b-a4b-ultra-heretic:q4_k_m",
     "priority": 6,
     "context_tokens": 131072,
-    "why": "Heavier uncapped-quality local candidate for opt-in or health-gated use."
+    "why": "Heavier uncapped-quality local candidate kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved."
   },
   {
     "model": "gemma4-31b-heretic:q4_k_m",
     "priority": 7,
     "context_tokens": 131072,
-    "why": "Heaviest q4 local reasoning lane to keep available only when the machine-fit budget allows it."
+    "why": "Heaviest q4 local reasoning lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved."
   },
   {
     "model": "gemma4-26b-a4b-heretic:q8_0",
     "priority": 8,
     "context_tokens": 131072,
-    "why": "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+    "why": "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved."
   },
   {
     "model": "gemma4-26b-a4b-ultra-heretic:q8_0",
     "priority": 9,
     "context_tokens": 131072,
-    "why": "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+    "why": "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved."
   }
 ]

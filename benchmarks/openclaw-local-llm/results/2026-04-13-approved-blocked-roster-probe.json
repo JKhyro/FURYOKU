@@ -1,0 +1,178 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-04-13T14:03:08.9786969Z",
+    "maxProbeSeconds":  60,
+    "preflightPath":  ".\\benchmarks\\openclaw-local-llm\\results\\2026-04-13-approved-roster-preflight.json",
+    "results":  [
+                    {
+                        "model":  "gemma3-12b-ultra-heretic:q8_0",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  4,
+                        "candidateWhy":  "Deeper local reasoning step-up only after the approved model is installed and benchmarked on this machine.",
+                        "initialAvailabilityStatus":  "missing",
+                        "initialProbeStatus":  "skipped",
+                        "initialElapsedMs":  0,
+                        "secondStageProbeStatus":  "missing",
+                        "secondStageElapsedMs":  0,
+                        "machineDecision":  "exclude-until-installed",
+                        "reason":  "model is not present in ollama list",
+                        "responseText":  "",
+                        "responseMetadata":  {
+                                                 "done":  false,
+                                                 "doneReason":  "",
+                                                 "totalDuration":  0,
+                                                 "loadDuration":  0,
+                                                 "promptEvalCount":  0,
+                                                 "evalCount":  0,
+                                                 "evalDuration":  0
+                                             }
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-heretic:q4_k_m",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  5,
+                        "candidateWhy":  "Heavy local quality lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved.",
+                        "initialAvailabilityStatus":  "installed",
+                        "initialProbeStatus":  "empty-response",
+                        "initialElapsedMs":  17956.2,
+                        "secondStageProbeStatus":  "empty-response",
+                        "secondStageElapsedMs":  12289.9,
+                        "machineDecision":  "exclude-until-empty-response-is-resolved",
+                        "reason":  "chat probe returned empty content",
+                        "responseText":  "",
+                        "responseMetadata":  {
+                                                 "done":  true,
+                                                 "doneReason":  "length",
+                                                 "totalDuration":  12186992900,
+                                                 "loadDuration":  10118373800,
+                                                 "promptEvalCount":  27,
+                                                 "evalCount":  8,
+                                                 "evalDuration":  807510600
+                                             }
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-ultra-heretic:q4_k_m",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  6,
+                        "candidateWhy":  "Heavier uncapped-quality local candidate kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved.",
+                        "initialAvailabilityStatus":  "installed",
+                        "initialProbeStatus":  "empty-response",
+                        "initialElapsedMs":  15002.4,
+                        "secondStageProbeStatus":  "empty-response",
+                        "secondStageElapsedMs":  13983.7,
+                        "machineDecision":  "exclude-until-empty-response-is-resolved",
+                        "reason":  "chat probe returned empty content",
+                        "responseText":  "",
+                        "responseMetadata":  {
+                                                 "done":  true,
+                                                 "doneReason":  "length",
+                                                 "totalDuration":  13973348100,
+                                                 "loadDuration":  11584207600,
+                                                 "promptEvalCount":  27,
+                                                 "evalCount":  8,
+                                                 "evalDuration":  1129994400
+                                             }
+                    },
+                    {
+                        "model":  "gemma4-31b-heretic:q4_k_m",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  7,
+                        "candidateWhy":  "Heaviest q4 local reasoning lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved.",
+                        "initialAvailabilityStatus":  "installed",
+                        "initialProbeStatus":  "timeout",
+                        "initialElapsedMs":  20013.3,
+                        "secondStageProbeStatus":  "empty-response",
+                        "secondStageElapsedMs":  26233.8,
+                        "machineDecision":  "exclude-until-empty-response-is-resolved",
+                        "reason":  "chat probe returned empty content",
+                        "responseText":  "",
+                        "responseMetadata":  {
+                                                 "done":  true,
+                                                 "doneReason":  "length",
+                                                 "totalDuration":  26229690200,
+                                                 "loadDuration":  16169336600,
+                                                 "promptEvalCount":  27,
+                                                 "evalCount":  8,
+                                                 "evalDuration":  3327518000
+                                             }
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-heretic:q8_0",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  8,
+                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved.",
+                        "initialAvailabilityStatus":  "installed",
+                        "initialProbeStatus":  "timeout",
+                        "initialElapsedMs":  20003.3,
+                        "secondStageProbeStatus":  "empty-response",
+                        "secondStageElapsedMs":  21777.9,
+                        "machineDecision":  "exclude-until-empty-response-is-resolved",
+                        "reason":  "chat probe returned empty content",
+                        "responseText":  "",
+                        "responseMetadata":  {
+                                                 "done":  true,
+                                                 "doneReason":  "length",
+                                                 "totalDuration":  21769166700,
+                                                 "loadDuration":  18929541000,
+                                                 "promptEvalCount":  27,
+                                                 "evalCount":  8,
+                                                 "evalDuration":  1425103400
+                                             }
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-ultra-heretic:q8_0",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  9,
+                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved.",
+                        "initialAvailabilityStatus":  "installed",
+                        "initialProbeStatus":  "timeout",
+                        "initialElapsedMs":  20013.7,
+                        "secondStageProbeStatus":  "empty-response",
+                        "secondStageElapsedMs":  20815.3,
+                        "machineDecision":  "exclude-until-empty-response-is-resolved",
+                        "reason":  "chat probe returned empty content",
+                        "responseText":  "",
+                        "responseMetadata":  {
+                                                 "done":  true,
+                                                 "doneReason":  "length",
+                                                 "totalDuration":  20801531500,
+                                                 "loadDuration":  18252335800,
+                                                 "promptEvalCount":  27,
+                                                 "evalCount":  8,
+                                                 "evalDuration":  1150798300
+                                             }
+                    }
+                ],
+    "counts":  {
+                   "total":  6,
+                   "missing":  1,
+                   "ready":  0,
+                   "timeout":  0,
+                   "emptyResponse":  5,
+                   "error":  0
+               },
+    "recommendedDecisions":  {
+                                 "promoteToFullBenchmark":  [
+
+                                                            ],
+                                 "excludeUntilInstalled":  [
+                                                               "gemma3-12b-ultra-heretic:q8_0"
+                                                           ],
+                                 "excludeUntilEmptyResponseIsResolved":  [
+                                                                             "gemma4-26b-a4b-heretic:q4_k_m",
+                                                                             "gemma4-26b-a4b-ultra-heretic:q4_k_m",
+                                                                             "gemma4-31b-heretic:q4_k_m",
+                                                                             "gemma4-26b-a4b-heretic:q8_0",
+                                                                             "gemma4-26b-a4b-ultra-heretic:q8_0"
+                                                                         ],
+                                 "excludeOnCurrentMachineBudget":  [
+
+                                                                   ],
+                                 "excludeUntilRuntimeErrorIsResolved":  [
+
+                                                                        ],
+                                 "manualReview":  [
+
+                                                  ]
+                             }
+}
