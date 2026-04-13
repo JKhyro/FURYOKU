@@ -1,6 +1,6 @@
 ﻿{
     "host":  "http://127.0.0.1:11434",
-    "generatedAtUtc":  "2026-04-13T03:50:53.1662229Z",
+    "generatedAtUtc":  "2026-04-13T14:01:15.0874617Z",
     "maxProbeSeconds":  20,
     "candidates":  [
                        {
@@ -25,37 +25,37 @@
                            "model":  "gemma3-12b-ultra-heretic:q8_0",
                            "priority":  4,
                            "context_tokens":  131072,
-                           "why":  "Deeper local reasoning step-up when the machine can tolerate more latency and memory pressure."
+                           "why":  "Deeper local reasoning step-up only after the approved model is installed and benchmarked on this machine."
                        },
                        {
                            "model":  "gemma4-26b-a4b-heretic:q4_k_m",
                            "priority":  5,
                            "context_tokens":  131072,
-                           "why":  "Heavy local quality lane to evaluate only when the limited hardware budget still fits."
+                           "why":  "Heavy local quality lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved."
                        },
                        {
                            "model":  "gemma4-26b-a4b-ultra-heretic:q4_k_m",
                            "priority":  6,
                            "context_tokens":  131072,
-                           "why":  "Heavier uncapped-quality local candidate for opt-in or health-gated use."
+                           "why":  "Heavier uncapped-quality local candidate kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved."
                        },
                        {
                            "model":  "gemma4-31b-heretic:q4_k_m",
                            "priority":  7,
                            "context_tokens":  131072,
-                           "why":  "Heaviest q4 local reasoning lane to keep available only when the machine-fit budget allows it."
+                           "why":  "Heaviest q4 local reasoning lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved."
                        },
                        {
                            "model":  "gemma4-26b-a4b-heretic:q8_0",
                            "priority":  8,
                            "context_tokens":  131072,
-                           "why":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+                           "why":  "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved."
                        },
                        {
                            "model":  "gemma4-26b-a4b-ultra-heretic:q8_0",
                            "priority":  9,
                            "context_tokens":  131072,
-                           "why":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+                           "why":  "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved."
                        }
                    ],
     "results":  [
@@ -68,7 +68,7 @@
                         "availabilityStatus":  "installed",
                         "probeStatus":  "ready",
                         "ready":  true,
-                        "elapsedMs":  13562.1,
+                        "elapsedMs":  11450.7,
                         "reason":  "chat probe completed",
                         "detail":  "",
                         "responseText":  "ok"
@@ -82,7 +82,7 @@
                         "availabilityStatus":  "installed",
                         "probeStatus":  "ready",
                         "ready":  true,
-                        "elapsedMs":  9490.6,
+                        "elapsedMs":  8655.7,
                         "reason":  "chat probe completed",
                         "detail":  "",
                         "responseText":  "ok"
@@ -96,7 +96,7 @@
                         "availabilityStatus":  "installed",
                         "probeStatus":  "ready",
                         "ready":  true,
-                        "elapsedMs":  8401.3,
+                        "elapsedMs":  7184.3,
                         "reason":  "chat probe completed",
                         "detail":  "",
                         "responseText":  "ok"
@@ -105,7 +105,7 @@
                         "model":  "gemma3-12b-ultra-heretic:q8_0",
                         "candidateRole":  "candidate",
                         "candidatePriority":  4,
-                        "candidateWhy":  "Deeper local reasoning step-up when the machine can tolerate more latency and memory pressure.",
+                        "candidateWhy":  "Deeper local reasoning step-up only after the approved model is installed and benchmarked on this machine.",
                         "installed":  false,
                         "availabilityStatus":  "missing",
                         "probeStatus":  "skipped",
@@ -119,12 +119,12 @@
                         "model":  "gemma4-26b-a4b-heretic:q4_k_m",
                         "candidateRole":  "candidate",
                         "candidatePriority":  5,
-                        "candidateWhy":  "Heavy local quality lane to evaluate only when the limited hardware budget still fits.",
+                        "candidateWhy":  "Heavy local quality lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved.",
                         "installed":  true,
                         "availabilityStatus":  "installed",
                         "probeStatus":  "empty-response",
                         "ready":  false,
-                        "elapsedMs":  18279.8,
+                        "elapsedMs":  17956.2,
                         "reason":  "chat probe returned empty content",
                         "detail":  "",
                         "responseText":  ""
@@ -133,12 +133,12 @@
                         "model":  "gemma4-26b-a4b-ultra-heretic:q4_k_m",
                         "candidateRole":  "candidate",
                         "candidatePriority":  6,
-                        "candidateWhy":  "Heavier uncapped-quality local candidate for opt-in or health-gated use.",
+                        "candidateWhy":  "Heavier uncapped-quality local candidate kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved.",
                         "installed":  true,
                         "availabilityStatus":  "installed",
                         "probeStatus":  "empty-response",
                         "ready":  false,
-                        "elapsedMs":  16267.7,
+                        "elapsedMs":  15002.4,
                         "reason":  "chat probe returned empty content",
                         "detail":  "",
                         "responseText":  ""
@@ -147,12 +147,12 @@
                         "model":  "gemma4-31b-heretic:q4_k_m",
                         "candidateRole":  "candidate",
                         "candidatePriority":  7,
-                        "candidateWhy":  "Heaviest q4 local reasoning lane to keep available only when the machine-fit budget allows it.",
+                        "candidateWhy":  "Heaviest q4 local reasoning lane kept registered for revisit, but currently excluded on this machine until the empty-response behavior is resolved.",
                         "installed":  true,
                         "availabilityStatus":  "installed",
                         "probeStatus":  "timeout",
                         "ready":  false,
-                        "elapsedMs":  20011.1,
+                        "elapsedMs":  20013.3,
                         "reason":  "chat probe exceeded 20s",
                         "detail":  "",
                         "responseText":  ""
@@ -161,12 +161,12 @@
                         "model":  "gemma4-26b-a4b-heretic:q8_0",
                         "candidateRole":  "candidate",
                         "candidatePriority":  8,
-                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware.",
+                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved.",
                         "installed":  true,
                         "availabilityStatus":  "installed",
                         "probeStatus":  "timeout",
                         "ready":  false,
-                        "elapsedMs":  20005,
+                        "elapsedMs":  20003.3,
                         "reason":  "chat probe exceeded 20s",
                         "detail":  "",
                         "responseText":  ""
@@ -175,12 +175,12 @@
                         "model":  "gemma4-26b-a4b-ultra-heretic:q8_0",
                         "candidateRole":  "candidate",
                         "candidatePriority":  9,
-                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware.",
+                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only, and currently excluded on this machine until the empty-response behavior is resolved.",
                         "installed":  true,
                         "availabilityStatus":  "installed",
                         "probeStatus":  "timeout",
                         "ready":  false,
-                        "elapsedMs":  20005.4,
+                        "elapsedMs":  20013.7,
                         "reason":  "chat probe exceeded 20s",
                         "detail":  "",
                         "responseText":  ""
