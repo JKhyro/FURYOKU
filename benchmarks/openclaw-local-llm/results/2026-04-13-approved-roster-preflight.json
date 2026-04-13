@@ -1,0 +1,199 @@
+﻿{
+    "host":  "http://127.0.0.1:11434",
+    "generatedAtUtc":  "2026-04-13T03:50:53.1662229Z",
+    "maxProbeSeconds":  20,
+    "candidates":  [
+                       {
+                           "model":  "gemma4-e4b-ultra-heretic:q8_0",
+                           "priority":  1,
+                           "context_tokens":  131072,
+                           "why":  "Provisional balanced local default for limited hardware until stronger evidence says otherwise."
+                       },
+                       {
+                           "model":  "gemma4-e4b-hauhau-aggressive:q8kp",
+                           "priority":  2,
+                           "context_tokens":  131072,
+                           "why":  "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning."
+                       },
+                       {
+                           "model":  "gemma4-e2b-hauhau-aggressive:q8kp",
+                           "priority":  3,
+                           "context_tokens":  131072,
+                           "why":  "Lightest local lane for the tightest memory and throughput conditions."
+                       },
+                       {
+                           "model":  "gemma3-12b-ultra-heretic:q8_0",
+                           "priority":  4,
+                           "context_tokens":  131072,
+                           "why":  "Deeper local reasoning step-up when the machine can tolerate more latency and memory pressure."
+                       },
+                       {
+                           "model":  "gemma4-26b-a4b-heretic:q4_k_m",
+                           "priority":  5,
+                           "context_tokens":  131072,
+                           "why":  "Heavy local quality lane to evaluate only when the limited hardware budget still fits."
+                       },
+                       {
+                           "model":  "gemma4-26b-a4b-ultra-heretic:q4_k_m",
+                           "priority":  6,
+                           "context_tokens":  131072,
+                           "why":  "Heavier uncapped-quality local candidate for opt-in or health-gated use."
+                       },
+                       {
+                           "model":  "gemma4-31b-heretic:q4_k_m",
+                           "priority":  7,
+                           "context_tokens":  131072,
+                           "why":  "Heaviest q4 local reasoning lane to keep available only when the machine-fit budget allows it."
+                       },
+                       {
+                           "model":  "gemma4-26b-a4b-heretic:q8_0",
+                           "priority":  8,
+                           "context_tokens":  131072,
+                           "why":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+                       },
+                       {
+                           "model":  "gemma4-26b-a4b-ultra-heretic:q8_0",
+                           "priority":  9,
+                           "context_tokens":  131072,
+                           "why":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware."
+                       }
+                   ],
+    "results":  [
+                    {
+                        "model":  "gemma4-e4b-ultra-heretic:q8_0",
+                        "candidateRole":  "baseline",
+                        "candidatePriority":  1,
+                        "candidateWhy":  "Provisional balanced local default for limited hardware until stronger evidence says otherwise.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "ready",
+                        "ready":  true,
+                        "elapsedMs":  13562.1,
+                        "reason":  "chat probe completed",
+                        "detail":  "",
+                        "responseText":  "ok"
+                    },
+                    {
+                        "model":  "gemma4-e4b-hauhau-aggressive:q8kp",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  2,
+                        "candidateWhy":  "Faster/lighter local fallback when latency or hardware pressure matters more than deeper reasoning.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "ready",
+                        "ready":  true,
+                        "elapsedMs":  9490.6,
+                        "reason":  "chat probe completed",
+                        "detail":  "",
+                        "responseText":  "ok"
+                    },
+                    {
+                        "model":  "gemma4-e2b-hauhau-aggressive:q8kp",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  3,
+                        "candidateWhy":  "Lightest local lane for the tightest memory and throughput conditions.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "ready",
+                        "ready":  true,
+                        "elapsedMs":  8401.3,
+                        "reason":  "chat probe completed",
+                        "detail":  "",
+                        "responseText":  "ok"
+                    },
+                    {
+                        "model":  "gemma3-12b-ultra-heretic:q8_0",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  4,
+                        "candidateWhy":  "Deeper local reasoning step-up when the machine can tolerate more latency and memory pressure.",
+                        "installed":  false,
+                        "availabilityStatus":  "missing",
+                        "probeStatus":  "skipped",
+                        "ready":  false,
+                        "elapsedMs":  0,
+                        "reason":  "model is not present in ollama list",
+                        "detail":  "model was not available locally",
+                        "responseText":  ""
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-heretic:q4_k_m",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  5,
+                        "candidateWhy":  "Heavy local quality lane to evaluate only when the limited hardware budget still fits.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "empty-response",
+                        "ready":  false,
+                        "elapsedMs":  18279.8,
+                        "reason":  "chat probe returned empty content",
+                        "detail":  "",
+                        "responseText":  ""
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-ultra-heretic:q4_k_m",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  6,
+                        "candidateWhy":  "Heavier uncapped-quality local candidate for opt-in or health-gated use.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "empty-response",
+                        "ready":  false,
+                        "elapsedMs":  16267.7,
+                        "reason":  "chat probe returned empty content",
+                        "detail":  "",
+                        "responseText":  ""
+                    },
+                    {
+                        "model":  "gemma4-31b-heretic:q4_k_m",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  7,
+                        "candidateWhy":  "Heaviest q4 local reasoning lane to keep available only when the machine-fit budget allows it.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "timeout",
+                        "ready":  false,
+                        "elapsedMs":  20011.1,
+                        "reason":  "chat probe exceeded 20s",
+                        "detail":  "",
+                        "responseText":  ""
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-heretic:q8_0",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  8,
+                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "timeout",
+                        "ready":  false,
+                        "elapsedMs":  20005,
+                        "reason":  "chat probe exceeded 20s",
+                        "detail":  "",
+                        "responseText":  ""
+                    },
+                    {
+                        "model":  "gemma4-26b-a4b-ultra-heretic:q8_0",
+                        "candidateRole":  "candidate",
+                        "candidatePriority":  9,
+                        "candidateWhy":  "Registered for manual or evidence-backed opt-in only; not a default on limited hardware.",
+                        "installed":  true,
+                        "availabilityStatus":  "installed",
+                        "probeStatus":  "timeout",
+                        "ready":  false,
+                        "elapsedMs":  20005.4,
+                        "reason":  "chat probe exceeded 20s",
+                        "detail":  "",
+                        "responseText":  ""
+                    }
+                ],
+    "counts":  {
+                   "installed":  8,
+                   "missing":  1,
+                   "ready":  3,
+                   "timeout":  3,
+                   "emptyResponse":  2,
+                   "error":  0,
+                   "skipped":  1
+               },
+    "recommendedStartModel":  "gemma4-e4b-ultra-heretic:q8_0"
+}

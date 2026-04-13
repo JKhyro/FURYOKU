@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#204](https://github.com/JKhyro/FURYOKU/issues/204)
+- Current active lane: [#206](https://github.com/JKhyro/FURYOKU/issues/206)
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: none currently open
 
@@ -23,7 +23,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp`, then `gemma4-e2b-hauhau-aggressive:q8kp` when the lighter/faster local fit wins
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
 - Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: refresh the local model roster and provisional usage tiers so FURYOKU only references the approved local Gemma set and stages heavier models behind limited-hardware guidance instead of treating the old Gemma3 baseline as active truth.
+- Current follow-on focus: classify the approved local Gemma roster with a fast local preflight before any full benchmark rerun, then replace the archived compare truth with current blocker or promotion evidence from the approved roster on limited hardware.
 
 ### Provisional Local Usage Tiers
 
