@@ -23,11 +23,13 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 
 ## Current Runtime Truth
 
-- Current bounded follow-on: [#204](https://github.com/JKhyro/FURYOKU/issues/204)
+- Current bounded follow-on: [#206](https://github.com/JKhyro/FURYOKU/issues/206)
 - Local primary lane: `gemma4-e4b-ultra-heretic:q8_0` as the provisional balanced local default
 - Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp`, then `gemma4-e2b-hauhau-aggressive:q8kp` under tighter hardware pressure
 - The older `gemma3:4b-it-qat` / `qwen2.5:7b` ranking remains part of the archived 2026-03-24 benchmark record, not the active deployed FURYOKU baseline
 - The active candidate roster now lives in `candidates.json` and only uses the currently approved local Gemma set for this lane
+- Current approved-roster preflight evidence: [2026-04-13 approved-roster preflight](results/2026-04-13-approved-roster-preflight.json)
+- Current approved-roster preflight summary: 3 ready (`gemma4-e4b-ultra-heretic:q8_0`, `gemma4-e4b-hauhau-aggressive:q8kp`, `gemma4-e2b-hauhau-aggressive:q8kp`), 1 missing (`gemma3-12b-ultra-heretic:q8_0`), 2 empty-response (`gemma4-26b-a4b-heretic:q4_k_m`, `gemma4-26b-a4b-ultra-heretic:q4_k_m`), and 3 timeout-bound (`gemma4-31b-heretic:q4_k_m`, `gemma4-26b-a4b-heretic:q8_0`, `gemma4-26b-a4b-ultra-heretic:q8_0`) at a 20-second direct probe budget
 - Archived April 9 compare manifest: [2026-04-09 Gemma Heretic current-baseline manifest](results/2026-04-09-gemma3-heretic-current-baseline.json)
 - Archived April 9 compare evidence: [2026-04-09 Gemma Heretic compare summary](results/2026-04-09-gemma3-heretic-compare-summary.md)
 - Current direct comparison evidence remains the April 9 compare summary until the approved Gemma roster is re-benchmarked on the target machine profile
@@ -41,11 +43,12 @@ Select a local model that fits a 32 GB RAM / 4 GB VRAM machine profile with the 
 ## Usage
 
 1. Pull the candidate models you want to test with Ollama.
-2. Run `run_ollama_benchmark.ps1`.
-3. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
-4. Review the JSON output, including the attached `contractEvaluation`, `contractChecks`, `contractSummary`, `promotionVerdict`, `resourceFitVerdict`, and `compareDecision` fields.
-5. When you publish a compare lane, run `publish_compare_truth.ps1` so the compare summary and current-baseline manifest are emitted together.
-6. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
+2. Run `run_ollama_preflight.ps1` first to classify the approved roster as ready, missing, empty-response, or timeout-bound before spending time on the full suites.
+3. Run `run_ollama_benchmark.ps1`.
+4. Run `run_ollama_response_suite.ps1` for same-prompt quality comparisons.
+5. Review the JSON output, including the attached `contractEvaluation`, `contractChecks`, `contractSummary`, `promotionVerdict`, `resourceFitVerdict`, and `compareDecision` fields.
+6. When you publish a compare lane, run `publish_compare_truth.ps1` so the compare summary and current-baseline manifest are emitted together.
+7. Use alternate prompt files to probe specific lanes such as sexual-boundary behavior or harder capability tasks.
 
 Preset file:
 
@@ -65,6 +68,13 @@ powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\check_c
 ```
 
 GitHub Actions also runs the benchmark contract reporter tests plus this compare-truth freshness check on pull requests and pushes to `main` through [`.github/workflows/benchmark-truth-gate.yml`](../../.github/workflows/benchmark-truth-gate.yml).
+
+Run the approved-roster preflight:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\benchmarks\openclaw-local-llm\run_ollama_preflight.ps1 `
+  -OutputPath .\benchmarks\openclaw-local-llm\results\approved-roster-preflight.json
+```
 
 Publish an alternate compare set:
 
