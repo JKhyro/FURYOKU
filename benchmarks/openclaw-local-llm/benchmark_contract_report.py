@@ -626,6 +626,15 @@ def infer_candidate_role(candidate: dict) -> str | None:
     explicit = str(candidate.get("role", "")).strip().lower()
     if explicit in {"baseline", "candidate"}:
         return explicit
+    priority = candidate.get("priority")
+    try:
+        parsed_priority = int(priority)
+    except (TypeError, ValueError):
+        parsed_priority = None
+    if parsed_priority == 1:
+        return "baseline"
+    if parsed_priority and parsed_priority > 1:
+        return "candidate"
     why = str(candidate.get("why", "")).strip().lower()
     if "comparison candidate" in why or "against the deployed" in why:
         return "candidate"

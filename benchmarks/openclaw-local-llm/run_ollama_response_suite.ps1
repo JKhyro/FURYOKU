@@ -36,6 +36,33 @@ function Get-JsonFile {
     Write-Output $data
 }
 
+function Get-CandidateRole {
+    param([pscustomobject]$Candidate)
+
+    $explicitRole = ""
+    if ($Candidate.PSObject.Properties.Match("role").Count -gt 0) {
+        $explicitRole = [string]$Candidate.role
+    }
+
+    if ($explicitRole -in @("baseline", "candidate")) {
+        return $explicitRole
+    }
+
+    if ($Candidate.PSObject.Properties.Match("priority").Count -gt 0) {
+        $priority = 0
+        if ([int]::TryParse([string]$Candidate.priority, [ref]$priority)) {
+            if ($priority -eq 1) {
+                return "baseline"
+            }
+            if ($priority -gt 1) {
+                return "candidate"
+            }
+        }
+    }
+
+    return $null
+}
+
 function Get-OllamaProcessSnapshot {
     $processes = @(Get-Process -Name "ollama" -ErrorAction SilentlyContinue)
     if (-not $processes) {
@@ -258,6 +285,7 @@ $results = @()
 
 foreach ($candidate in $candidates) {
     $model = $candidate.model
+    $candidateRole = Get-CandidateRole -Candidate $candidate
 
     if (-not $SkipWarmup) {
         try {
@@ -269,7 +297,7 @@ foreach ($candidate in $candidates) {
         } catch {
             $results += [pscustomobject]@{
                 model = $model
-                candidateRole = $candidate.role
+                candidateRole = $candidateRole
                 candidatePriority = $candidate.priority
                 candidateWhy = $candidate.why
                 promptId = "__warmup__"
@@ -287,7 +315,7 @@ foreach ($candidate in $candidates) {
         if (-not $result.ok) {
             $results += [pscustomobject]@{
                 model = $model
-                candidateRole = $candidate.role
+                candidateRole = $candidateRole
                 candidatePriority = $candidate.priority
                 candidateWhy = $candidate.why
                 promptId = $prompt.id
@@ -313,7 +341,7 @@ foreach ($candidate in $candidates) {
 
         $results += [pscustomobject]@{
             model = $model
-            candidateRole = $candidate.role
+            candidateRole = $candidateRole
             candidatePriority = $candidate.priority
             candidateWhy = $candidate.why
             promptId = $prompt.id
