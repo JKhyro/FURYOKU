@@ -101,6 +101,47 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_exposes_live_provider_health_endpoint_with_registry_path(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-health-registry.json"
+            self._write_provider_health_override_registry_fixture(request_registry_path)
+            try:
+                self._wait_for_service_health(process, base_url)
+                payload = self._request_json(
+                    base_url + "/v1/health",
+                    {"registryPath": str(request_registry_path)},
+                )
+
+                self.assertTrue(payload["ok"])
+                self.assertEqual(len(payload["providers"]), 1)
+                self.assertEqual(payload["providers"][0]["modelId"], "request-echo")
+                self.assertTrue(payload["providers"][0]["ready"])
+            finally:
+                self._stop_process(process)
+
+    def test_editable_install_exposes_live_provider_health_endpoint_with_inline_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-health-registry.json"
+            self._write_provider_health_override_registry_fixture(request_registry_path)
+            registry = json.loads(request_registry_path.read_text(encoding="utf-8"))
+            try:
+                self._wait_for_service_health(process, base_url)
+                payload = self._request_json(
+                    base_url + "/v1/health",
+                    {"registry": registry},
+                )
+
+                self.assertTrue(payload["ok"])
+                self.assertEqual(len(payload["providers"]), 1)
+                self.assertEqual(payload["providers"][0]["modelId"], "request-echo")
+                self.assertTrue(payload["providers"][0]["ready"])
+            finally:
+                self._stop_process(process)
+
     def test_editable_install_exposes_live_select_and_run_endpoints(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -437,6 +478,33 @@ class PackagingTests(unittest.TestCase):
                             "capabilities": {
                                 "conversation": 0.8,
                                 "coding": 0.98,
+                            },
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def _write_provider_health_override_registry_fixture(self, registry_path: Path) -> None:
+        registry_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "models": [
+                        {
+                            "modelId": "request-echo",
+                            "provider": "local",
+                            "privacyLevel": "local",
+                            "contextWindowTokens": 4096,
+                            "averageLatencyMs": 10,
+                            "invocation": [
+                                sys.executable,
+                                "-c",
+                                "import sys; print('echo:' + sys.stdin.read())",
+                            ],
+                            "capabilities": {
+                                "conversation": 0.95,
                             },
                         },
                     ],
