@@ -220,6 +220,33 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_rejects_provider_health_registry_override_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-health-registry.json"
+            self._write_provider_health_override_registry_fixture(request_registry_path)
+            registry = json.loads(request_registry_path.read_text(encoding="utf-8"))
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(
+                    base_url + "/v1/health",
+                    {
+                        "registry": registry,
+                        "registryPath": str(request_registry_path),
+                    },
+                )
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn(
+                    "provide only one of registry or registryPath",
+                    error["payload"]["error"]["message"],
+                )
+            finally:
+                self._stop_process(process)
+
     def test_editable_install_exposes_live_select_endpoint_with_task_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
