@@ -247,6 +247,37 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_exposes_live_select_endpoint_with_inline_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-registry.json"
+            self._write_registry_fixture(request_registry_path)
+            registry = json.loads(request_registry_path.read_text(encoding="utf-8"))
+            task = {
+                "schemaVersion": 1,
+                "taskId": "private-chat",
+                "privacyRequirement": "local_only",
+                "requiredCapabilities": {
+                    "conversation": 0.9,
+                },
+            }
+            try:
+                self._wait_for_service_health(process, base_url)
+                payload = self._request_json(
+                    base_url + "/v1/select",
+                    {
+                        "registry": registry,
+                        "task": task,
+                    },
+                )
+
+                self.assertTrue(payload["ok"])
+                self.assertEqual(payload["selection"]["modelId"], "local-echo")
+                self.assertEqual(payload["taskProfile"]["taskId"], "private-chat")
+            finally:
+                self._stop_process(process)
+
     def test_editable_install_exposes_live_run_endpoint_with_registry_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -267,6 +298,39 @@ class PackagingTests(unittest.TestCase):
                     base_url + "/v1/run",
                     {
                         "registryPath": str(request_registry_path),
+                        "task": task,
+                        "prompt": "hello",
+                    },
+                )
+
+                self.assertTrue(payload["ok"])
+                self.assertEqual(payload["selection"]["modelId"], "local-echo")
+                self.assertEqual(payload["taskProfile"]["taskId"], "private-chat")
+                self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            finally:
+                self._stop_process(process)
+
+    def test_editable_install_exposes_live_run_endpoint_with_inline_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-registry.json"
+            self._write_registry_fixture(request_registry_path)
+            registry = json.loads(request_registry_path.read_text(encoding="utf-8"))
+            task = {
+                "schemaVersion": 1,
+                "taskId": "private-chat",
+                "privacyRequirement": "local_only",
+                "requiredCapabilities": {
+                    "conversation": 0.9,
+                },
+            }
+            try:
+                self._wait_for_service_health(process, base_url)
+                payload = self._request_json(
+                    base_url + "/v1/run",
+                    {
+                        "registry": registry,
                         "task": task,
                         "prompt": "hello",
                     },
