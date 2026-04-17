@@ -421,6 +421,42 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_rejects_select_registry_override_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-registry.json"
+            self._write_registry_fixture(request_registry_path)
+            registry = json.loads(request_registry_path.read_text(encoding="utf-8"))
+            task = {
+                "schemaVersion": 1,
+                "taskId": "private-chat",
+                "privacyRequirement": "local_only",
+                "requiredCapabilities": {
+                    "conversation": 0.9,
+                },
+            }
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(
+                    base_url + "/v1/select",
+                    {
+                        "registry": registry,
+                        "registryPath": str(request_registry_path),
+                        "task": task,
+                    },
+                )
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn(
+                    "provide only one of registry or registryPath",
+                    error["payload"]["error"]["message"],
+                )
+            finally:
+                self._stop_process(process)
+
     def test_editable_install_exposes_live_run_endpoint_with_registry_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -483,6 +519,43 @@ class PackagingTests(unittest.TestCase):
                 self.assertEqual(payload["selection"]["modelId"], "local-echo")
                 self.assertEqual(payload["taskProfile"]["taskId"], "private-chat")
                 self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            finally:
+                self._stop_process(process)
+
+    def test_editable_install_rejects_run_registry_override_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            request_registry_path = temp_path / "request-registry.json"
+            self._write_registry_fixture(request_registry_path)
+            registry = json.loads(request_registry_path.read_text(encoding="utf-8"))
+            task = {
+                "schemaVersion": 1,
+                "taskId": "private-chat",
+                "privacyRequirement": "local_only",
+                "requiredCapabilities": {
+                    "conversation": 0.9,
+                },
+            }
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(
+                    base_url + "/v1/run",
+                    {
+                        "registry": registry,
+                        "registryPath": str(request_registry_path),
+                        "task": task,
+                        "prompt": "hello",
+                    },
+                )
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn(
+                    "provide only one of registry or registryPath",
+                    error["payload"]["error"]["message"],
+                )
             finally:
                 self._stop_process(process)
 
