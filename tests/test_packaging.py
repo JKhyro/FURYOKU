@@ -311,6 +311,55 @@ class PackagingTests(unittest.TestCase):
             finally:
                 self._stop_process(process)
 
+    def test_editable_install_rejects_select_task_input_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            task_path = temp_path / "task.json"
+            self._write_task_fixture(task_path)
+            task = json.loads(task_path.read_text(encoding="utf-8"))
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(
+                    base_url + "/v1/select",
+                    {
+                        "task": task,
+                        "taskPath": str(task_path),
+                    },
+                )
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn("provide only one of task or taskPath", error["payload"]["error"]["message"])
+            finally:
+                self._stop_process(process)
+
+    def test_editable_install_rejects_run_task_input_conflict(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            process, base_url, _registry_path = self._start_installed_service(temp_path)
+            task_path = temp_path / "task.json"
+            self._write_task_fixture(task_path)
+            task = json.loads(task_path.read_text(encoding="utf-8"))
+            try:
+                self._wait_for_service_health(process, base_url)
+                error = self._request_http_error(
+                    base_url + "/v1/run",
+                    {
+                        "task": task,
+                        "taskPath": str(task_path),
+                        "prompt": "hello",
+                    },
+                )
+
+                self.assertEqual(error["status"], 400)
+                self.assertFalse(error["payload"]["ok"])
+                self.assertEqual(error["payload"]["error"]["type"], "ServiceRequestError")
+                self.assertIn("provide only one of task or taskPath", error["payload"]["error"]["message"])
+            finally:
+                self._stop_process(process)
+
     def test_editable_install_exposes_live_select_endpoint_with_registry_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
