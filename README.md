@@ -15,8 +15,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Latest completed support lane: [#266](https://github.com/JKhyro/FURYOKU/issues/266) defined the bounded operator resume workflow contract
-- Active bounded operator command lane: [#268](https://github.com/JKhyro/FURYOKU/issues/268) adds local resume record preview/append support without runtime launch expansion
+- Latest completed support lane: [#268](https://github.com/JKhyro/FURYOKU/issues/268) added local resume record preview/append support after the [#266](https://github.com/JKhyro/FURYOKU/issues/266) operator resume workflow contract
+- Next support lane: select a fresh bounded [#230](https://github.com/JKhyro/FURYOKU/issues/230) child from current GitHub/local truth; do not infer runtime launch or scheduler expansion from the completed operator lane
 
 ## Current Baseline
 
