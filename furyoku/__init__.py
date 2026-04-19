@@ -152,6 +152,13 @@ from .runtime import (
     route_and_execute_with_fallback,
 )
 from .task_profiles import TaskProfileError, load_task_profile, parse_task_profile
+from .workflow_envelope import (
+    OperatorReview,
+    OperatorReviewedHermesWorkflowEnvelope,
+    WorkflowEnvelopeError,
+    load_operator_reviewed_workflow_envelope,
+    parse_operator_reviewed_workflow_envelope,
+)
 
 __all__ = [
     "__version__",
@@ -199,6 +206,8 @@ __all__ = [
     "OutcomeFeedbackGroupSummary",
     "ModelReadinessEvidence",
     "ModelScore",
+    "OperatorReview",
+    "OperatorReviewedHermesWorkflowEnvelope",
     "OutcomeFeedbackError",
     "OutcomeFeedbackModelScorecard",
     "OutcomeFeedbackSituationLeaderboard",
@@ -223,6 +232,7 @@ __all__ = [
     "TaskProfile",
     "TaskProfileError",
     "VALID_OUTCOME_VERDICTS",
+    "WorkflowEnvelopeError",
     "append_decision_outcome",
     "build_feedback_policy_metadata",
     "build_character_orchestration_envelope",
@@ -267,6 +277,7 @@ __all__ = [
     "load_hermes_seven_symbiote_smoke",
     "load_hermes_three_symbiote_smoke",
     "load_task_profile",
+    "load_operator_reviewed_workflow_envelope",
     "outcome_feedback_source",
     "parse_feedback_adjustment_policy",
     "parse_routing_evidence_contract",
@@ -277,6 +288,7 @@ __all__ = [
     "parse_character_profile",
     "parse_decision_suite",
     "parse_task_profile",
+    "parse_operator_reviewed_workflow_envelope",
     "rank_models",
     "route_and_execute",
     "route_and_execute_with_fallback",
