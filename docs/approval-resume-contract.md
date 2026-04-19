@@ -95,6 +95,8 @@ Operators can inspect a local store before a handoff with `approval-resume-store
 
 The [operator resume workflow contract](operator-resume-workflow-contract.md) defines the bounded operator step after inspection: how a consumed or blocked local-store report can become a new append-only `resume_requested` or `resume_approved` record without adding a scheduler, hidden shared state, or Hermes-owned approval memory.
 
+`approval-resume-create` implements the local operator command for that step. It previews the candidate record by default and appends it only with `--append`.
+
 Example gated live bridge:
 
 ```powershell
