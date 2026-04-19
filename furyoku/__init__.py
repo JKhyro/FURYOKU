@@ -162,19 +162,23 @@ from .workflow_envelope import (
     parse_operator_reviewed_workflow_envelope,
 )
 from .approval_resume import (
+    ApprovalResumeConsumptionEvent,
     ApprovalResumeError,
     ApprovalResumeLedger,
     ApprovalResumeRecord,
+    LocalApprovalResumeLedgerAdapter,
     ResumeIntent,
     approval_resume_record_from_workflow_envelope,
     load_approval_resume_ledger,
     load_approval_resume_record,
+    load_local_approval_resume_ledger_adapter,
     parse_approval_resume_ledger,
     parse_approval_resume_record,
 )
 
 __all__ = [
     "__version__",
+    "ApprovalResumeConsumptionEvent",
     "ApprovalResumeError",
     "ApprovalResumeLedger",
     "ApprovalResumeRecord",
@@ -223,6 +227,7 @@ __all__ = [
     "OutcomeFeedbackGroupSummary",
     "ModelReadinessEvidence",
     "ModelScore",
+    "LocalApprovalResumeLedgerAdapter",
     "OperatorReview",
     "OperatorReviewedHermesWorkflowEnvelope",
     "OutcomeFeedbackError",
@@ -288,6 +293,7 @@ __all__ = [
     "load_model_registry",
     "load_approval_resume_ledger",
     "load_approval_resume_record",
+    "load_local_approval_resume_ledger_adapter",
     "load_routing_evidence_contract",
     "load_routing_score_policy",
     "load_character_profile",

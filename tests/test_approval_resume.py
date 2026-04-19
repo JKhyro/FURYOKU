@@ -4,10 +4,13 @@ import unittest
 from pathlib import Path
 
 from furyoku import (
+    ApprovalResumeConsumptionEvent,
     ApprovalResumeError,
+    LocalApprovalResumeLedgerAdapter,
     approval_resume_record_from_workflow_envelope,
     load_approval_resume_ledger,
     load_approval_resume_record,
+    load_local_approval_resume_ledger_adapter,
     parse_approval_resume_ledger,
     parse_approval_resume_record,
     parse_operator_reviewed_workflow_envelope,
@@ -185,6 +188,165 @@ class ApprovalResumeContractTests(unittest.TestCase):
             parse_approval_resume_ledger(payload)
 
         self.assertIn("ambiguous ownership", str(error.exception))
+
+    def test_local_adapter_appends_and_reads_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "approval-store.json"
+            adapter = load_local_approval_resume_ledger_adapter(path)
+            record = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+
+            adapter.append_record(record)
+            reloaded = LocalApprovalResumeLedgerAdapter(path)
+
+            self.assertEqual(len(reloaded.records), 1)
+            self.assertEqual(reloaded.records[0].record_key, record.record_key)
+            latest = reloaded.latest_gate_record(HANDOFF_EXECUTION_KEY)
+            self.assertIsNotNone(latest)
+            self.assertEqual(latest.record_key, record.record_key)
+            self.assertEqual(reloaded.to_dict()["records"][0]["recordKey"], record.record_key)
+
+    def test_local_adapter_selects_latest_gate_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            first = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                    createdAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+            resumed = parse_approval_resume_record(
+                record_payload(
+                    recordState="resume_approved",
+                    attemptIndex=2,
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T02:00:00Z",
+                    createdAtUtc="2026-04-19T02:00:00Z",
+                    resume={
+                        "resumeOf": WORKFLOW_EXECUTION_KEY,
+                        "previousAttemptIndex": 1,
+                        "requestedBy": "operator",
+                        "reason": "recoverable handoff retry",
+                    },
+                )
+            )
+
+            adapter.append_record(first)
+            adapter.append_record(resumed)
+            selected = adapter.select_gate_record_for_handoff(HANDOFF_EXECUTION_KEY)
+
+        self.assertEqual(selected.record_key, resumed.record_key)
+        self.assertEqual(selected.state, "resume_approved")
+        self.assertEqual(selected.attempt_index, 2)
+
+    def test_local_adapter_blocks_ambiguous_workflow_selection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            first = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+            second = parse_approval_resume_record(
+                record_payload(
+                    workflowId="operator.reviewed.other-workflow",
+                    executionId="other-execution-001",
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:05:00Z",
+                )
+            )
+
+            adapter.append_record(first)
+            adapter.append_record(second)
+            with self.assertRaises(ApprovalResumeError) as error:
+                adapter.latest_gate_record(HANDOFF_EXECUTION_KEY)
+            selected = adapter.latest_gate_record(
+                HANDOFF_EXECUTION_KEY,
+                workflow_execution_key=second.workflow_execution_key,
+            )
+
+        self.assertIn("multiple workflow executions", str(error.exception))
+        self.assertEqual(selected.record_key, second.record_key)
+
+    def test_local_adapter_blocks_consumed_record_replay(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            record = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+
+            adapter.append_record(record)
+            selected = adapter.select_gate_record_for_handoff(HANDOFF_EXECUTION_KEY)
+            adapter.append_consumption_event(
+                ApprovalResumeConsumptionEvent.from_record(
+                    selected,
+                    execution_key="bridge-run-001",
+                    result_status="succeeded",
+                    started_at_utc="2026-04-19T01:01:00Z",
+                    finished_at_utc="2026-04-19T01:02:00Z",
+                )
+            )
+
+            self.assertTrue(adapter.is_record_consumed(record.record_key))
+            with self.assertRaises(ApprovalResumeError) as error:
+                adapter.select_gate_record_for_handoff(HANDOFF_EXECUTION_KEY)
+
+        self.assertIn("already consumed", str(error.exception))
+
+    def test_local_adapter_rejects_consumption_event_for_wrong_handoff(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            record = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+            event = ApprovalResumeConsumptionEvent(
+                schema_version=1,
+                record_key=record.record_key,
+                handoff_execution_key="symbiote-02:secondary:hermes.bridge.other",
+                execution_key="bridge-run-001",
+                result_status="succeeded",
+            )
+
+            adapter.append_record(record)
+            with self.assertRaises(ApprovalResumeError) as error:
+                adapter.append_consumption_event(event)
+
+        self.assertIn("handoffExecutionKey does not match", str(error.exception))
+
+    def test_local_adapter_rejects_duplicate_record_keys(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            record = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+
+            adapter.append_record(record)
+            with self.assertRaises(ApprovalResumeError) as error:
+                adapter.append_record(record)
+
+        self.assertIn("duplicate approval/resume record", str(error.exception))
 
     def test_record_rejects_hidden_shared_state_fields(self):
         with self.assertRaises(ApprovalResumeError) as error:

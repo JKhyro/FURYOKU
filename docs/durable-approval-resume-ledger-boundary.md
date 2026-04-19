@@ -2,13 +2,15 @@
 
 Parent lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230)
 
-Active boundary issue: [#256](https://github.com/JKhyro/FURYOKU/issues/256)
+Boundary issue: [#256](https://github.com/JKhyro/FURYOKU/issues/256)
+
+Local adapter prototype issue: [#258](https://github.com/JKhyro/FURYOKU/issues/258)
 
 ## Purpose
 
 FURYOKU now has approval/resume records for one-Symbiote handoffs, multi-Symbiote ledger gating, and a checked-in seven-Symbiote approval fixture. This document defines the durable state boundary that a later implementation can use without adding a second scheduler, hidden shared state, or Hermes-owned coordination state.
 
-This is a contract only. It does not implement persistence, workflow scheduling, or a runtime store.
+This boundary started as a contract only. Issue #258 now adds the first local JSON-backed adapter prototype for the ledger operations below, while durable workflow scheduling and a full runtime store remain out of scope.
 
 ## Ownership Boundary
 
@@ -125,11 +127,13 @@ The current JSON records remain version `1`. Future durable implementations shou
 
 Any incompatible schema change should open a new issue and introduce an explicit version gate before current fixtures are changed.
 
-## Future Implementation Handoff
+## Local Adapter Prototype
 
-The next implementation issue may add a local durable ledger adapter only after this boundary is accepted. That issue should prove:
+Issue #258 implements the first local durable ledger adapter in `furyoku/approval_resume.py`. It proves:
 
 - append and read behavior for one handoff
 - latest-record selection for a multi-Symbiote ledger
 - consumption event replay blocking
 - JSON report compatibility with the existing bridge output contract
+
+This adapter is a bounded local persistence scaffold. It is not a durable workflow scheduler, a queue runner, or a Hermes-owned approval store.

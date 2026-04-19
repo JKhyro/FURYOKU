@@ -88,7 +88,7 @@ The live bridge accepts either one approval/resume record or a ledger. Multi-Sym
 
 The live bridge result includes `approvalResumeGate` with the gate status, record state, record key, attempt index, owner, and recoverable error details when blocked. Multi-Symbiote aggregate reports also list `blockedExecutionKeys`. Only `approved` and `resume_approved` records are safe to hand off.
 
-Durable ledger ownership, replay blocking, consumption events, and persistence non-goals are defined separately in the [durable approval/resume ledger state boundary](durable-approval-resume-ledger-boundary.md). That boundary must be accepted before FURYOKU adds durable workflow state.
+Durable ledger ownership, replay blocking, consumption events, and persistence non-goals are defined separately in the [durable approval/resume ledger state boundary](durable-approval-resume-ledger-boundary.md). The current local adapter keeps those rules inside FURYOKU-owned approval/resume state and remains a bounded persistence scaffold, not a workflow scheduler.
 
 Example gated live bridge:
 
