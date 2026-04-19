@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#260](https://github.com/JKhyro/FURYOKU/issues/260) wire the local durable approval/resume ledger adapter into bridge gates
+- Current support lane: [#262](https://github.com/JKhyro/FURYOKU/issues/262) add a local approval/resume store inspection report
 
 ## Current Baseline
 
@@ -118,6 +118,7 @@ Current routing core:
 - [`furyoku/workflow_envelope.py`](furyoku/workflow_envelope.py) validates a typed operator-reviewed workflow envelope around one Hermes/FURYOKU handoff without adding a second scheduler or hidden shared state.
 - [`furyoku/approval_resume.py`](furyoku/approval_resume.py) validates execution-keyed approval/resume records and provides a small local JSON-backed durable adapter for append/read, latest gate selection, and consumption-event replay blocking.
 - Live Hermes bridge handoffs can require approval/resume evidence from a record, ledger fixture, or local JSON-backed store and block before process invocation unless the latest matching record is `approved` or `resume_approved` for the exact bridge execution key.
+- Local approval/resume stores can be inspected with `approval-resume-store-report` to review matching records, consumption events, and gate readiness without loading a model registry or invoking Hermes.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
@@ -146,7 +147,7 @@ Current routing core:
 - Comparative execution reports can append one feedback record per executed candidate so future recommendation and routing runs can learn from same-prompt comparison results.
 - Suite-level comparative execution batches can now compare multiple decision-suite situations in one aggregate report using a prompt-map input.
 - Suite-level `compare-batch` reports can append one feedback record per executed candidate so aggregate comparative batches feed the same reusable feedback-evidence loop.
-- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `compare-batch`, `health`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, comparative execution, CHARACTER role selection, and selected role execution.
+- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `compare-batch`, `health`, `approval-resume-store-report`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, local approval/resume store inspection, comparative execution, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/decision_suite.primary-routing.json`](examples/decision_suite.primary-routing.json) shows a reusable multi-situation decision suite.
 - [`examples/comparison_prompt_map.primary-routing.json`](examples/comparison_prompt_map.primary-routing.json) shows a reusable prompt-map for suite-level comparative execution batches.

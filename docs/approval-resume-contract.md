@@ -91,6 +91,8 @@ The live bridge result includes `approvalResumeGate` with the gate status, recor
 
 Durable ledger ownership, replay blocking, consumption events, and persistence non-goals are defined separately in the [durable approval/resume ledger state boundary](durable-approval-resume-ledger-boundary.md). The current local adapter keeps those rules inside FURYOKU-owned approval/resume state and remains a bounded persistence scaffold, not a workflow scheduler.
 
+Operators can inspect a local store before a handoff with `approval-resume-store-report`. The report lists matching records, consumption events, summary counts, and the same readiness/blocking decision the bridge would use for a selected `handoffExecutionKey`, without loading a model registry or invoking Hermes.
+
 Example gated live bridge:
 
 ```powershell
@@ -111,6 +113,14 @@ python -m furyoku.cli hermes-bridge `
   --approval-resume-store .\operator-state\approval-resume-store.json `
   --require-approval-resume `
   --handoff-command python .\examples\hermes_bridge_echo_runtime.py
+```
+
+Example local store inspection:
+
+```powershell
+python -m furyoku.cli approval-resume-store-report `
+  --store .\operator-state\approval-resume-store.json `
+  --handoff-execution-key symbiote-01:primary:hermes.bridge.one-symbiote
 ```
 
 ## Example
