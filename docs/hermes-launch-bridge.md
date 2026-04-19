@@ -133,6 +133,8 @@ To execute Hermes itself, replace the handoff command with the confirmed Hermes/
 
 The adapter does not store credentials and does not mutate `JKhyro/HERMES-AGENT`. It only runs the Hermes CLI already installed in WSL.
 
+If Hermes exits successfully while printing a terminal agent failure such as exhausted API retries or a final provider error, the adapter treats that as a recoverable runtime failure instead of a successful Symbiote execution. That keeps the bridge from advancing on a session id or setup/error transcript alone.
+
 Current host command shape:
 
 ```powershell
