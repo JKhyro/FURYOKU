@@ -14,6 +14,7 @@ from furyoku import (
     HermesBridgeError,
     HermesBridgeSevenSymbioteSmokeEnvelope,
     HermesBridgeThreeSymbioteSmokeEnvelope,
+    LocalApprovalResumeLedgerAdapter,
     ModelEndpoint,
     dry_run_hermes_bridge,
     dry_run_seven_symbiote_smoke,
@@ -408,6 +409,42 @@ class HermesBridgeTests(unittest.TestCase):
         self.assertEqual(payload["handoff"]["status"], "approval-blocked")
         self.assertFalse(payload["execution"]["started"])
         self.assertEqual(payload["approvalResumeGate"]["recordState"], "resume_requested")
+
+    def test_live_run_local_approval_store_consumes_record_and_blocks_replay(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            adapter.append_record(approval_record(envelope.execution_key))
+
+            first = live_run_hermes_bridge(
+                [local_endpoint()],
+                envelope,
+                approval_resume=adapter,
+                require_approval_resume=True,
+                handoff_command=(
+                    sys.executable,
+                    "-c",
+                    "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'gate':payload['approvalResumeGate']['status'],'consumed':bool(payload['approvalResumeGate']['consumptionEvent'])}))",
+                ),
+            )
+            second = live_run_hermes_bridge(
+                [local_endpoint()],
+                envelope,
+                approval_resume=adapter,
+                require_approval_resume=True,
+                handoff_command=(sys.executable, "-c", "import sys; sys.exit(99)"),
+            )
+
+        first_payload = first.to_dict()
+        second_payload = second.to_dict()
+        self.assertTrue(first.ok)
+        self.assertEqual(first_payload["approvalResumeGate"]["source"], "local-ledger")
+        self.assertEqual(first_payload["approvalResumeGate"]["consumptionEvent"]["resultStatus"], "started")
+        self.assertTrue(first_payload["execution"]["runtimePayload"]["consumed"])
+        self.assertFalse(second.ok)
+        self.assertEqual(second_payload["handoff"]["status"], "approval-blocked")
+        self.assertEqual(second_payload["execution"]["status"], "not-started")
+        self.assertEqual(second_payload["error"]["code"], "approval_resume_record_consumed")
 
     def test_live_run_does_not_start_duplicate_execution_key(self):
         envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
@@ -813,6 +850,96 @@ class HermesBridgeCliTests(unittest.TestCase):
         self.assertEqual(payload["handoff"]["status"], "completed")
         self.assertEqual(payload["approvalResumeGate"]["status"], "approved")
         self.assertEqual(payload["execution"]["runtimePayload"]["received"], "symbiote-01:primary:hermes.bridge.one-symbiote")
+
+    def test_cli_live_mode_accepts_approval_resume_store_and_blocks_replay(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            registry_path = temp_path / "models.json"
+            envelope_path = temp_path / "envelope.json"
+            store_path = temp_path / "approval-store.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "models": [
+                            {
+                                "modelId": "local-echo",
+                                "provider": "local",
+                                "privacyLevel": "local",
+                                "contextWindowTokens": 4096,
+                                "averageLatencyMs": 10,
+                                "invocation": [sys.executable, "-c", "print('ready')"],
+                                "capabilities": {
+                                    "conversation": 0.95,
+                                    "instruction_following": 0.9,
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            envelope_path.write_text(json.dumps(envelope_payload()), encoding="utf-8")
+            store = LocalApprovalResumeLedgerAdapter(store_path)
+            store.append_record(approval_record("symbiote-01:primary:hermes.bridge.one-symbiote"))
+
+            first = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-bridge",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(envelope_path),
+                    "--approval-resume-store",
+                    str(store_path),
+                    "--require-approval-resume",
+                    "--handoff-command",
+                    sys.executable,
+                    "-c",
+                    "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'source':payload['approvalResumeGate']['source'],'consumed':bool(payload['approvalResumeGate']['consumptionEvent'])}))",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            second = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-bridge",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(envelope_path),
+                    "--approval-resume-store",
+                    str(store_path),
+                    "--require-approval-resume",
+                    "--handoff-command",
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.exit(99)",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            store_payload = json.loads(store_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(first.returncode, 0, first.stderr)
+        first_payload = json.loads(first.stdout)
+        self.assertTrue(first_payload["ok"])
+        self.assertEqual(first_payload["approvalResumeGate"]["source"], "local-ledger")
+        self.assertTrue(first_payload["execution"]["runtimePayload"]["consumed"])
+        self.assertEqual(len(store_payload["consumptionEvents"]), 1)
+        self.assertEqual(second.returncode, 2, second.stderr)
+        second_payload = json.loads(second.stdout)
+        self.assertFalse(second_payload["ok"])
+        self.assertEqual(second_payload["handoff"]["status"], "approval-blocked")
+        self.assertEqual(second_payload["error"]["code"], "approval_resume_record_consumed")
 
     def test_cli_live_mode_blocks_pending_approval_before_handoff_command(self):
         with tempfile.TemporaryDirectory() as temp_dir:

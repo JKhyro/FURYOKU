@@ -29,7 +29,12 @@ from .outcome_feedback import (
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
-from .approval_resume import ApprovalResumeError, load_approval_resume_ledger, load_approval_resume_record
+from .approval_resume import (
+    ApprovalResumeError,
+    load_approval_resume_ledger,
+    load_approval_resume_record,
+    load_local_approval_resume_ledger_adapter,
+)
 from .hermes_bridge import (
     HermesBridgeError,
     dry_run_hermes_bridge,
@@ -936,6 +941,11 @@ def _add_approval_resume_args(parser: argparse.ArgumentParser) -> None:
         help="Approval/resume ledger JSON; the latest matching record gates each live handoff.",
     )
     parser.add_argument(
+        "--approval-resume-store",
+        type=Path,
+        help="Local JSON-backed approval/resume store; consumed records block replay.",
+    )
+    parser.add_argument(
         "--require-approval-resume",
         action="store_true",
         help="Block live handoff unless an approved approval/resume record or ledger entry is present.",
@@ -1259,12 +1269,20 @@ def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParse
 def _approval_resume_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser):
     record_path = getattr(args, "approval_resume_record", None)
     ledger_path = getattr(args, "approval_resume_ledger", None)
-    if record_path and ledger_path:
-        parser.error("--approval-resume-record cannot be combined with --approval-resume-ledger")
+    store_path = getattr(args, "approval_resume_store", None)
+    selected_paths = [name for name, path in (
+        ("--approval-resume-record", record_path),
+        ("--approval-resume-ledger", ledger_path),
+        ("--approval-resume-store", store_path),
+    ) if path]
+    if len(selected_paths) > 1:
+        parser.error(f"{selected_paths[0]} cannot be combined with {selected_paths[1]}")
     if record_path:
         return load_approval_resume_record(record_path)
     if ledger_path:
         return load_approval_resume_ledger(ledger_path)
+    if store_path:
+        return load_local_approval_resume_ledger_adapter(store_path)
     return None
 
 

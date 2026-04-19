@@ -79,14 +79,15 @@ These records are validation and audit artifacts only. Durable persistence, queu
 
 ## Live Bridge Gate
 
-The live bridge accepts either one approval/resume record or a ledger. Multi-Symbiote smoke commands use the ledger to gate each ordered handoff independently. The gate blocks before process invocation when:
+The live bridge accepts one approval/resume record, a static ledger fixture, or a local JSON-backed approval/resume store. Multi-Symbiote smoke commands use the ledger or store to gate each ordered handoff independently. The gate blocks before process invocation when:
 
-- `--require-approval-resume` is set and no record or ledger is provided
+- `--require-approval-resume` is set and no record, ledger, or store is provided
 - the record `handoffExecutionKey` does not match the bridge envelope `executionKey`
 - the latest matching ledger record is not `approved` or `resume_approved`
 - a ledger has multiple workflow executions for the same bridge handoff execution key
+- a local store record has already been consumed by a previous handoff attempt
 
-The live bridge result includes `approvalResumeGate` with the gate status, record state, record key, attempt index, owner, and recoverable error details when blocked. Multi-Symbiote aggregate reports also list `blockedExecutionKeys`. Only `approved` and `resume_approved` records are safe to hand off.
+The live bridge result includes `approvalResumeGate` with the gate status, record state, record key, attempt index, owner, optional local-store `consumptionEvent`, and recoverable error details when blocked. Multi-Symbiote aggregate reports also list `blockedExecutionKeys`. Only `approved` and `resume_approved` records are safe to hand off.
 
 Durable ledger ownership, replay blocking, consumption events, and persistence non-goals are defined separately in the [durable approval/resume ledger state boundary](durable-approval-resume-ledger-boundary.md). The current local adapter keeps those rules inside FURYOKU-owned approval/resume state and remains a bounded persistence scaffold, not a workflow scheduler.
 
@@ -97,6 +98,17 @@ python -m furyoku.cli hermes-bridge `
   --registry .\examples\model_registry.example.json `
   --envelope .\examples\hermes_bridge_one_symbiote.example.json `
   --approval-resume-record .\examples\hermes_approval_resume_gate.approved.json `
+  --require-approval-resume `
+  --handoff-command python .\examples\hermes_bridge_echo_runtime.py
+```
+
+Example local store-backed gate:
+
+```powershell
+python -m furyoku.cli hermes-bridge `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_one_symbiote.example.json `
+  --approval-resume-store .\operator-state\approval-resume-store.json `
   --require-approval-resume `
   --handoff-command python .\examples\hermes_bridge_echo_runtime.py
 ```
