@@ -15,8 +15,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Latest completed support lane: [#268](https://github.com/JKhyro/FURYOKU/issues/268) added local resume record preview/append support after the [#266](https://github.com/JKhyro/FURYOKU/issues/266) operator resume workflow contract
-- Next support lane: select a fresh bounded [#230](https://github.com/JKhyro/FURYOKU/issues/230) child from current GitHub/local truth; do not infer runtime launch or scheduler expansion from the completed operator lane
+- Latest completed support lane: [#272](https://github.com/JKhyro/FURYOKU/issues/272) validated the local report -> preview -> append -> readiness operator resume loop after [#270](https://github.com/JKhyro/FURYOKU/issues/270) reconciled the completed [#266](https://github.com/JKhyro/FURYOKU/issues/266) / [#268](https://github.com/JKhyro/FURYOKU/issues/268) operator lane
+- Next support lane: select a fresh bounded [#230](https://github.com/JKhyro/FURYOKU/issues/230) child from current GitHub/local truth; do not infer runtime launch, scheduler expansion, or Ubuntu/WSL/Ubuntu-VM work from the completed operator lane
 
 ## Current Baseline
 
@@ -123,6 +123,7 @@ Current routing core:
 - Local approval/resume stores can be inspected with `approval-resume-store-report` to review matching records, consumption events, and gate readiness without loading a model registry or invoking Hermes.
 - The operator resume workflow contract defines how a consumed or blocked local-store report becomes a new append-only `resume_requested` or `resume_approved` record without adding a scheduler or hidden runtime state.
 - `approval-resume-create` previews that operator resume record by default and appends it to the local store only with `--append`.
+- The completed local operator loop is: inspect a consumed record with `approval-resume-store-report`, preview a retry with `approval-resume-create`, append the reviewed retry with `--append`, and re-run the report to confirm the appended `resume_approved` record is ready.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
@@ -153,7 +154,7 @@ Current routing core:
 - Comparative execution reports can append one feedback record per executed candidate so future recommendation and routing runs can learn from same-prompt comparison results.
 - Suite-level comparative execution batches can now compare multiple decision-suite situations in one aggregate report using a prompt-map input.
 - Suite-level `compare-batch` reports can append one feedback record per executed candidate so aggregate comparative batches feed the same reusable feedback-evidence loop.
-- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `compare-batch`, `health`, `approval-resume-store-report`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, local approval/resume store inspection, comparative execution, CHARACTER role selection, and selected role execution.
+- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `compare-batch`, `health`, `approval-resume-store-report`, `approval-resume-create`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, local approval/resume store inspection and retry-record creation, comparative execution, CHARACTER role selection, and selected role execution.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/decision_suite.primary-routing.json`](examples/decision_suite.primary-routing.json) shows a reusable multi-situation decision suite.
 - [`examples/comparison_prompt_map.primary-routing.json`](examples/comparison_prompt_map.primary-routing.json) shows a reusable prompt-map for suite-level comparative execution batches.

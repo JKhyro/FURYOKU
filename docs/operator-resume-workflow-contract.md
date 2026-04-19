@@ -1,6 +1,6 @@
 # Operator Resume Workflow Contract
 
-Tracked by [issue #266](https://github.com/JKhyro/FURYOKU/issues/266) under parent [#230](https://github.com/JKhyro/FURYOKU/issues/230).
+Tracked by [issue #266](https://github.com/JKhyro/FURYOKU/issues/266) under parent [#230](https://github.com/JKhyro/FURYOKU/issues/230). The local command implementation landed in [#268](https://github.com/JKhyro/FURYOKU/issues/268), status reconciliation landed in [#270](https://github.com/JKhyro/FURYOKU/issues/270), and the report -> preview -> append -> readiness smoke landed in [#272](https://github.com/JKhyro/FURYOKU/issues/272).
 
 ## Purpose
 
@@ -71,6 +71,8 @@ The checked-in fixture [operator_resume_workflow.example.json](../examples/opera
 
 The local store fixture [operator_resume_loop_store.example.json](../examples/operator_resume_loop_store.example.json) is used for the operator smoke that runs `approval-resume-store-report`, previews a retry, appends it with `approval-resume-create --append`, and confirms the appended `resume_approved` record is ready.
 
+That loop remains a local operator proof only. It does not add an automatic retry loop, scheduler, queue runner, Ubuntu/WSL launch path, Hermes launch, or OpenClaw runtime dependency.
+
 ## Non-Goals
 
 This contract does not authorize:
@@ -84,4 +86,4 @@ This contract does not authorize:
 - provider secret persistence
 - full seven-Symbiote production operation
 
-Issue [#268](https://github.com/JKhyro/FURYOKU/issues/268) added the bounded local command to preview or append resume approval records while preserving this contract.
+Issue [#268](https://github.com/JKhyro/FURYOKU/issues/268) added the bounded local command to preview or append resume approval records while preserving this contract. Issue [#272](https://github.com/JKhyro/FURYOKU/issues/272) validated the complete local operator loop from blocked consumed record through ready appended retry.

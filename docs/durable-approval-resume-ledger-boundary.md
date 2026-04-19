@@ -14,11 +14,15 @@ Operator resume workflow issue: [#266](https://github.com/JKhyro/FURYOKU/issues/
 
 Operator resume command issue: [#268](https://github.com/JKhyro/FURYOKU/issues/268)
 
+Operator lane status reconciliation issue: [#270](https://github.com/JKhyro/FURYOKU/issues/270)
+
+Operator resume loop smoke issue: [#272](https://github.com/JKhyro/FURYOKU/issues/272)
+
 ## Purpose
 
 FURYOKU now has approval/resume records for one-Symbiote handoffs, multi-Symbiote ledger gating, and a checked-in seven-Symbiote approval fixture. This document defines the durable state boundary that a later implementation can use without adding a second scheduler, hidden shared state, or Hermes-owned coordination state.
 
-This boundary started as a contract only. Issue #258 added the first local JSON-backed adapter prototype for the ledger operations below, issue #260 wired that adapter into the existing bridge gate path, issue #262 added an operator-facing inspection report for the local store, issue #266 defined the bounded operator resume workflow contract, and issue #268 added the local resume record preview/append command. Durable workflow scheduling and a full runtime store remain out of scope.
+This boundary started as a contract only. Issue #258 added the first local JSON-backed adapter prototype for the ledger operations below, issue #260 wired that adapter into the existing bridge gate path, issue #262 added an operator-facing inspection report for the local store, issue #266 defined the bounded operator resume workflow contract, issue #268 added the local resume record preview/append command, issue #270 reconciled the operator-lane status after that command landed, and issue #272 validated the local report -> preview -> append -> readiness smoke. Durable workflow scheduling and a full runtime store remain out of scope.
 
 ## Ownership Boundary
 
@@ -152,5 +156,7 @@ When the bridge consumes a local-store approval record, it appends a `started` c
 `approval-resume-store-report` gives operators a read-only report over the same local store. With a `handoffExecutionKey`, it returns the matching records, consumption events, summary counts, and gate readiness or recoverable blocking code that a bridge gate would use.
 
 `approval-resume-create` can preview a candidate resume record, or append it with `--append`, while preserving the contract boundary: append-only records, explicit operator identity, evidence references instead of hidden memory, and no scheduler or runtime loop.
+
+The focused #272 smoke proves the local-only operator loop without launching Hermes: a consumed local-store report blocks replay, `approval-resume-create` previews a reviewed `resume_approved` retry, `--append` persists it, and a final report marks that retry `resume-ready`.
 
 This adapter path is a bounded local persistence scaffold. It is not a durable workflow scheduler, a queue runner, or a Hermes-owned approval store.
