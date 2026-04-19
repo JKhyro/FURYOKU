@@ -10,10 +10,14 @@ from pathlib import Path
 from furyoku import (
     HermesBridgeEnvelope,
     HermesBridgeError,
+    HermesBridgeThreeSymbioteSmokeEnvelope,
     ModelEndpoint,
     dry_run_hermes_bridge,
+    dry_run_three_symbiote_smoke,
     live_run_hermes_bridge,
+    live_run_three_symbiote_smoke,
     load_hermes_bridge_envelope,
+    load_hermes_three_symbiote_smoke,
 )
 
 
@@ -60,6 +64,22 @@ def envelope_payload() -> dict:
             "fallback": True,
             "maxAttempts": 2,
         },
+    }
+
+
+def three_symbiote_payload() -> dict:
+    payloads = []
+    for index, role in enumerate(("primary", "research", "synthesis"), start=1):
+        payload = envelope_payload()
+        payload["symbioteId"] = f"symbiote-{index:02d}"
+        payload["role"] = role
+        payload["task"]["taskId"] = f"hermes.bridge.three-symbiote.{role}"
+        payload["prompt"] = f"Confirm the {role} three-Symbiote smoke handoff."
+        payloads.append(payload)
+    return {
+        "schemaVersion": 1,
+        "smokeId": "hermes.bridge.three-symbiote",
+        "symbiotes": payloads,
     }
 
 
@@ -191,6 +211,91 @@ class HermesBridgeTests(unittest.TestCase):
         self.assertEqual(payload["execution"]["status"], "error")
         self.assertEqual(payload["execution"]["exitCode"], 3)
         self.assertEqual(payload["error"]["code"], "handoff_process_failed")
+
+    def test_loads_three_symbiote_smoke_envelope(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "three-smoke.json"
+            path.write_text(json.dumps(three_symbiote_payload()), encoding="utf-8")
+
+            envelope = load_hermes_three_symbiote_smoke(path)
+
+        self.assertEqual(envelope.smoke_id, "hermes.bridge.three-symbiote")
+        self.assertEqual(len(envelope.symbiotes), 3)
+        self.assertEqual(
+            envelope.execution_keys,
+            (
+                "symbiote-01:primary:hermes.bridge.three-symbiote.primary",
+                "symbiote-02:research:hermes.bridge.three-symbiote.research",
+                "symbiote-03:synthesis:hermes.bridge.three-symbiote.synthesis",
+            ),
+        )
+
+    def test_three_symbiote_smoke_requires_exactly_three_symbiotes(self):
+        payload = three_symbiote_payload()
+        payload["symbiotes"] = payload["symbiotes"][:2]
+
+        with self.assertRaises(HermesBridgeError) as error:
+            HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(payload)
+
+        self.assertIn("exactly three Symbiotes", str(error.exception))
+
+    def test_three_symbiote_dry_run_routes_three_distinct_handoffs(self):
+        envelope = HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(three_symbiote_payload())
+
+        result = dry_run_three_symbiote_smoke(
+            [local_endpoint(), cli_endpoint()],
+            envelope,
+            command_resolver=lambda command: command if command == sys.executable else None,
+        )
+        payload = result.to_dict()
+
+        self.assertTrue(result.ok)
+        self.assertEqual(payload["mode"], "dry_run")
+        self.assertEqual(payload["handoff"]["status"], "dry-run-ready")
+        self.assertEqual(payload["execution"]["status"], "not-started")
+        self.assertEqual(payload["aggregate"]["totalSymbiotes"], 3)
+        self.assertEqual(payload["aggregate"]["succeeded"], 3)
+        self.assertEqual(payload["duplicateGuard"]["duplicates"], [])
+        self.assertEqual([item["selectedModel"]["modelId"] for item in payload["results"]], ["local-echo"] * 3)
+
+    def test_three_symbiote_dry_run_prevents_duplicate_execution_key(self):
+        payload = three_symbiote_payload()
+        payload["symbiotes"][1]["symbioteId"] = payload["symbiotes"][0]["symbioteId"]
+        payload["symbiotes"][1]["role"] = payload["symbiotes"][0]["role"]
+        payload["symbiotes"][1]["task"]["taskId"] = payload["symbiotes"][0]["task"]["taskId"]
+        envelope = HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(payload)
+
+        result = dry_run_three_symbiote_smoke([local_endpoint()], envelope)
+        report = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(report["aggregate"]["duplicatesPrevented"], 1)
+        self.assertEqual(report["results"][1]["handoff"]["status"], "duplicate-prevented")
+        self.assertFalse(report["results"][1]["execution"]["started"])
+        self.assertEqual(report["error"]["code"], "three_symbiote_smoke_incomplete")
+
+    def test_three_symbiote_live_run_invokes_ordered_handoffs(self):
+        envelope = HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(three_symbiote_payload())
+        result = live_run_three_symbiote_smoke(
+            [local_endpoint()],
+            envelope,
+            handoff_command=(
+                sys.executable,
+                "-c",
+                "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'status':'ok','executionKey':payload['envelope']['executionKey']}))",
+            ),
+        )
+        payload = result.to_dict()
+
+        self.assertTrue(result.ok)
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["handoff"]["status"], "completed")
+        self.assertEqual(payload["execution"]["status"], "succeeded")
+        self.assertEqual(payload["aggregate"]["succeeded"], 3)
+        self.assertEqual(
+            [item["execution"]["runtimePayload"]["executionKey"] for item in payload["results"]],
+            list(envelope.execution_keys),
+        )
 
 
 class HermesBridgeCliTests(unittest.TestCase):
@@ -355,3 +460,57 @@ class HermesBridgeCliTests(unittest.TestCase):
         self.assertEqual(payload["mode"], "live")
         self.assertEqual(payload["handoff"]["status"], "completed")
         self.assertEqual(payload["execution"]["runtimePayload"]["received"], "symbiote-01:primary:hermes.bridge.one-symbiote")
+
+    def test_cli_three_symbiote_dry_run_outputs_aggregate_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            registry_path = temp_path / "models.json"
+            envelope_path = temp_path / "three-smoke.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "models": [
+                            {
+                                "modelId": "local-echo",
+                                "provider": "local",
+                                "privacyLevel": "local",
+                                "contextWindowTokens": 4096,
+                                "averageLatencyMs": 10,
+                                "invocation": [sys.executable, "-c", "print('ready')"],
+                                "capabilities": {
+                                    "conversation": 0.95,
+                                    "instruction_following": 0.9,
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            envelope_path.write_text(json.dumps(three_symbiote_payload()), encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-three-smoke",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(envelope_path),
+                    "--dry-run",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["bridge"], "hermes-furyoku")
+        self.assertEqual(payload["smoke"]["symbioteCount"], 3)
+        self.assertEqual(payload["aggregate"]["succeeded"], 3)
+        self.assertEqual(len(payload["results"]), 3)
