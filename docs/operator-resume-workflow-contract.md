@@ -82,4 +82,4 @@ This contract does not authorize:
 - provider secret persistence
 - full seven-Symbiote production operation
 
-Issue [#268](https://github.com/JKhyro/FURYOKU/issues/268) adds the bounded local command to preview or append resume approval records while preserving this contract.
+Issue [#268](https://github.com/JKhyro/FURYOKU/issues/268) added the bounded local command to preview or append resume approval records while preserving this contract.

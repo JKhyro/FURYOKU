@@ -18,7 +18,7 @@ Operator resume command issue: [#268](https://github.com/JKhyro/FURYOKU/issues/2
 
 FURYOKU now has approval/resume records for one-Symbiote handoffs, multi-Symbiote ledger gating, and a checked-in seven-Symbiote approval fixture. This document defines the durable state boundary that a later implementation can use without adding a second scheduler, hidden shared state, or Hermes-owned coordination state.
 
-This boundary started as a contract only. Issue #258 added the first local JSON-backed adapter prototype for the ledger operations below, issue #260 wired that adapter into the existing bridge gate path, issue #262 added an operator-facing inspection report for the local store, and issue #266 defines the bounded operator resume workflow contract. Durable workflow scheduling and a full runtime store remain out of scope.
+This boundary started as a contract only. Issue #258 added the first local JSON-backed adapter prototype for the ledger operations below, issue #260 wired that adapter into the existing bridge gate path, issue #262 added an operator-facing inspection report for the local store, issue #266 defined the bounded operator resume workflow contract, and issue #268 added the local resume record preview/append command. Durable workflow scheduling and a full runtime store remain out of scope.
 
 ## Ownership Boundary
 
