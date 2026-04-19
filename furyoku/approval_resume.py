@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from .workflow_envelope import OperatorReviewedHermesWorkflowEnvelope, WorkflowEnvelopeError
 
@@ -614,6 +614,166 @@ def approval_resume_record_from_workflow_envelope(
 
 def load_local_approval_resume_ledger_adapter(path: str | Path) -> LocalApprovalResumeLedgerAdapter:
     return LocalApprovalResumeLedgerAdapter(path)
+
+
+def build_local_approval_resume_store_report(
+    adapter: LocalApprovalResumeLedgerAdapter,
+    *,
+    handoff_execution_key: str | None = None,
+    workflow_execution_key: str | None = None,
+) -> dict:
+    records = adapter.records
+    if handoff_execution_key:
+        records = tuple(record for record in records if record.handoff_execution_key == handoff_execution_key)
+    if workflow_execution_key:
+        records = tuple(record for record in records if record.workflow_execution_key == workflow_execution_key)
+
+    record_keys = {record.record_key for record in records}
+    consumption_events = tuple(
+        event
+        for event in adapter.consumption_events
+        if event.record_key in record_keys
+    )
+    record_reports = [_local_store_record_report(adapter, record) for record in records]
+    return {
+        "schemaVersion": 1,
+        "reportType": "local-approval-resume-store",
+        "storePath": str(adapter.path),
+        "filters": {
+            "handoffExecutionKey": handoff_execution_key,
+            "workflowExecutionKey": workflow_execution_key,
+        },
+        "ok": True,
+        "summary": {
+            "totalRecords": len(adapter.records),
+            "totalConsumptionEvents": len(adapter.consumption_events),
+            "filteredRecords": len(record_reports),
+            "filteredConsumptionEvents": len(consumption_events),
+            "readyRecords": sum(1 for record in record_reports if record["gateStatus"] in {"ready", "resume-ready"}),
+            "consumedRecords": sum(1 for record in record_reports if record["gateStatus"] == "consumed"),
+            "blockedRecords": sum(1 for record in record_reports if record["gateStatus"] == "blocked"),
+            "handoffExecutionKeys": _unique_values(record.handoff_execution_key for record in records),
+            "workflowExecutionKeys": _unique_values(record.workflow_execution_key for record in records),
+        },
+        "gate": _local_store_gate_report(
+            adapter,
+            handoff_execution_key=handoff_execution_key,
+            workflow_execution_key=workflow_execution_key,
+        ),
+        "records": record_reports,
+        "consumptionEvents": [event.to_dict() for event in consumption_events],
+    }
+
+
+def _local_store_record_report(adapter: LocalApprovalResumeLedgerAdapter, record: ApprovalResumeRecord) -> dict:
+    consumption_events = adapter.consumption_events_for_record(record.record_key)
+    if consumption_events:
+        gate_status = "consumed"
+    elif record.safe_to_handoff:
+        gate_status = "resume-ready" if record.state == "resume_approved" else "ready"
+    else:
+        gate_status = "blocked"
+    payload = record.to_dict()
+    payload.update(
+        {
+            "gateStatus": gate_status,
+            "consumed": bool(consumption_events),
+            "consumptionEvents": [event.to_dict() for event in consumption_events],
+        }
+    )
+    return payload
+
+
+def _local_store_gate_report(
+    adapter: LocalApprovalResumeLedgerAdapter,
+    *,
+    handoff_execution_key: str | None,
+    workflow_execution_key: str | None,
+) -> dict:
+    if not handoff_execution_key:
+        return {
+            "status": "not-selected",
+            "ready": False,
+            "handoffExecutionKey": None,
+            "workflowExecutionKey": workflow_execution_key,
+            "recordKey": None,
+            "recordState": None,
+            "error": None,
+        }
+    try:
+        record = adapter.latest_gate_record(
+            handoff_execution_key,
+            workflow_execution_key=workflow_execution_key,
+        )
+    except ApprovalResumeError as exc:
+        return {
+            "status": "blocked",
+            "ready": False,
+            "handoffExecutionKey": handoff_execution_key,
+            "workflowExecutionKey": workflow_execution_key,
+            "recordKey": None,
+            "recordState": None,
+            "error": {
+                "recoverable": True,
+                "code": "approval_resume_ambiguous_handoff",
+                "message": str(exc),
+            },
+        }
+    if record is None:
+        return {
+            "status": "blocked",
+            "ready": False,
+            "handoffExecutionKey": handoff_execution_key,
+            "workflowExecutionKey": workflow_execution_key,
+            "recordKey": None,
+            "recordState": None,
+            "error": {
+                "recoverable": True,
+                "code": "approval_resume_record_missing",
+                "message": f"approval/resume local store has no record for {handoff_execution_key}",
+            },
+        }
+    if adapter.is_record_consumed(record.record_key):
+        return {
+            "status": "blocked",
+            "ready": False,
+            "handoffExecutionKey": handoff_execution_key,
+            "workflowExecutionKey": record.workflow_execution_key,
+            "recordKey": record.record_key,
+            "recordState": record.state,
+            "error": {
+                "recoverable": True,
+                "code": "approval_resume_record_consumed",
+                "message": f"approval/resume record {record.record_key} was already consumed",
+            },
+        }
+    if not record.safe_to_handoff:
+        return {
+            "status": "blocked",
+            "ready": False,
+            "handoffExecutionKey": handoff_execution_key,
+            "workflowExecutionKey": record.workflow_execution_key,
+            "recordKey": record.record_key,
+            "recordState": record.state,
+            "error": {
+                "recoverable": True,
+                "code": "approval_resume_not_safe",
+                "message": f"approval/resume record state {record.state!r} is not safe to hand off",
+            },
+        }
+    return {
+        "status": "resume-ready" if record.state == "resume_approved" else "ready",
+        "ready": True,
+        "handoffExecutionKey": handoff_execution_key,
+        "workflowExecutionKey": record.workflow_execution_key,
+        "recordKey": record.record_key,
+        "recordState": record.state,
+        "error": None,
+    }
+
+
+def _unique_values(values: Iterable[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
 
 
 def _record_order_key(record: ApprovalResumeRecord) -> tuple[int, str, str]:

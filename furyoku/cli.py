@@ -31,6 +31,7 @@ from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResu
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .approval_resume import (
     ApprovalResumeError,
+    build_local_approval_resume_store_report,
     load_approval_resume_ledger,
     load_approval_resume_record,
     load_local_approval_resume_ledger_adapter,
@@ -91,6 +92,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             evidence_sources=args.evidence_source,
         )
         _write_json(report.to_dict(), output_path=args.output)
+        return 0
+
+    if args.command == "approval-resume-store-report":
+        try:
+            report = build_local_approval_resume_store_report(
+                load_local_approval_resume_ledger_adapter(args.store),
+                handoff_execution_key=args.handoff_execution_key,
+                workflow_execution_key=args.workflow_execution_key,
+            )
+        except ApprovalResumeError as exc:
+            parser.error(str(exc))
+        _write_json(report, output_path=args.output)
         return 0
 
     models = load_model_registry(args.registry)
@@ -588,6 +601,29 @@ def _build_parser() -> argparse.ArgumentParser:
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
     health_parser.add_argument("--probe-prompt", default="", help="Prompt text used when --probe is set.")
     health_parser.add_argument("--timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    approval_store_report_parser = subparsers.add_parser(
+        "approval-resume-store-report",
+        help="Inspect a local approval/resume store without invoking Hermes.",
+    )
+    approval_store_report_parser.add_argument(
+        "--store",
+        required=True,
+        type=Path,
+        help="Path to the local JSON-backed approval/resume store.",
+    )
+    approval_store_report_parser.add_argument(
+        "--handoff-execution-key",
+        help="Optional handoff execution key filter and gate readiness check.",
+    )
+    approval_store_report_parser.add_argument(
+        "--workflow-execution-key",
+        help="Optional workflow execution key filter.",
+    )
+    approval_store_report_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to persist the JSON local-store inspection report.",
+    )
     bridge_parser = subparsers.add_parser(
         "hermes-bridge",
         help="Validate and route a one-Symbiote Hermes/FURYOKU handoff envelope.",

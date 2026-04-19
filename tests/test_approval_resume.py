@@ -1,6 +1,8 @@
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 from furyoku import (
@@ -8,6 +10,7 @@ from furyoku import (
     ApprovalResumeError,
     LocalApprovalResumeLedgerAdapter,
     approval_resume_record_from_workflow_envelope,
+    build_local_approval_resume_store_report,
     load_approval_resume_ledger,
     load_approval_resume_record,
     load_local_approval_resume_ledger_adapter,
@@ -15,6 +18,7 @@ from furyoku import (
     parse_approval_resume_record,
     parse_operator_reviewed_workflow_envelope,
 )
+from furyoku.cli import main as cli_main
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -306,6 +310,81 @@ class ApprovalResumeContractTests(unittest.TestCase):
                 adapter.select_gate_record_for_handoff(HANDOFF_EXECUTION_KEY)
 
         self.assertIn("already consumed", str(error.exception))
+
+    def test_local_store_report_summarizes_ready_and_consumed_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            record = parse_approval_resume_record(
+                record_payload(
+                    recordState="approved",
+                    approvedBy="operator",
+                    approvedAtUtc="2026-04-19T01:00:00Z",
+                )
+            )
+
+            adapter.append_record(record)
+            ready_report = build_local_approval_resume_store_report(
+                adapter,
+                handoff_execution_key=HANDOFF_EXECUTION_KEY,
+            )
+            adapter.append_consumption_event(
+                ApprovalResumeConsumptionEvent.from_record(
+                    record,
+                    execution_key="bridge-run-001",
+                    result_status="succeeded",
+                    started_at_utc="2026-04-19T01:01:00Z",
+                    finished_at_utc="2026-04-19T01:02:00Z",
+                )
+            )
+            consumed_report = build_local_approval_resume_store_report(
+                adapter,
+                handoff_execution_key=HANDOFF_EXECUTION_KEY,
+            )
+
+        self.assertTrue(ready_report["gate"]["ready"])
+        self.assertEqual(ready_report["gate"]["status"], "ready")
+        self.assertEqual(ready_report["summary"]["readyRecords"], 1)
+        self.assertEqual(ready_report["records"][0]["gateStatus"], "ready")
+        self.assertFalse(consumed_report["gate"]["ready"])
+        self.assertEqual(consumed_report["gate"]["status"], "blocked")
+        self.assertEqual(consumed_report["gate"]["error"]["code"], "approval_resume_record_consumed")
+        self.assertEqual(consumed_report["summary"]["readyRecords"], 0)
+        self.assertEqual(consumed_report["summary"]["consumedRecords"], 1)
+        self.assertEqual(consumed_report["records"][0]["gateStatus"], "consumed")
+        self.assertEqual(consumed_report["records"][0]["consumptionEvents"][0]["executionKey"], "bridge-run-001")
+
+    def test_cli_reports_local_store_without_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "approval-store.json"
+            adapter = LocalApprovalResumeLedgerAdapter(path)
+            adapter.append_record(
+                parse_approval_resume_record(
+                    record_payload(
+                        recordState="approved",
+                        approvedBy="operator",
+                        approvedAtUtc="2026-04-19T01:00:00Z",
+                    )
+                )
+            )
+            stdout = StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = cli_main(
+                    [
+                        "approval-resume-store-report",
+                        "--store",
+                        str(path),
+                        "--handoff-execution-key",
+                        HANDOFF_EXECUTION_KEY,
+                    ]
+                )
+            report = json.loads(stdout.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(report["reportType"], "local-approval-resume-store")
+        self.assertEqual(report["gate"]["status"], "ready")
+        self.assertEqual(report["summary"]["filteredRecords"], 1)
+        self.assertEqual(report["records"][0]["handoffExecutionKey"], HANDOFF_EXECUTION_KEY)
 
     def test_local_adapter_rejects_consumption_event_for_wrong_handoff(self):
         with tempfile.TemporaryDirectory() as temp_dir:
