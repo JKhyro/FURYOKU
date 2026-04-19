@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document records the completed issue [#232](https://github.com/JKhyro/FURYOKU/issues/232) launch bridge and the active issue [#238](https://github.com/JKhyro/FURYOKU/issues/238) three-Symbiote coordination smoke.
+This document records the completed issues [#232](https://github.com/JKhyro/FURYOKU/issues/232) and [#238](https://github.com/JKhyro/FURYOKU/issues/238), plus the active issue [#240](https://github.com/JKhyro/FURYOKU/issues/240) seven-Symbiote coordination smoke.
 
 Parent migration lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230).
 
@@ -217,4 +217,39 @@ python -m furyoku.cli hermes-three-smoke `
     --max-turns 1
 ```
 
-Do not advance to seven-Symbiote coordination until this three-Symbiote smoke establishes bounded coordination behavior.
+## Seven-Symbiote Smoke Contract
+
+Issue [#240](https://github.com/JKhyro/FURYOKU/issues/240) scales the proven three-Symbiote smoke into exactly seven ordered one-Symbiote handoffs. This is the first full swarm-count smoke, but it still avoids broad runtime feature parity and OpenClaw carryover inventory.
+
+Example dry-run:
+
+```powershell
+python -m furyoku.cli hermes-seven-smoke `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_seven_symbiote.example.json `
+  --dry-run
+```
+
+Expected aggregate output contract:
+
+- exactly seven Symbiote handoff results
+- ordered execution keys derived from `symbioteId`, `role`, and `taskId`
+- per-Symbiote selected model, handoff status, execution status, timing, and recoverable error details
+- aggregate counts for succeeded, failed, and duplicate-prevented handoffs
+- no duplicate execution if two handoffs claim the same execution key
+
+Live mode reuses the one-Symbiote process boundary and invokes the configured handoff command once per ordered Symbiote:
+
+```powershell
+python -m furyoku.cli hermes-seven-smoke `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_seven_symbiote.example.json `
+  --timeout-seconds 180 `
+  --handoff-command wsl -d Ubuntu python3 /mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh/examples/hermes_bridge_hermes_runtime.py `
+    --hermes-command /root/.venvs/hermes-agent-smoke/bin/hermes `
+    --provider copilot `
+    --model gpt-4.1 `
+    --max-turns 1
+```
+
+Do not advance to OpenClaw carryover inventory until this seven-Symbiote smoke establishes bounded coordination behavior.
