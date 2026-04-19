@@ -35,13 +35,9 @@ The first read-only source check against `JKhyro/HERMES-AGENT` shows the mirror 
 
 Current host stance: do not treat Ubuntu, WSL, or Ubuntu-VM launch as a standing prerequisite for #230 work. Any future runtime launch path must be selected by a separately formalized child issue; until then, continue local FURYOKU-side contract, bridge, approval/resume, and documentation work without invoking Hermes.
 
-## Fast Migration Order
+## Completed Migration Path
 
-1. Confirm the local Hermes Agent source path, launch command, config path, and current runnable state.
-2. Define the minimal Hermes/FURYOKU swarm contract for seven Symbiotes: identity, role, allowed model lane, state boundary, task queue ownership, and stop/retry behavior.
-3. Build or adapt the first local bridge so FURYOKU can route selected model/provider calls into the Hermes runtime without bypassing provider health and benchmark-truth evidence.
-4. Run a one-Symbiote smoke, then a three-Symbiote coordination smoke, then the full seven-Symbiote smoke.
-5. Inventory OpenClaw features and port only the pieces that improve Hermes/FURYOKU without recreating the coordination failure modes.
+The first #230 migration path is no longer pending. The completed path confirmed the local Hermes source and process-boundary shape, added the first FURYOKU-owned bridge, scaled it from one to three to seven ordered Symbiote handoffs, inventoried OpenClaw carryover as a feature source only, and added the approval/resume contracts that keep handoffs operator-reviewed and replay-safe.
 
 The smoke path through seven ordered Symbiote handoffs is complete through issue [#240](https://github.com/JKhyro/FURYOKU/issues/240). The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), recorded in [OpenClaw carryover inventory](openclaw-carryover-inventory.md). The routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246), the [execution-keyed approval/resume contract](approval-resume-contract.md) completed in [#248](https://github.com/JKhyro/FURYOKU/issues/248), one-Symbiote approval gating completed in [#250](https://github.com/JKhyro/FURYOKU/issues/250), multi-Symbiote approval/resume ledger gating completed in [#252](https://github.com/JKhyro/FURYOKU/issues/252), the reusable seven-Symbiote approval fixture completed in [#254](https://github.com/JKhyro/FURYOKU/issues/254), the durable approval/resume ledger state boundary completed in [#256](https://github.com/JKhyro/FURYOKU/issues/256), the local durable approval/resume adapter completed in [#258](https://github.com/JKhyro/FURYOKU/issues/258), local-store bridge gate integration completed in [#260](https://github.com/JKhyro/FURYOKU/issues/260), local approval/resume store inspection completed in [#262](https://github.com/JKhyro/FURYOKU/issues/262), the [operator resume workflow contract](operator-resume-workflow-contract.md) completed in [#266](https://github.com/JKhyro/FURYOKU/issues/266), the bounded local resume record preview/append command completed in [#268](https://github.com/JKhyro/FURYOKU/issues/268), the operator-lane status reconciliation completed in [#270](https://github.com/JKhyro/FURYOKU/issues/270), and the local operator resume loop smoke completed in [#272](https://github.com/JKhyro/FURYOKU/issues/272). The next #230 child should be selected from fresh GitHub/local truth rather than inferred as a scheduler, launch, Ubuntu/WSL/Ubuntu-VM work, or full runtime expansion.
 
@@ -51,20 +47,20 @@ The smoke path through seven ordered Symbiote handoffs is complete through issue
 - Re-evaluate: agent conversation flow, shared state, task routing, and fallback behavior before porting.
 - Avoid: uncontrolled cross-talk, unclear task ownership, hidden shared mutable state, or any pattern that makes seven agents compete for the same work.
 
-## First Implementation Slice
+## Completed Bridge Slice
 
-The first code-bearing migration issue should be opened after the local Hermes path is confirmed. It should target the smallest possible bridge:
+The first code-bearing migration slice is complete. Its target was the smallest possible bridge:
 
 - input: one Symbiote task envelope with role, prompt, and required model capabilities
 - routing: FURYOKU model selection and provider health checks choose an eligible lane
 - runtime handoff: Hermes/FURYOKU receives exactly one bounded task through the confirmed WSL2 or local process boundary
 - output: structured result with selected model, execution status, latency, and recoverable error details
 
-The first slice should not attempt full OpenClaw parity, long-running memory, remote deployment, or cross-product CORTEX/VECTOR/SYNAPSE integration.
+That bridge was then extended into bounded three- and seven-Symbiote smokes, approval/resume gating, local durable approval/resume state, and an operator-driven local resume loop. Any next implementation child must still be selected explicitly under #230 and must not infer full OpenClaw parity, long-running memory, remote deployment, scheduler ownership, Ubuntu/WSL launch work, or cross-product CORTEX/VECTOR/SYNAPSE integration from the completed bridge path.
 
 ## Verification Plan
 
 - Documentation truth: README and this plan identify Hermes-derived FURYOKU as the active direction.
-- GitHub truth: issue #230 stays In Progress until the first executable bridge issue is opened.
-- Local smoke: one-Symbiote route can run without swarm contention.
-- Scale smoke: seven Symbiotes can hold distinct identities and task boundaries without duplicate execution.
+- GitHub truth: issue #230 stays In Progress while fresh bounded FURYOKU-only child issues remain necessary.
+- Local smoke: one-Symbiote, three-Symbiote, and seven-Symbiote bridge paths have proved bounded handoff contracts without making launch or scheduler work implicit.
+- Scale smoke: seven Symbiotes can hold distinct identities and task boundaries without duplicate execution in the current smoke sequence.
