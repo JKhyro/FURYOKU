@@ -31,6 +31,7 @@ from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResu
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .approval_resume import (
     ApprovalResumeError,
+    build_operator_resume_record,
     build_local_approval_resume_store_report,
     load_approval_resume_ledger,
     load_approval_resume_record,
@@ -104,6 +105,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         except ApprovalResumeError as exc:
             parser.error(str(exc))
         _write_json(report, output_path=args.output)
+        return 0
+
+    if args.command == "approval-resume-create":
+        try:
+            timestamp = _utc_timestamp()
+            record = build_operator_resume_record(
+                load_local_approval_resume_ledger_adapter(args.store),
+                handoff_execution_key=args.handoff_execution_key,
+                workflow_execution_key=args.workflow_execution_key,
+                record_state=args.record_state,
+                requested_by=args.requested_by,
+                reason=args.reason,
+                evidence=_parse_key_value_pairs(args.evidence, field_name="evidence"),
+                approved_by=args.approved_by,
+                approved_at_utc=args.approved_at_utc or timestamp,
+                created_at_utc=args.created_at_utc or timestamp,
+                require_consumption=not (
+                    args.record_state == "resume_requested" and not args.append
+                ),
+            )
+            appended = False
+            if args.append:
+                record = load_local_approval_resume_ledger_adapter(args.store).append_record(record)
+                appended = True
+        except (ApprovalResumeError, argparse.ArgumentTypeError) as exc:
+            parser.error(str(exc))
+        _write_json(
+            {
+                "ok": True,
+                "reportType": "operator-approval-resume-record",
+                "storePath": str(args.store),
+                "action": "appended" if appended else "preview",
+                "record": record.to_dict(),
+            },
+            output_path=args.output,
+        )
         return 0
 
     models = load_model_registry(args.registry)
@@ -623,6 +660,72 @@ def _build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         help="Optional path to persist the JSON local-store inspection report.",
+    )
+    approval_resume_create_parser = subparsers.add_parser(
+        "approval-resume-create",
+        help="Preview or append a bounded operator resume record for a local approval/resume store.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--store",
+        required=True,
+        type=Path,
+        help="Path to the local JSON-backed approval/resume store.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--handoff-execution-key",
+        required=True,
+        help="Handoff execution key whose latest record should be resumed.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--workflow-execution-key",
+        help="Workflow execution key to disambiguate repeated handoff keys.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--record-state",
+        choices=("resume_requested", "resume_approved"),
+        default="resume_requested",
+        help="Resume record state to create. Defaults to a non-handoff-safe request.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--requested-by",
+        required=True,
+        help="Operator or system identity requesting the resume.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--reason",
+        required=True,
+        help="Recoverable operator-reviewed reason for the resume.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--approved-by",
+        help="Operator identity approving the retry. Required for resume_approved.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--approved-at-utc",
+        default="",
+        help="Approval timestamp for resume_approved. Defaults to the current UTC timestamp.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--created-at-utc",
+        default="",
+        help="Creation timestamp for the resume record. Defaults to the current UTC timestamp.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--evidence",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Safe evidence reference to include on the record. Repeat for multiple references.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append the candidate record to the local store. Omit to preview without mutation.",
+    )
+    approval_resume_create_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to persist the JSON operator resume record report.",
     )
     bridge_parser = subparsers.add_parser(
         "hermes-bridge",
@@ -1227,6 +1330,26 @@ def _parse_capabilities(raw_values: Sequence[str]) -> dict[str, float]:
             raise argparse.ArgumentTypeError(f"capability score must be between 0.0 and 1.0: {raw_value}")
         capabilities[name] = score
     return capabilities
+
+
+def _parse_key_value_pairs(raw_values: Sequence[str], *, field_name: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for raw_value in raw_values:
+        if "=" not in raw_value:
+            raise argparse.ArgumentTypeError(f"{field_name} must use KEY=VALUE syntax: {raw_value}")
+        key, value = raw_value.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            raise argparse.ArgumentTypeError(f"{field_name} key must be non-empty")
+        if not value:
+            raise argparse.ArgumentTypeError(f"{field_name}.{key} must be non-empty")
+        values[key] = value
+    return values
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _parse_non_negative_float_arg(raw_value: str) -> float:

@@ -12,6 +12,8 @@ Inspection/report issue: [#262](https://github.com/JKhyro/FURYOKU/issues/262)
 
 Operator resume workflow issue: [#266](https://github.com/JKhyro/FURYOKU/issues/266)
 
+Operator resume command issue: [#268](https://github.com/JKhyro/FURYOKU/issues/268)
+
 ## Purpose
 
 FURYOKU now has approval/resume records for one-Symbiote handoffs, multi-Symbiote ledger gating, and a checked-in seven-Symbiote approval fixture. This document defines the durable state boundary that a later implementation can use without adding a second scheduler, hidden shared state, or Hermes-owned coordination state.
@@ -143,11 +145,12 @@ Issue #258 implements the first local durable ledger adapter in `furyoku/approva
 - JSON report compatibility with the existing bridge output contract
 - operator inspection of record readiness and consumption history without invoking Hermes
 - operator-approved retry records through the [operator resume workflow contract](operator-resume-workflow-contract.md)
+- local preview/append support for operator resume records through `approval-resume-create`
 
 When the bridge consumes a local-store approval record, it appends a `started` consumption event before invoking the external Hermes process boundary. That makes a second invocation with the same approval record block before process execution.
 
 `approval-resume-store-report` gives operators a read-only report over the same local store. With a `handoffExecutionKey`, it returns the matching records, consumption events, summary counts, and gate readiness or recoverable blocking code that a bridge gate would use.
 
-A later operator command may generate or append resume approval records, but it must preserve the contract boundary: append-only records, explicit operator identity, evidence references instead of hidden memory, and no scheduler or runtime loop.
+`approval-resume-create` can preview a candidate resume record, or append it with `--append`, while preserving the contract boundary: append-only records, explicit operator identity, evidence references instead of hidden memory, and no scheduler or runtime loop.
 
 This adapter path is a bounded local persistence scaffold. It is not a durable workflow scheduler, a queue runner, or a Hermes-owned approval store.

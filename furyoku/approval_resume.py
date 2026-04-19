@@ -616,6 +616,82 @@ def load_local_approval_resume_ledger_adapter(path: str | Path) -> LocalApproval
     return LocalApprovalResumeLedgerAdapter(path)
 
 
+def build_operator_resume_record(
+    adapter: LocalApprovalResumeLedgerAdapter,
+    *,
+    handoff_execution_key: str,
+    workflow_execution_key: str | None = None,
+    record_state: str = "resume_requested",
+    requested_by: str,
+    reason: str,
+    evidence: Mapping[str, str] | None = None,
+    approved_by: str | None = None,
+    approved_at_utc: str = "",
+    created_at_utc: str = "",
+    require_consumption: bool = True,
+) -> ApprovalResumeRecord:
+    if not isinstance(handoff_execution_key, str) or not handoff_execution_key.strip():
+        raise ApprovalResumeError("operator resume record requires handoffExecutionKey")
+    if record_state not in {"resume_requested", "resume_approved"}:
+        raise ApprovalResumeError("operator resume record state must be resume_requested or resume_approved")
+    if not isinstance(requested_by, str) or not requested_by.strip():
+        raise ApprovalResumeError("operator resume record requires requestedBy")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ApprovalResumeError("operator resume record requires reason")
+    if record_state == "resume_approved" and not (approved_by or "").strip():
+        raise ApprovalResumeError("resume_approved operator resume record requires approvedBy")
+    if record_state == "resume_approved" and not approved_at_utc.strip():
+        raise ApprovalResumeError("resume_approved operator resume record requires approvedAtUtc")
+
+    prior_record = adapter.latest_gate_record(
+        handoff_execution_key.strip(),
+        workflow_execution_key=(workflow_execution_key or "").strip() or None,
+    )
+    if prior_record is None:
+        raise ApprovalResumeError(
+            f"{adapter.path}: approval/resume local store has no prior record for {handoff_execution_key}"
+        )
+
+    consumption_events = adapter.consumption_events_for_record(prior_record.record_key)
+    if require_consumption and not consumption_events:
+        raise ApprovalResumeError(
+            f"{adapter.path}: operator resume requires consumption evidence for {prior_record.record_key}"
+        )
+
+    attempt_index = prior_record.attempt_index + 1
+    record_key = f"{prior_record.workflow_execution_key}:attempt:{attempt_index}"
+    if any(record.record_key == record_key for record in adapter.records):
+        raise ApprovalResumeError(f"{adapter.path}: duplicate approval/resume record for {record_key}")
+
+    output_evidence = dict(evidence or {})
+    output_evidence.setdefault("previousRecordKey", prior_record.record_key)
+    if consumption_events:
+        output_evidence.setdefault("consumptionEventKey", consumption_events[-1].event_key)
+
+    record = ApprovalResumeRecord(
+        schema_version=1,
+        workflow_id=prior_record.workflow_id,
+        execution_id=prior_record.execution_id,
+        handoff_execution_key=prior_record.handoff_execution_key,
+        state=record_state,
+        owner=prior_record.owner,
+        attempt_index=attempt_index,
+        approved_by=(approved_by or "").strip() or None,
+        approved_at_utc=approved_at_utc,
+        resume=ResumeIntent(
+            resume_of=prior_record.workflow_execution_key,
+            previous_attempt_index=prior_record.attempt_index,
+            requested_by=requested_by.strip(),
+            reason=reason.strip(),
+        ),
+        created_at_utc=created_at_utc,
+        evidence=output_evidence,
+        source=f"{adapter.path}:operator-resume",
+    )
+    record._validate()
+    return record
+
+
 def build_local_approval_resume_store_report(
     adapter: LocalApprovalResumeLedgerAdapter,
     *,

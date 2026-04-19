@@ -10,6 +10,7 @@ from furyoku import (
     ApprovalResumeError,
     LocalApprovalResumeLedgerAdapter,
     approval_resume_record_from_workflow_envelope,
+    build_operator_resume_record,
     build_local_approval_resume_store_report,
     load_approval_resume_ledger,
     load_approval_resume_record,
@@ -386,6 +387,155 @@ class ApprovalResumeContractTests(unittest.TestCase):
         self.assertEqual(report["gate"]["status"], "ready")
         self.assertEqual(report["summary"]["filteredRecords"], 1)
         self.assertEqual(report["records"][0]["handoffExecutionKey"], HANDOFF_EXECUTION_KEY)
+
+    def test_operator_resume_record_builder_requires_consumption_for_approved_retry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
+            adapter.append_record(
+                parse_approval_resume_record(
+                    record_payload(
+                        recordState="approved",
+                        approvedBy="operator",
+                        approvedAtUtc="2026-04-19T01:00:00Z",
+                    )
+                )
+            )
+
+            with self.assertRaises(ApprovalResumeError) as error:
+                build_operator_resume_record(
+                    adapter,
+                    handoff_execution_key=HANDOFF_EXECUTION_KEY,
+                    record_state="resume_approved",
+                    requested_by="operator",
+                    reason="recoverable provider timeout",
+                    approved_by="operator",
+                    approved_at_utc="2026-04-19T01:20:00Z",
+                    created_at_utc="2026-04-19T01:15:00Z",
+                )
+
+        self.assertIn("consumption evidence", str(error.exception))
+
+    def test_cli_previews_operator_resume_record_without_mutating_store(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "approval-store.json"
+            adapter = LocalApprovalResumeLedgerAdapter(path)
+            prior = adapter.append_record(
+                parse_approval_resume_record(
+                    record_payload(
+                        recordState="approved",
+                        approvedBy="operator",
+                        approvedAtUtc="2026-04-19T01:00:00Z",
+                    )
+                )
+            )
+            adapter.append_consumption_event(
+                ApprovalResumeConsumptionEvent.from_record(
+                    prior,
+                    execution_key="bridge-run-001",
+                    result_status="failed",
+                    started_at_utc="2026-04-19T01:01:00Z",
+                    finished_at_utc="2026-04-19T01:02:00Z",
+                    recoverable_error_code="provider_timeout",
+                )
+            )
+            stdout = StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = cli_main(
+                    [
+                        "approval-resume-create",
+                        "--store",
+                        str(path),
+                        "--handoff-execution-key",
+                        HANDOFF_EXECUTION_KEY,
+                        "--record-state",
+                        "resume_approved",
+                        "--requested-by",
+                        "operator",
+                        "--reason",
+                        "recoverable provider timeout",
+                        "--approved-by",
+                        "operator",
+                        "--approved-at-utc",
+                        "2026-04-19T01:20:00Z",
+                        "--created-at-utc",
+                        "2026-04-19T01:15:00Z",
+                        "--evidence",
+                        "issue=#268",
+                    ]
+            )
+            report = json.loads(stdout.getvalue())
+            reloaded = LocalApprovalResumeLedgerAdapter(path)
+            reloaded_record_count = len(reloaded.records)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(report["action"], "preview")
+        self.assertEqual(report["record"]["recordState"], "resume_approved")
+        self.assertEqual(report["record"]["attemptIndex"], 2)
+        self.assertTrue(report["record"]["safeToHandoff"])
+        self.assertEqual(report["record"]["resume"]["resumeOf"], WORKFLOW_EXECUTION_KEY)
+        self.assertEqual(report["record"]["resume"]["previousAttemptIndex"], 1)
+        self.assertEqual(report["record"]["evidence"]["issue"], "#268")
+        self.assertIn("consumptionEventKey", report["record"]["evidence"])
+        self.assertEqual(reloaded_record_count, 1)
+
+    def test_cli_appends_operator_resume_record_once(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "approval-store.json"
+            adapter = LocalApprovalResumeLedgerAdapter(path)
+            prior = adapter.append_record(
+                parse_approval_resume_record(
+                    record_payload(
+                        recordState="approved",
+                        approvedBy="operator",
+                        approvedAtUtc="2026-04-19T01:00:00Z",
+                    )
+                )
+            )
+            adapter.append_consumption_event(
+                ApprovalResumeConsumptionEvent.from_record(
+                    prior,
+                    execution_key="bridge-run-001",
+                    result_status="failed",
+                    recoverable_error_code="provider_timeout",
+                )
+            )
+            stdout = StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = cli_main(
+                    [
+                        "approval-resume-create",
+                        "--store",
+                        str(path),
+                        "--handoff-execution-key",
+                        HANDOFF_EXECUTION_KEY,
+                        "--record-state",
+                        "resume_approved",
+                        "--requested-by",
+                        "operator",
+                        "--reason",
+                        "recoverable provider timeout",
+                        "--approved-by",
+                        "operator",
+                        "--approved-at-utc",
+                        "2026-04-19T01:20:00Z",
+                        "--created-at-utc",
+                        "2026-04-19T01:15:00Z",
+                        "--evidence",
+                        "issue=#268",
+                        "--append",
+                    ]
+            )
+            report = json.loads(stdout.getvalue())
+            reloaded = LocalApprovalResumeLedgerAdapter(path)
+            reloaded_records = reloaded.records
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(report["action"], "appended")
+        self.assertEqual(len(reloaded_records), 2)
+        self.assertEqual(reloaded_records[1].state, "resume_approved")
+        self.assertEqual(reloaded_records[1].attempt_index, 2)
 
     def test_local_adapter_rejects_consumption_event_for_wrong_handoff(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -15,8 +15,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Latest completed support lane: [#262](https://github.com/JKhyro/FURYOKU/issues/262) added a local approval/resume store inspection report
-- Bounded resume/operator contract lane: [#266](https://github.com/JKhyro/FURYOKU/issues/266) defines the operator resume workflow before any generation command or runtime implementation
+- Latest completed support lane: [#266](https://github.com/JKhyro/FURYOKU/issues/266) defined the bounded operator resume workflow contract
+- Active bounded operator command lane: [#268](https://github.com/JKhyro/FURYOKU/issues/268) adds local resume record preview/append support without runtime launch expansion
 
 ## Current Baseline
 
@@ -122,6 +122,7 @@ Current routing core:
 - Live Hermes bridge handoffs can require approval/resume evidence from a record, ledger fixture, or local JSON-backed store and block before process invocation unless the latest matching record is `approved` or `resume_approved` for the exact bridge execution key.
 - Local approval/resume stores can be inspected with `approval-resume-store-report` to review matching records, consumption events, and gate readiness without loading a model registry or invoking Hermes.
 - The operator resume workflow contract defines how a consumed or blocked local-store report becomes a new append-only `resume_requested` or `resume_approved` record without adding a scheduler or hidden runtime state.
+- `approval-resume-create` previews that operator resume record by default and appends it to the local store only with `--append`.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.

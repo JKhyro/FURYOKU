@@ -34,7 +34,7 @@ The operator should obtain these values from `approval-resume-store-report`, the
 6. Set `resume.resumeOf` to the exact `workflowExecutionKey` and `resume.previousAttemptIndex` to the consumed attempt.
 7. Use `resume_requested` when the operator is recording intent only.
 8. Use `resume_approved` only when the operator has approved the retry and the record is safe to hand off.
-9. Append the new record to the FURYOKU-owned approval/resume store through a future bounded command or an explicitly reviewed store update.
+9. Append the new record to the FURYOKU-owned approval/resume store through `approval-resume-create --append` or an explicitly reviewed store update.
 10. Re-run `approval-resume-store-report` before any live handoff to confirm the selected record is ready and not already consumed.
 
 ## Output Record
@@ -82,4 +82,4 @@ This contract does not authorize:
 - provider secret persistence
 - full seven-Symbiote production operation
 
-The next implementation lane may add a bounded operator command to generate or append resume approval records, but that must be formalized under a separate issue before code work starts.
+Issue [#268](https://github.com/JKhyro/FURYOKU/issues/268) adds the bounded local command to preview or append resume approval records while preserving this contract.
