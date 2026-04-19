@@ -120,3 +120,62 @@ python -m furyoku.cli hermes-bridge `
 On the current handoff host, `<furyoku-repo-wsl-path>` resolved to `/mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh`.
 
 To execute Hermes itself, replace the handoff command with the confirmed Hermes/FURYOKU launch command from the read-only WSL checkout. The scaffold must not be widened into multi-Symbiote execution until the one-Symbiote live handoff is proven.
+
+## Hermes Runtime Adapter
+
+`examples/hermes_bridge_hermes_runtime.py` is the first FURYOKU-owned adapter for the actual Hermes CLI. It reads the validated live bridge payload from stdin, invokes exactly one `hermes chat --query ... --quiet` process, and returns a structured JSON runtime payload with:
+
+- bridge execution key
+- Symbiote id, role, and task id
+- selected FURYOKU model/provider evidence
+- Hermes command argv without secret values
+- stdout/stderr, exit code, timeout state, elapsed timing, and recoverable error details
+
+The adapter does not store credentials and does not mutate `JKhyro/HERMES-AGENT`. It only runs the Hermes CLI already installed in WSL.
+
+Current host command shape:
+
+```powershell
+python -m furyoku.cli hermes-bridge `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_one_symbiote.example.json `
+  --timeout-seconds 180 `
+  --handoff-command wsl -d Ubuntu python3 /mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh/examples/hermes_bridge_hermes_runtime.py `
+    --hermes-command /root/.venvs/hermes-agent-smoke/bin/hermes `
+    --max-turns 1
+```
+
+If Hermes needs an explicit provider/model override for the first smoke, pass it to the adapter, not to FURYOKU routing:
+
+```powershell
+    --provider openrouter `
+    --model anthropic/claude-sonnet-4.6
+```
+
+FURYOKU still records the selected model from its own routing evidence. The adapter override only tells Hermes which configured runtime provider to use for the one bounded execution.
+
+## Hermes Provider/Auth Gate
+
+On this host, the Hermes checkout and venv are usable, but the actual agent cannot execute a prompt yet because no provider credentials/config are present:
+
+```powershell
+wsl -d Ubuntu -- /root/.venvs/hermes-agent-smoke/bin/hermes status
+wsl -d Ubuntu -- /root/.venvs/hermes-agent-smoke/bin/hermes chat --query "Reply with one short sentence confirming the Hermes/FURYOKU bridge received this task." --quiet --source furyoku-bridge --max-turns 1
+```
+
+Observed blocker:
+
+- `/root/.hermes/.env` is not present.
+- Hermes model/provider is not set.
+- API-key providers and OAuth providers report not configured.
+- `hermes chat --query ...` exits before execution with first-run non-interactive setup guidance.
+
+Minimum non-interactive configuration is provider-specific. Hermes currently suggests either setting provider environment variables such as `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, or configuring a custom endpoint with:
+
+```bash
+hermes config set model.provider custom
+hermes config set model.base_url http://localhost:8080/v1
+hermes config set model.default your-model-name
+```
+
+After that provider/auth gate is resolved, rerun the adapter command above. A successful one-Symbiote Hermes execution is required before the lane advances to any three-Symbiote smoke.
