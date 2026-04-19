@@ -61,6 +61,14 @@ from .character_profiles import (
     select_character_profile_models,
 )
 from .model_registry import RegistryError, load_model_registry, parse_model_registry
+from .routing_evidence import (
+    BenchmarkModelEvidence,
+    BlockedRosterEvidence,
+    RoutingEvidenceContract,
+    RoutingEvidenceError,
+    load_routing_evidence_contract,
+    parse_routing_evidence_contract,
+)
 from .provider_adapters import (
     ApiProviderAdapter,
     ProviderAdapterError,
@@ -148,6 +156,8 @@ from .task_profiles import TaskProfileError, load_task_profile, parse_task_profi
 __all__ = [
     "__version__",
     "ApiProviderAdapter",
+    "BenchmarkModelEvidence",
+    "BlockedRosterEvidence",
     "CharacterCompositionSelection",
     "CharacterPanelSelection",
     "CharacterOrchestrationEnvelope",
@@ -201,6 +211,8 @@ __all__ = [
     "ProviderHealthCheckRequest",
     "ProviderHealthCheckResult",
     "RouterError",
+    "RoutingEvidenceContract",
+    "RoutingEvidenceError",
     "RoutingScorePolicy",
     "RoutingScorePolicyInput",
     "RoutingScorePolicyMetadata",
@@ -245,6 +257,7 @@ __all__ = [
     "filter_outcome_feedback_records",
     "infer_execution_outcome_verdict",
     "load_model_registry",
+    "load_routing_evidence_contract",
     "load_routing_score_policy",
     "load_character_profile",
     "load_decision_suite",
@@ -256,6 +269,7 @@ __all__ = [
     "load_task_profile",
     "outcome_feedback_source",
     "parse_feedback_adjustment_policy",
+    "parse_routing_evidence_contract",
     "parse_routing_score_policy",
     "resolve_feedback_adjustment_policy",
     "resolve_routing_score_policy",

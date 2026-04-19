@@ -252,4 +252,4 @@ python -m furyoku.cli hermes-seven-smoke `
     --max-turns 1
 ```
 
-The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The active follow-on is [#242](https://github.com/JKhyro/FURYOKU/issues/242), which inventories OpenClaw carryover candidates without porting feature code yet.
+The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242). The active follow-on is [#244](https://github.com/JKhyro/FURYOKU/issues/244), which turns retained benchmark truth into an explicit Hermes/FURYOKU routing evidence contract before any wider OpenClaw feature port.
