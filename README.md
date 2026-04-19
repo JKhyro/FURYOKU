@@ -13,18 +13,18 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
+- Completed runtime adoption lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) established Hermes Agent as the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Latest completed support lane: [#272](https://github.com/JKhyro/FURYOKU/issues/272) validated the local report -> preview -> append -> readiness operator resume loop after [#270](https://github.com/JKhyro/FURYOKU/issues/270) reconciled the completed [#266](https://github.com/JKhyro/FURYOKU/issues/266) / [#268](https://github.com/JKhyro/FURYOKU/issues/268) operator lane
-- Next support lane: select a fresh bounded [#230](https://github.com/JKhyro/FURYOKU/issues/230) child from current GitHub/local truth; do not infer runtime launch, scheduler expansion, or Ubuntu/WSL/Ubuntu-VM work from the completed operator lane
+- Completed closeout lane: [#278](https://github.com/JKhyro/FURYOKU/issues/278) aligned local/GitHub truth for the [#230](https://github.com/JKhyro/FURYOKU/issues/230) parent closeout after [#276](https://github.com/JKhyro/FURYOKU/issues/276) reconciled bridge/migration docs
+- Future runtime work: open a new explicitly scoped issue; do not infer runtime launch, scheduler expansion, OpenClaw work, or Ubuntu/WSL/Ubuntu-VM work from the completed [#230](https://github.com/JKhyro/FURYOKU/issues/230) lane
 
 ## Current Baseline
 
 - Local primary lane: `gemma4-e4b-ultra-heretic:q8_0` as the provisional balanced local default on limited hardware
 - Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp` first when latency or memory pressure rises, then `gemma4-e2b-hauhau-aggressive:q8kp` only for the tightest local fit, but neither is promoted over the current balanced default on this machine yet
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
-- Current architecture direction: Hermes-derived FURYOKU runtime first, with the existing multi-model local/CLI/API selection, benchmark truth, provider health, feedback, and service-wrapper assets preserved as reusable FURYOKU components.
-- Current follow-on focus: migrate the 7-Symbiote swarm onto the Hermes-derived FURYOKU base quickly, then inventory and port only the OpenClaw features that improve the new runtime without carrying forward OpenClaw's coordination failure modes.
+- Established architecture direction: Hermes-derived FURYOKU runtime first, with the existing multi-model local/CLI/API selection, benchmark truth, provider health, feedback, and service-wrapper assets preserved as reusable FURYOKU components.
+- Follow-on runtime focus: continue only through separately scoped issues that build on the completed seven-Symbiote smoke, approval/resume, durable ledger, and operator resume loop without carrying forward OpenClaw's coordination failure modes.
 - Migration plan: [Hermes-derived FURYOKU migration](docs/hermes-furyoku-migration.md)
 - Launch bridge plan: [Hermes/FURYOKU launch bridge](docs/hermes-launch-bridge.md)
 - OpenClaw carryover inventory: [OpenClaw carryover inventory](docs/openclaw-carryover-inventory.md)
