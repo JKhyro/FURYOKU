@@ -13,7 +13,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter ratification: [#1](https://github.com/JKhyro/FURYOKU/issues/1)
 - First execution wave closure: [#2](https://github.com/JKhyro/FURYOKU/issues/2)
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
-- Current active lane: none currently open
+- Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Current support lane: none currently open
 
@@ -22,8 +22,9 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Local primary lane: `gemma4-e4b-ultra-heretic:q8_0` as the provisional balanced local default on limited hardware
 - Local fallback lane: `gemma4-e4b-hauhau-aggressive:q8kp` first when latency or memory pressure rises, then `gemma4-e2b-hauhau-aggressive:q8kp` only for the tightest local fit, but neither is promoted over the current balanced default on this machine yet
 - Strong remote continuation: `minimax-portal/MiniMax-M2.7` then `openai-codex/gpt-5.4`
-- Current architecture direction: multi-model local/CLI/API selection and execution first, then reusable component surfaces layered on top, with flexible CHARACTER/MOA role composition downstream rather than bypassing the runtime.
-- Current follow-on focus: no active follow-on is currently open; the most recent wrapper and local-model benchmark lanes are closed and reflected below.
+- Current architecture direction: Hermes-derived FURYOKU runtime first, with the existing multi-model local/CLI/API selection, benchmark truth, provider health, feedback, and service-wrapper assets preserved as reusable FURYOKU components.
+- Current follow-on focus: migrate the 7-Symbiote swarm onto the Hermes-derived FURYOKU base quickly, then inventory and port only the OpenClaw features that improve the new runtime without carrying forward OpenClaw's coordination failure modes.
+- Migration plan: [Hermes-derived FURYOKU migration](docs/hermes-furyoku-migration.md)
 
 ### Provisional Local Usage Tiers
 
@@ -79,14 +80,17 @@ Initial wrapper contract:
 
 ## Product Direction
 
-FURYOKU's currently known job is to help the wider system choose and use the right LLM for the situation. This is the current implementation horizon, not the final long-term definition of the project.
+FURYOKU's current runtime direction is now Hermes-derived FURYOKU: Hermes Agent becomes the base architecture for operating the 7-Symbiote swarm, and OpenClaw becomes a feature/source integration lane rather than the controlling runtime.
+
+The existing FURYOKU model-selection package remains part of the runtime spine. Its job is still to help the wider system choose and use the right LLM for each situation, but it now serves the Hermes-derived swarm runtime instead of assuming OpenClaw is the primary host.
 
 Scope guard:
 
 - Do not treat benchmark truth or CI support as the project purpose.
-- Keep the primary execution lane on the multi-model local/CLI/API decision system unless the user explicitly redirects.
+- Keep the primary execution lane on Hermes-derived FURYOKU for swarm operation, with the multi-model local/CLI/API decision system retained as reusable routing infrastructure.
+- Treat OpenClaw as a source of features to inventory and selectively port, not as the default runtime base.
 - Treat flexible CHARACTER/MOA support as important downstream product work, not discarded scope.
-- Sequence the work deliberately: make the multi-model decision/runtime layer functional first, then use it to power flexible CHARACTER/MOA arrays such as one-role tertiary Symbiotes and larger primary-plus-secondary role compositions.
+- Sequence the work deliberately: make the Hermes/FURYOKU 7-Symbiote control loop functional first, then layer broader CHARACTER/MOA arrays and OpenClaw feature harvests onto the stable runtime.
 - Treat benchmark and CI work as supporting evidence and safety infrastructure.
 
 - Register multiple model endpoints: local models, command-line/CLI models, and remote API models.
@@ -185,7 +189,7 @@ python -m furyoku.cli character-run --registry .\examples\model_registry.example
 
 ## Benchmark Evidence Lane
 
-- Local OpenClaw model benchmark: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)
+- Historical OpenClaw local-model benchmark, retained as FURYOKU routing evidence during the Hermes migration: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)
 - Current deployed-baseline manifest: [2026-04-13 approved-ready current-baseline manifest](benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-current-baseline.json)
 - Current deployed-baseline evidence: [2026-04-13 approved-ready compare summary](benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-compare-summary.md)
 - Current blocked-roster evidence: [2026-04-13 approved blocked-roster probe](benchmarks/openclaw-local-llm/results/2026-04-13-approved-blocked-roster-probe.json)
