@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#240](https://github.com/JKhyro/FURYOKU/issues/240) prepare Hermes/FURYOKU seven-Symbiote coordination smoke
+- Current support lane: [#242](https://github.com/JKhyro/FURYOKU/issues/242) inventory OpenClaw feature carryover for the Hermes/FURYOKU runtime
 
 ## Current Baseline
 
@@ -26,6 +26,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Current follow-on focus: migrate the 7-Symbiote swarm onto the Hermes-derived FURYOKU base quickly, then inventory and port only the OpenClaw features that improve the new runtime without carrying forward OpenClaw's coordination failure modes.
 - Migration plan: [Hermes-derived FURYOKU migration](docs/hermes-furyoku-migration.md)
 - Launch bridge plan: [Hermes/FURYOKU launch bridge](docs/hermes-launch-bridge.md)
+- OpenClaw carryover inventory: [OpenClaw carryover inventory](docs/openclaw-carryover-inventory.md)
 
 ### Provisional Local Usage Tiers
 

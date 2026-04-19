@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document records the completed issues [#232](https://github.com/JKhyro/FURYOKU/issues/232) and [#238](https://github.com/JKhyro/FURYOKU/issues/238), plus the active issue [#240](https://github.com/JKhyro/FURYOKU/issues/240) seven-Symbiote coordination smoke.
+This document records the completed issues [#232](https://github.com/JKhyro/FURYOKU/issues/232), [#238](https://github.com/JKhyro/FURYOKU/issues/238), and [#240](https://github.com/JKhyro/FURYOKU/issues/240) for the one-, three-, and seven-Symbiote Hermes/FURYOKU smoke sequence.
 
 Parent migration lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230).
 
@@ -252,4 +252,4 @@ python -m furyoku.cli hermes-seven-smoke `
     --max-turns 1
 ```
 
-Do not advance to OpenClaw carryover inventory until this seven-Symbiote smoke establishes bounded coordination behavior.
+The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The active follow-on is [#242](https://github.com/JKhyro/FURYOKU/issues/242), which inventories OpenClaw carryover candidates without porting feature code yet.
