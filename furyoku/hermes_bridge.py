@@ -5,7 +5,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
 from .model_decisions import ModelDecisionReport, ReadinessEvidenceInput, evaluate_model_decisions
 from .model_router import ModelEndpoint, ModelScore, RoutingScorePolicyInput, TaskProfile
@@ -16,6 +16,9 @@ from .provider_health import (
     check_provider_health_many,
 )
 from .task_profiles import parse_task_profile
+
+if TYPE_CHECKING:
+    from .approval_resume import ApprovalResumeLedger, ApprovalResumeRecord
 
 
 class HermesBridgeError(ValueError):
@@ -344,6 +347,40 @@ class HermesBridgeSevenSymbioteSmokeResult(HermesBridgeThreeSymbioteSmokeResult)
 
 
 @dataclass(frozen=True)
+class HermesBridgeApprovalGateResult:
+    """Approval/resume gate decision for one live bridge handoff."""
+
+    status: str
+    execution_key: str
+    required: bool
+    safe_to_handoff: bool
+    source: str = "none"
+    record: ApprovalResumeRecord | None = None
+    error: Mapping[str, Any] | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.safe_to_handoff
+
+    def to_dict(self) -> dict:
+        return {
+            "status": self.status,
+            "executionKey": self.execution_key,
+            "required": self.required,
+            "safeToHandoff": self.safe_to_handoff,
+            "source": self.source,
+            "recordKey": self.record.record_key if self.record is not None else None,
+            "workflowExecutionKey": self.record.workflow_execution_key if self.record is not None else None,
+            "recordState": self.record.state if self.record is not None else None,
+            "attemptIndex": self.record.attempt_index if self.record is not None else None,
+            "owner": self.record.owner if self.record is not None else None,
+            "resumable": self.record.is_resume if self.record is not None else False,
+            "recordSource": self.record.source if self.record is not None else None,
+            "error": dict(self.error) if self.error is not None else None,
+        }
+
+
+@dataclass(frozen=True)
 class HermesBridgeLiveResult:
     """Structured result for a one-Symbiote Hermes/FURYOKU process-boundary handoff."""
 
@@ -358,6 +395,7 @@ class HermesBridgeLiveResult:
     stderr: str = ""
     timed_out: bool = False
     runtime_payload: Mapping[str, Any] | str | None = None
+    approval_gate: HermesBridgeApprovalGateResult | None = None
     error: Mapping[str, Any] | None = None
 
     @property
@@ -391,6 +429,8 @@ class HermesBridgeLiveResult:
                 "error": dict(self.error) if self.error is not None else None,
             }
         )
+        if self.approval_gate is not None:
+            payload["approvalResumeGate"] = self.approval_gate.to_dict()
         return payload
 
 
@@ -550,6 +590,8 @@ def live_run_hermes_bridge(
     command_resolver: CommandResolver | None = None,
     timeout_seconds: float | None = 60.0,
     cwd: str | Path | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    require_approval_resume: bool = False,
 ) -> HermesBridgeLiveResult:
     """Route exactly one Symbiote task, then hand it to one configured Hermes process boundary."""
 
@@ -575,6 +617,23 @@ def live_run_hermes_bridge(
             error=dry_run.error,
         )
 
+    approval_gate = validate_hermes_bridge_approval_gate(
+        envelope,
+        approval_resume,
+        required=require_approval_resume,
+    )
+    if not approval_gate.ok:
+        return HermesBridgeLiveResult(
+            dry_run=dry_run,
+            handoff_command=tuple(handoff_command),
+            handoff_status="approval-blocked",
+            execution_status="not-started",
+            elapsed_ms=_elapsed_ms(started),
+            started=False,
+            approval_gate=approval_gate,
+            error=approval_gate.error,
+        )
+
     handoff_payload = {
         "schemaVersion": 1,
         "bridge": "hermes-furyoku",
@@ -583,6 +642,7 @@ def live_run_hermes_bridge(
         "selectedModel": _score_to_dict(dry_run.selected) if dry_run.selected is not None else None,
         "decisionReport": dry_run.report.to_dict() if dry_run.report is not None else None,
         "readiness": [_health_to_dict(result) for result in dry_run.readiness],
+        "approvalResumeGate": approval_gate.to_dict(),
     }
     try:
         completed = subprocess.run(
@@ -607,6 +667,7 @@ def live_run_hermes_bridge(
             stdout=_coerce_text(exc.stdout),
             stderr=_coerce_text(exc.stderr),
             timed_out=True,
+            approval_gate=approval_gate,
             error={
                 "recoverable": True,
                 "code": "handoff_timeout",
@@ -620,6 +681,7 @@ def live_run_hermes_bridge(
             handoff_status="failed",
             execution_status="error",
             elapsed_ms=_elapsed_ms(started),
+            approval_gate=approval_gate,
             error={
                 "recoverable": True,
                 "code": "handoff_launch_failed",
@@ -640,6 +702,7 @@ def live_run_hermes_bridge(
             stdout=completed.stdout or "",
             stderr=completed.stderr or "",
             runtime_payload=runtime_payload,
+            approval_gate=approval_gate,
             error={
                 "recoverable": True,
                 "code": "handoff_process_failed",
@@ -658,6 +721,117 @@ def live_run_hermes_bridge(
         stdout=completed.stdout or "",
         stderr=completed.stderr or "",
         runtime_payload=runtime_payload,
+        approval_gate=approval_gate,
+    )
+
+
+def validate_hermes_bridge_approval_gate(
+    envelope: HermesBridgeEnvelope,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    *,
+    required: bool = False,
+) -> HermesBridgeApprovalGateResult:
+    """Validate approval/resume evidence for one external Hermes/FURYOKU handoff."""
+
+    from .approval_resume import ApprovalResumeLedger, ApprovalResumeRecord
+
+    if approval_resume is None:
+        if required:
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_record_missing",
+                    "message": f"approval/resume record is required for {envelope.execution_key}",
+                },
+            )
+        return HermesBridgeApprovalGateResult(
+            status="not-required",
+            execution_key=envelope.execution_key,
+            required=required,
+            safe_to_handoff=True,
+        )
+
+    if isinstance(approval_resume, ApprovalResumeRecord):
+        if approval_resume.handoff_execution_key != envelope.execution_key:
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                source="record",
+                record=approval_resume,
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_handoff_mismatch",
+                    "message": (
+                        "approval/resume record is keyed to "
+                        f"{approval_resume.handoff_execution_key}, not {envelope.execution_key}"
+                    ),
+                },
+            )
+        record = approval_resume
+        source = "record"
+    elif isinstance(approval_resume, ApprovalResumeLedger):
+        records = approval_resume.records_for_handoff(envelope.execution_key)
+        if not records:
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                source="ledger",
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_record_missing",
+                    "message": f"approval/resume ledger has no record for {envelope.execution_key}",
+                },
+            )
+        workflow_keys = {record.workflow_execution_key for record in records}
+        if len(workflow_keys) > 1:
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                source="ledger",
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_ambiguous_handoff",
+                    "message": f"approval/resume ledger has multiple workflow executions for {envelope.execution_key}",
+                    "workflowExecutionKeys": sorted(workflow_keys),
+                },
+            )
+        record = max(records, key=lambda item: item.attempt_index)
+        source = "ledger"
+    else:
+        raise HermesBridgeError("approval_resume must be an ApprovalResumeRecord, ApprovalResumeLedger, or None")
+
+    if not record.safe_to_handoff:
+        return HermesBridgeApprovalGateResult(
+            status="blocked",
+            execution_key=envelope.execution_key,
+            required=required,
+            safe_to_handoff=False,
+            source=source,
+            record=record,
+            error={
+                "recoverable": True,
+                "code": "approval_resume_not_safe",
+                "message": f"approval/resume record state {record.state!r} is not safe to hand off",
+            },
+        )
+
+    return HermesBridgeApprovalGateResult(
+        status="resume-approved" if record.state == "resume_approved" else "approved",
+        execution_key=envelope.execution_key,
+        required=required,
+        safe_to_handoff=True,
+        source=source,
+        record=record,
     )
 
 

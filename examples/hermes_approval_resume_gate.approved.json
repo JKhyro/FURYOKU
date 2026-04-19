@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "operator.reviewed.hermes-handoff",
+  "executionId": "reviewed-handoff-001",
+  "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.one-symbiote",
+  "attemptIndex": 1,
+  "recordState": "approved",
+  "owner": "furyoku-operator",
+  "approvedBy": "operator",
+  "approvedAtUtc": "2026-04-19T01:00:00Z",
+  "createdAtUtc": "2026-04-19T00:00:00Z",
+  "evidence": {
+    "workflowEnvelope": "examples/operator_reviewed_hermes_workflow.example.json",
+    "issue": "#250"
+  }
+}

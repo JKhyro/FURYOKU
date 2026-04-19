@@ -8,6 +8,8 @@ from io import StringIO
 from pathlib import Path
 
 from furyoku import (
+    ApprovalResumeLedger,
+    ApprovalResumeRecord,
     HermesBridgeEnvelope,
     HermesBridgeError,
     HermesBridgeSevenSymbioteSmokeEnvelope,
@@ -89,6 +91,50 @@ def envelope_payload() -> dict:
             "maxAttempts": 2,
         },
     }
+
+
+def approval_record_payload(
+    execution_key: str,
+    *,
+    state: str = "approved",
+    attempt_index: int = 1,
+    workflow_id: str = "operator.reviewed.hermes-handoff",
+    execution_id: str = "reviewed-handoff-001",
+    owner: str = "furyoku-operator",
+) -> dict:
+    if state in {"resume_requested", "resume_approved", "resumed"} and attempt_index == 1:
+        attempt_index = 2
+    payload = {
+        "schemaVersion": 1,
+        "workflowId": workflow_id,
+        "executionId": execution_id,
+        "handoffExecutionKey": execution_key,
+        "attemptIndex": attempt_index,
+        "recordState": state,
+        "owner": owner,
+        "createdAtUtc": "2026-04-19T00:00:00Z",
+        "evidence": {
+            "workflowEnvelope": "docs/operator-reviewed-workflow-envelope.md",
+            "issue": "#250",
+        },
+    }
+    if state in {"approved", "resume_approved", "resumed"}:
+        payload["approvedBy"] = "operator"
+        payload["approvedAtUtc"] = "2026-04-19T01:00:00Z"
+    if state in {"rejected", "duplicate_blocked", "stale_blocked"}:
+        payload["reason"] = f"{state} by approval/resume gate test"
+    if attempt_index > 1 or state in {"resume_requested", "resume_approved", "resumed"}:
+        payload["resume"] = {
+            "resumeOf": f"{workflow_id}:{execution_id}:{execution_key}",
+            "previousAttemptIndex": attempt_index - 1,
+            "requestedBy": "operator",
+            "reason": "recoverable handoff retry",
+        }
+    return payload
+
+
+def approval_record(execution_key: str, **overrides) -> ApprovalResumeRecord:
+    return ApprovalResumeRecord.from_dict(approval_record_payload(execution_key, **overrides))
 
 
 def three_symbiote_payload() -> dict:
@@ -216,10 +262,12 @@ class HermesBridgeTests(unittest.TestCase):
         result = live_run_hermes_bridge(
             [local_endpoint()],
             envelope,
+            approval_resume=approval_record(envelope.execution_key),
+            require_approval_resume=True,
             handoff_command=(
                 sys.executable,
                 "-c",
-                "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'status':'ok','executionKey':payload['envelope']['executionKey']}))",
+                "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'status':'ok','executionKey':payload['envelope']['executionKey'],'approvalGate':payload['approvalResumeGate']['status']}))",
             ),
         )
         payload = result.to_dict()
@@ -230,6 +278,124 @@ class HermesBridgeTests(unittest.TestCase):
         self.assertEqual(payload["execution"]["status"], "succeeded")
         self.assertTrue(payload["execution"]["started"])
         self.assertEqual(payload["execution"]["runtimePayload"]["executionKey"], envelope.execution_key)
+        self.assertEqual(payload["approvalResumeGate"]["status"], "approved")
+        self.assertEqual(payload["execution"]["runtimePayload"]["approvalGate"], "approved")
+
+    def test_live_run_requires_approval_record_when_gate_is_required(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            require_approval_resume=True,
+            handoff_command=(sys.executable, "-c", "import sys; sys.exit(99)"),
+        )
+        payload = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(payload["handoff"]["status"], "approval-blocked")
+        self.assertEqual(payload["execution"]["status"], "not-started")
+        self.assertFalse(payload["execution"]["started"])
+        self.assertEqual(payload["approvalResumeGate"]["status"], "blocked")
+        self.assertEqual(payload["error"]["code"], "approval_resume_record_missing")
+
+    def test_live_run_blocks_unsafe_approval_resume_states_before_handoff(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        blocked_states = (
+            "approval_pending",
+            "rejected",
+            "resume_requested",
+            "resumed",
+            "duplicate_blocked",
+            "stale_blocked",
+        )
+
+        for state in blocked_states:
+            with self.subTest(state=state):
+                result = live_run_hermes_bridge(
+                    [local_endpoint()],
+                    envelope,
+                    approval_resume=approval_record(envelope.execution_key, state=state),
+                    require_approval_resume=True,
+                    handoff_command=(sys.executable, "-c", "import sys; sys.exit(99)"),
+                )
+                payload = result.to_dict()
+
+                self.assertFalse(result.ok)
+                self.assertEqual(payload["handoff"]["status"], "approval-blocked")
+                self.assertEqual(payload["execution"]["status"], "not-started")
+                self.assertFalse(payload["execution"]["started"])
+                self.assertEqual(payload["approvalResumeGate"]["recordState"], state)
+                self.assertEqual(payload["error"]["code"], "approval_resume_not_safe")
+
+    def test_live_run_blocks_mismatched_approval_record_before_handoff(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            approval_resume=approval_record("symbiote-99:other:wrong-task"),
+            require_approval_resume=True,
+            handoff_command=(sys.executable, "-c", "import sys; sys.exit(99)"),
+        )
+        payload = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(payload["handoff"]["status"], "approval-blocked")
+        self.assertFalse(payload["execution"]["started"])
+        self.assertEqual(payload["error"]["code"], "approval_resume_handoff_mismatch")
+
+    def test_live_run_ledger_uses_latest_resume_approval(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        ledger = ApprovalResumeLedger.from_dict(
+            {
+                "schemaVersion": 1,
+                "records": [
+                    approval_record_payload(envelope.execution_key, state="approved"),
+                    approval_record_payload(envelope.execution_key, state="resume_approved", attempt_index=2),
+                ],
+            }
+        )
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            approval_resume=ledger,
+            require_approval_resume=True,
+            handoff_command=(
+                sys.executable,
+                "-c",
+                "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'gate':payload['approvalResumeGate']['status'],'attempt':payload['approvalResumeGate']['attemptIndex']}))",
+            ),
+        )
+        payload = result.to_dict()
+
+        self.assertTrue(result.ok)
+        self.assertEqual(payload["approvalResumeGate"]["status"], "resume-approved")
+        self.assertEqual(payload["approvalResumeGate"]["attemptIndex"], 2)
+        self.assertEqual(payload["execution"]["runtimePayload"]["gate"], "resume-approved")
+
+    def test_live_run_ledger_blocks_latest_resume_request(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        ledger = ApprovalResumeLedger.from_dict(
+            {
+                "schemaVersion": 1,
+                "records": [
+                    approval_record_payload(envelope.execution_key, state="approved"),
+                    approval_record_payload(envelope.execution_key, state="resume_requested", attempt_index=2),
+                ],
+            }
+        )
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            approval_resume=ledger,
+            require_approval_resume=True,
+            handoff_command=(sys.executable, "-c", "import sys; sys.exit(99)"),
+        )
+        payload = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(payload["handoff"]["status"], "approval-blocked")
+        self.assertFalse(payload["execution"]["started"])
+        self.assertEqual(payload["approvalResumeGate"]["recordState"], "resume_requested")
 
     def test_live_run_does_not_start_duplicate_execution_key(self):
         envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
@@ -537,6 +703,7 @@ class HermesBridgeCliTests(unittest.TestCase):
             temp_path = Path(temp_dir)
             registry_path = temp_path / "models.json"
             envelope_path = temp_path / "envelope.json"
+            approval_path = temp_path / "approval.json"
             registry_path.write_text(
                 json.dumps(
                     {
@@ -560,6 +727,10 @@ class HermesBridgeCliTests(unittest.TestCase):
                 encoding="utf-8",
             )
             envelope_path.write_text(json.dumps(envelope_payload()), encoding="utf-8")
+            approval_path.write_text(
+                json.dumps(approval_record_payload("symbiote-01:primary:hermes.bridge.one-symbiote")),
+                encoding="utf-8",
+            )
 
             completed = subprocess.run(
                 [
@@ -573,6 +744,9 @@ class HermesBridgeCliTests(unittest.TestCase):
                     str(envelope_path),
                     "--timeout-seconds",
                     "5",
+                    "--approval-resume-record",
+                    str(approval_path),
+                    "--require-approval-resume",
                     "--handoff-command",
                     sys.executable,
                     "-c",
@@ -588,7 +762,78 @@ class HermesBridgeCliTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["mode"], "live")
         self.assertEqual(payload["handoff"]["status"], "completed")
+        self.assertEqual(payload["approvalResumeGate"]["status"], "approved")
         self.assertEqual(payload["execution"]["runtimePayload"]["received"], "symbiote-01:primary:hermes.bridge.one-symbiote")
+
+    def test_cli_live_mode_blocks_pending_approval_before_handoff_command(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            registry_path = temp_path / "models.json"
+            envelope_path = temp_path / "envelope.json"
+            approval_path = temp_path / "approval-pending.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "models": [
+                            {
+                                "modelId": "local-echo",
+                                "provider": "local",
+                                "privacyLevel": "local",
+                                "contextWindowTokens": 4096,
+                                "averageLatencyMs": 10,
+                                "invocation": [sys.executable, "-c", "print('ready')"],
+                                "capabilities": {
+                                    "conversation": 0.95,
+                                    "instruction_following": 0.9,
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            envelope_path.write_text(json.dumps(envelope_payload()), encoding="utf-8")
+            approval_path.write_text(
+                json.dumps(
+                    approval_record_payload(
+                        "symbiote-01:primary:hermes.bridge.one-symbiote",
+                        state="approval_pending",
+                    )
+                ),
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-bridge",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(envelope_path),
+                    "--approval-resume-record",
+                    str(approval_path),
+                    "--require-approval-resume",
+                    "--handoff-command",
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.exit(99)",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["handoff"]["status"], "approval-blocked")
+        self.assertEqual(payload["execution"]["status"], "not-started")
+        self.assertFalse(payload["execution"]["started"])
+        self.assertEqual(payload["approvalResumeGate"]["recordState"], "approval_pending")
 
     def test_cli_three_symbiote_dry_run_outputs_aggregate_report(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -86,6 +86,7 @@ from .provider_health import (
     check_provider_health_many,
 )
 from .hermes_bridge import (
+    HermesBridgeApprovalGateResult,
     HermesBridgeDryRunResult,
     HermesBridgeEnvelope,
     HermesBridgeError,
@@ -104,6 +105,7 @@ from .hermes_bridge import (
     load_hermes_bridge_envelope,
     load_hermes_seven_symbiote_smoke,
     load_hermes_three_symbiote_smoke,
+    validate_hermes_bridge_approval_gate,
 )
 from .outcome_feedback import (
     DecisionOutcomeRecord,
@@ -198,6 +200,7 @@ __all__ = [
     "FeedbackAdjustmentPolicy",
     "FeedbackAdjustmentPolicyInput",
     "FeedbackPolicyMetadata",
+    "HermesBridgeApprovalGateResult",
     "HermesBridgeDryRunResult",
     "HermesBridgeEnvelope",
     "HermesBridgeError",
@@ -318,4 +321,5 @@ __all__ = [
     "select_character_panel",
     "select_model",
     "summarize_outcome_feedback",
+    "validate_hermes_bridge_approval_gate",
 ]
