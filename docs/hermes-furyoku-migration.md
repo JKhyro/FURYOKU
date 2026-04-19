@@ -20,6 +20,21 @@ Hermes Agent is the preferred base because its design is expected to fit multi-a
 - The fastest useful milestone is a functional 7-Symbiote Hermes/FURYOKU control loop, not broad feature parity.
 - Current local model restrictions remain in force; do not use local models outside the approved roster.
 
+## Hermes Source Inventory
+
+The first read-only source check against `JKhyro/HERMES-AGENT` shows the mirror is a Python package named `hermes-agent` at version `0.6.0` with these likely migration-relevant surfaces:
+
+- `run_agent.py`: packaged `hermes-agent` entrypoint and likely primary agent loop surface.
+- `cli.py` and `hermes_cli`: interactive CLI and operator command surface.
+- `agent/`: provider adapters, prompt construction, credential pools, model metadata, smart routing, skills, context compression, trajectory capture, and pricing/usage support.
+- `acp_adapter/` and `acp_registry/`: Agent Client Protocol integration surfaces that may be useful for clean process boundaries.
+- `model_tools.py`, `toolsets.py`, and `toolset_distributions.py`: model/tool capability surfaces that should be compared with FURYOKU's current provider registry and task requirements.
+- `mcp_serve.py`: MCP serving surface for future tool interoperability.
+- `batch_runner.py`, `mini_swe_runner.py`, `trajectory_compressor.py`, and `rl_cli.py`: research/evaluation/training-adjacent surfaces that are useful later, but not the first swarm-stability target.
+- `scripts/install.ps1` and `scripts/install.cmd`: Windows install helpers exist, but upstream README still says native Windows is not supported and recommends WSL2.
+
+Immediate risk: this project is currently operating from Windows, while upstream Hermes is explicitly WSL2-oriented for Windows users. The first implementation slice should therefore prove either a WSL2-hosted Hermes/FURYOKU bridge or a narrowly adapted local process bridge before assuming direct native Windows operation.
+
 ## Fast Migration Order
 
 1. Confirm the local Hermes Agent source path, launch command, config path, and current runnable state.
@@ -40,7 +55,7 @@ The first code-bearing migration issue should be opened after the local Hermes p
 
 - input: one Symbiote task envelope with role, prompt, and required model capabilities
 - routing: FURYOKU model selection and provider health checks choose an eligible lane
-- runtime handoff: Hermes/FURYOKU receives exactly one bounded task
+- runtime handoff: Hermes/FURYOKU receives exactly one bounded task through the confirmed WSL2 or local process boundary
 - output: structured result with selected model, execution status, latency, and recoverable error details
 
 The first slice should not attempt full OpenClaw parity, long-running memory, remote deployment, or cross-product CORTEX/VECTOR/SYNAPSE integration.
