@@ -8,13 +8,14 @@ Parent migration lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230).
 
 ## Current Host Check
 
-The current Windows host does not yet expose a usable Linux WSL2 distro for upstream Hermes:
+The Windows host now exposes an Ubuntu WSL2 distro for the Hermes launch path:
 
 ```powershell
 wsl -l -v
+wsl -d Ubuntu -- uname -a
 ```
 
-Observed result in this thread: only `docker-desktop` was listed, and it was stopped.
+Observed result in this thread: `wsl --install -d Ubuntu` timed out after registering Ubuntu, the first `uname` probe returned `Wsl/Service/E_UNEXPECTED`, then `wsl --shutdown` cleared the WSL service state and `wsl -d Ubuntu -- uname -a` succeeded.
 
 Upstream Hermes says native Windows is not supported and recommends WSL2 for Windows users. That makes WSL2 launch readiness the first practical gate before we claim the Hermes runtime is runnable on this machine.
 
@@ -102,4 +103,20 @@ python -m furyoku.cli hermes-bridge --registry .\examples\model_registry.example
 
 The dry-run validates that the input describes exactly one Symbiote task, derives a duplicate-prevention execution key from `symbioteId`, `role`, and `taskId`, runs FURYOKU model selection with optional provider health evidence from the envelope, and emits the structured handoff result expected by the live bridge.
 
-Live mode remains blocked until a usable Ubuntu WSL2 distro and Hermes source path are confirmed. The scaffold must not be widened into multi-Symbiote execution until the one-Symbiote live handoff is proven.
+## Live Process-Boundary Scaffold
+
+Live mode invokes exactly one configured handoff command after the same one-Symbiote envelope validation, duplicate guard, and FURYOKU model routing used by dry-run mode. The validated handoff payload is written to the command on stdin, and the command's stdout/stderr, exit code, timing, and recoverable errors are captured in the structured bridge report.
+
+This command proves the Windows-to-WSL process boundary without claiming a full Hermes agent execution. The example runtime reads the bridge payload from stdin and echoes the execution key plus selected model evidence:
+
+```powershell
+python -m furyoku.cli hermes-bridge `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_one_symbiote.example.json `
+  --timeout-seconds 10 `
+  --handoff-command wsl -d Ubuntu python3 <furyoku-repo-wsl-path>/examples/hermes_bridge_echo_runtime.py
+```
+
+On the current handoff host, `<furyoku-repo-wsl-path>` resolved to `/mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh`.
+
+To execute Hermes itself, replace the handoff command with the confirmed Hermes/FURYOKU launch command from the read-only WSL checkout. The scaffold must not be widened into multi-Symbiote execution until the one-Symbiote live handoff is proven.

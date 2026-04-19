@@ -81,8 +81,10 @@ from .hermes_bridge import (
     HermesBridgeDryRunResult,
     HermesBridgeEnvelope,
     HermesBridgeError,
+    HermesBridgeLiveResult,
     HermesBridgeRoutingOptions,
     dry_run_hermes_bridge,
+    live_run_hermes_bridge,
     load_hermes_bridge_envelope,
 )
 from .outcome_feedback import (
@@ -158,6 +160,7 @@ __all__ = [
     "HermesBridgeDryRunResult",
     "HermesBridgeEnvelope",
     "HermesBridgeError",
+    "HermesBridgeLiveResult",
     "HermesBridgeRoutingOptions",
     "ModelCoverage",
     "ModelDecisionAggregate",
@@ -207,6 +210,7 @@ __all__ = [
     "default_decision_scenarios",
     "default_provider_adapters",
     "dry_run_hermes_bridge",
+    "live_run_hermes_bridge",
     "evaluate_model_decisions",
     "execute_model",
     "compare_decision_situation_executions",

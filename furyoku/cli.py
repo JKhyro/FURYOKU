@@ -29,7 +29,7 @@ from .outcome_feedback import (
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
-from .hermes_bridge import HermesBridgeError, dry_run_hermes_bridge, load_hermes_bridge_envelope
+from .hermes_bridge import HermesBridgeError, dry_run_hermes_bridge, live_run_hermes_bridge, load_hermes_bridge_envelope
 from .runtime import (
     CharacterRoleExecutionResult,
     ComparativeExecutionBatchResult,
@@ -242,16 +242,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if all(result.ready for result in results) else 2
 
     if args.command == "hermes-bridge":
-        if not args.dry_run:
-            parser.error("hermes-bridge currently supports --dry-run only until the WSL2 live handoff is available")
+        if args.dry_run and args.handoff_command:
+            parser.error("--dry-run cannot be combined with --handoff-command")
+        if not args.dry_run and not args.handoff_command:
+            parser.error("hermes-bridge live mode requires --handoff-command, or use --dry-run")
         try:
             envelope = load_hermes_bridge_envelope(args.envelope)
-            result = dry_run_hermes_bridge(
-                models,
-                envelope,
-                seen_execution_keys=args.seen_execution_key,
-                routing_policy=_routing_policy_from_args(args),
-            )
+            if args.dry_run:
+                result = dry_run_hermes_bridge(
+                    models,
+                    envelope,
+                    seen_execution_keys=args.seen_execution_key,
+                    routing_policy=_routing_policy_from_args(args),
+                )
+            else:
+                result = live_run_hermes_bridge(
+                    models,
+                    envelope,
+                    handoff_command=tuple(args.handoff_command),
+                    seen_execution_keys=args.seen_execution_key,
+                    routing_policy=_routing_policy_from_args(args),
+                    timeout_seconds=args.timeout_seconds,
+                    cwd=args.handoff_cwd,
+                )
         except HermesBridgeError as exc:
             parser.error(str(exc))
         _write_json(result.to_dict(), output_path=args.output)
@@ -503,13 +516,29 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Validate, route, and shape the handoff result without invoking Hermes.",
     )
     bridge_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=60.0,
+        help="Live handoff process timeout in seconds.",
+    )
+    bridge_parser.add_argument(
+        "--handoff-cwd",
+        type=Path,
+        help="Optional working directory for the live handoff process.",
+    )
+    bridge_parser.add_argument(
         "--seen-execution-key",
         action="append",
         default=[],
         help="Execution key already claimed by this handoff cycle. Repeat to prevent duplicate Symbiote execution.",
     )
     _add_routing_policy_arg(bridge_parser)
-    bridge_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON dry-run handoff report.")
+    bridge_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON bridge handoff report.")
+    bridge_parser.add_argument(
+        "--handoff-command",
+        nargs=argparse.REMAINDER,
+        help="Live handoff command to invoke. Must be the final CLI option; the validated payload is sent on stdin.",
+    )
     decide_parser = subparsers.add_parser(
         "decide",
         help="Evaluate local, CLI, and API models across multiple decision situations.",

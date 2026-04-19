@@ -12,6 +12,7 @@ from furyoku import (
     HermesBridgeError,
     ModelEndpoint,
     dry_run_hermes_bridge,
+    live_run_hermes_bridge,
     load_hermes_bridge_envelope,
 )
 
@@ -140,6 +141,57 @@ class HermesBridgeTests(unittest.TestCase):
         self.assertEqual(payload["error"]["code"], "no_eligible_model")
         self.assertIn("instruction_following", payload["error"]["message"])
 
+    def test_live_run_invokes_one_handoff_command(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            handoff_command=(
+                sys.executable,
+                "-c",
+                "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'status':'ok','executionKey':payload['envelope']['executionKey']}))",
+            ),
+        )
+        payload = result.to_dict()
+
+        self.assertTrue(result.ok)
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["handoff"]["status"], "completed")
+        self.assertEqual(payload["execution"]["status"], "succeeded")
+        self.assertTrue(payload["execution"]["started"])
+        self.assertEqual(payload["execution"]["runtimePayload"]["executionKey"], envelope.execution_key)
+
+    def test_live_run_does_not_start_duplicate_execution_key(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            handoff_command=("missing-live-handoff-command",),
+            seen_execution_keys=[envelope.execution_key],
+        )
+        payload = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(payload["handoff"]["status"], "duplicate-prevented")
+        self.assertEqual(payload["execution"]["status"], "skipped")
+        self.assertFalse(payload["execution"]["started"])
+        self.assertTrue(payload["duplicateGuard"]["duplicate"])
+
+    def test_live_run_reports_recoverable_handoff_failure(self):
+        envelope = HermesBridgeEnvelope.from_dict(envelope_payload())
+        result = live_run_hermes_bridge(
+            [local_endpoint()],
+            envelope,
+            handoff_command=(sys.executable, "-c", "import sys; sys.stderr.write('bad runtime'); sys.exit(3)"),
+        )
+        payload = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(payload["handoff"]["status"], "failed")
+        self.assertEqual(payload["execution"]["status"], "error")
+        self.assertEqual(payload["execution"]["exitCode"], 3)
+        self.assertEqual(payload["error"]["code"], "handoff_process_failed")
+
 
 class HermesBridgeCliTests(unittest.TestCase):
     def test_cli_dry_run_outputs_bridge_report(self):
@@ -245,3 +297,61 @@ class HermesBridgeCliTests(unittest.TestCase):
                     )
 
         self.assertEqual(error.exception.code, 2)
+
+    def test_cli_live_mode_invokes_handoff_command(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            registry_path = temp_path / "models.json"
+            envelope_path = temp_path / "envelope.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "models": [
+                            {
+                                "modelId": "local-echo",
+                                "provider": "local",
+                                "privacyLevel": "local",
+                                "contextWindowTokens": 4096,
+                                "averageLatencyMs": 10,
+                                "invocation": [sys.executable, "-c", "print('ready')"],
+                                "capabilities": {
+                                    "conversation": 0.95,
+                                    "instruction_following": 0.9,
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            envelope_path.write_text(json.dumps(envelope_payload()), encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-bridge",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(envelope_path),
+                    "--timeout-seconds",
+                    "5",
+                    "--handoff-command",
+                    sys.executable,
+                    "-c",
+                    "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'received':payload['envelope']['executionKey']}))",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["handoff"]["status"], "completed")
+        self.assertEqual(payload["execution"]["runtimePayload"]["received"], "symbiote-01:primary:hermes.bridge.one-symbiote")
