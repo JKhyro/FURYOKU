@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#254](https://github.com/JKhyro/FURYOKU/issues/254) publish the seven-Symbiote approval/resume smoke fixture after #252 closed multi-Symbiote ledger gating
+- Current support lane: [#256](https://github.com/JKhyro/FURYOKU/issues/256) define the durable approval/resume ledger state boundary before implementation
 
 ## Current Baseline
 
@@ -30,6 +30,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Routing evidence contract: [Hermes/FURYOKU routing evidence contract](docs/routing-evidence-contract.md)
 - Operator-reviewed workflow envelope: [Operator-reviewed Hermes workflow envelope](docs/operator-reviewed-workflow-envelope.md)
 - Approval/resume contract: [Execution-keyed approval/resume contract](docs/approval-resume-contract.md)
+- Durable approval/resume ledger boundary: [Durable approval/resume ledger state boundary](docs/durable-approval-resume-ledger-boundary.md)
 
 ### Provisional Local Usage Tiers
 
