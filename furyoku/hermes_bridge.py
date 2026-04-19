@@ -286,6 +286,16 @@ class HermesBridgeThreeSymbioteSmokeResult:
             for result in self.results
             if result.ok
         ]
+        approval_gate_payloads = [
+            gate
+            for gate in (_bridge_result_approval_gate(result) for result in self.results)
+            if gate is not None
+        ]
+        approval_blocked_keys = [
+            _bridge_result_execution_key(result)
+            for result in self.results
+            if _bridge_result_approval_blocked(result)
+        ]
         dry_run = self.mode == "dry_run"
         payload = {
             "schemaVersion": 1,
@@ -318,6 +328,11 @@ class HermesBridgeThreeSymbioteSmokeResult:
                 "enabled": True,
                 "uniqueExecutionKeys": len(set(self.envelope.execution_keys)),
                 "duplicates": duplicate_keys,
+            },
+            "approvalResumeGate": {
+                "enabled": bool(approval_gate_payloads),
+                "required": any(gate.get("required", False) for gate in approval_gate_payloads),
+                "blockedExecutionKeys": approval_blocked_keys,
             },
             "results": result_payloads,
             "error": None,
@@ -846,6 +861,8 @@ def live_run_three_symbiote_smoke(
     command_resolver: CommandResolver | None = None,
     timeout_seconds: float | None = 60.0,
     cwd: str | Path | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    require_approval_resume: bool = False,
 ) -> HermesBridgeThreeSymbioteSmokeResult:
     """Run three ordered one-Symbiote handoffs through one configured Hermes process boundary."""
 
@@ -859,6 +876,8 @@ def live_run_three_symbiote_smoke(
         command_resolver=command_resolver,
         timeout_seconds=timeout_seconds,
         cwd=cwd,
+        approval_resume=approval_resume,
+        require_approval_resume=require_approval_resume,
         result_factory=HermesBridgeThreeSymbioteSmokeResult,
     )
 
@@ -874,6 +893,8 @@ def live_run_seven_symbiote_smoke(
     command_resolver: CommandResolver | None = None,
     timeout_seconds: float | None = 60.0,
     cwd: str | Path | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    require_approval_resume: bool = False,
 ) -> HermesBridgeSevenSymbioteSmokeResult:
     """Run seven ordered one-Symbiote handoffs through one configured Hermes process boundary."""
 
@@ -887,6 +908,8 @@ def live_run_seven_symbiote_smoke(
         command_resolver=command_resolver,
         timeout_seconds=timeout_seconds,
         cwd=cwd,
+        approval_resume=approval_resume,
+        require_approval_resume=require_approval_resume,
         result_factory=HermesBridgeSevenSymbioteSmokeResult,
     )
 
@@ -935,6 +958,8 @@ def _live_run_symbiote_smoke(
     command_resolver: CommandResolver | None,
     timeout_seconds: float | None,
     cwd: str | Path | None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None,
+    require_approval_resume: bool,
     result_factory: type[HermesBridgeThreeSymbioteSmokeResult],
 ) -> HermesBridgeThreeSymbioteSmokeResult:
     started = time.perf_counter()
@@ -951,6 +976,8 @@ def _live_run_symbiote_smoke(
             command_resolver=command_resolver,
             timeout_seconds=timeout_seconds,
             cwd=cwd,
+            approval_resume=approval_resume,
+            require_approval_resume=require_approval_resume,
         )
         results.append(result)
         if not result.dry_run.duplicate:
@@ -1115,6 +1142,18 @@ def _bridge_result_duplicate(result: HermesBridgeDryRunResult | HermesBridgeLive
 def _bridge_result_started(result: HermesBridgeDryRunResult | HermesBridgeLiveResult) -> bool:
     if isinstance(result, HermesBridgeLiveResult):
         return result.started
+    return False
+
+
+def _bridge_result_approval_gate(result: HermesBridgeDryRunResult | HermesBridgeLiveResult) -> dict | None:
+    if isinstance(result, HermesBridgeLiveResult) and result.approval_gate is not None:
+        return result.approval_gate.to_dict()
+    return None
+
+
+def _bridge_result_approval_blocked(result: HermesBridgeDryRunResult | HermesBridgeLiveResult) -> bool:
+    if isinstance(result, HermesBridgeLiveResult):
+        return result.handoff_status == "approval-blocked"
     return False
 
 

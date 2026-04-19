@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#250](https://github.com/JKhyro/FURYOKU/issues/250) gate Hermes bridge handoffs with approval/resume records
+- Current support lane: [#252](https://github.com/JKhyro/FURYOKU/issues/252) extend approval/resume ledger gating to multi-Symbiote Hermes smoke handoffs
 
 ## Current Baseline
 
@@ -116,7 +116,7 @@ Current routing core:
 - [`furyoku/task_profiles.py`](furyoku/task_profiles.py) loads reusable JSON task profiles into router-ready task requirements.
 - [`furyoku/workflow_envelope.py`](furyoku/workflow_envelope.py) validates a typed operator-reviewed workflow envelope around one Hermes/FURYOKU handoff without adding a second scheduler or hidden shared state.
 - [`furyoku/approval_resume.py`](furyoku/approval_resume.py) validates execution-keyed approval/resume records before any durable workflow state is introduced.
-- Live one-Symbiote Hermes bridge handoffs can require approval/resume evidence and block before process invocation unless the record is `approved` or `resume_approved` for the exact bridge execution key.
+- Live Hermes bridge handoffs can require approval/resume evidence and block before process invocation unless the latest matching record is `approved` or `resume_approved` for the exact bridge execution key.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
@@ -136,6 +136,7 @@ Current routing core:
 - [`examples/operator_reviewed_hermes_workflow.example.json`](examples/operator_reviewed_hermes_workflow.example.json) shows the typed operator-reviewed Hermes handoff envelope.
 - [`examples/hermes_approval_resume_contract.example.json`](examples/hermes_approval_resume_contract.example.json) shows approval and resume records keyed to the reviewed handoff envelope.
 - [`examples/hermes_approval_resume_gate.approved.json`](examples/hermes_approval_resume_gate.approved.json) shows a single approved record for a gated one-Symbiote bridge handoff.
+- [`examples/hermes_approval_resume_three_smoke.approved.json`](examples/hermes_approval_resume_three_smoke.approved.json) shows approved records for a gated three-Symbiote smoke handoff ledger.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.

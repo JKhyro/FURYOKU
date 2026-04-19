@@ -137,6 +137,14 @@ def approval_record(execution_key: str, **overrides) -> ApprovalResumeRecord:
     return ApprovalResumeRecord.from_dict(approval_record_payload(execution_key, **overrides))
 
 
+def approval_ledger(execution_keys: list[str] | tuple[str, ...], *, blocked_key: str | None = None) -> ApprovalResumeLedger:
+    records = []
+    for execution_key in execution_keys:
+        state = "approval_pending" if execution_key == blocked_key else "approved"
+        records.append(approval_record_payload(execution_key, state=state))
+    return ApprovalResumeLedger.from_dict({"schemaVersion": 1, "records": records})
+
+
 def three_symbiote_payload() -> dict:
     payloads = []
     for index, role in enumerate(("primary", "research", "synthesis"), start=1):
@@ -495,6 +503,8 @@ class HermesBridgeTests(unittest.TestCase):
         result = live_run_three_symbiote_smoke(
             [local_endpoint()],
             envelope,
+            approval_resume=approval_ledger(envelope.execution_keys),
+            require_approval_resume=True,
             handoff_command=(
                 sys.executable,
                 "-c",
@@ -508,10 +518,41 @@ class HermesBridgeTests(unittest.TestCase):
         self.assertEqual(payload["handoff"]["status"], "completed")
         self.assertEqual(payload["execution"]["status"], "succeeded")
         self.assertEqual(payload["aggregate"]["succeeded"], 3)
+        self.assertTrue(payload["approvalResumeGate"]["required"])
+        self.assertEqual(payload["approvalResumeGate"]["blockedExecutionKeys"], [])
         self.assertEqual(
             [item["execution"]["runtimePayload"]["executionKey"] for item in payload["results"]],
             list(envelope.execution_keys),
         )
+        self.assertEqual(
+            [item["approvalResumeGate"]["status"] for item in payload["results"]],
+            ["approved", "approved", "approved"],
+        )
+
+    def test_three_symbiote_live_run_blocks_pending_ledger_record_before_handoff(self):
+        envelope = HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(three_symbiote_payload())
+        blocked_key = envelope.execution_keys[1]
+        result = live_run_three_symbiote_smoke(
+            [local_endpoint()],
+            envelope,
+            approval_resume=approval_ledger(envelope.execution_keys, blocked_key=blocked_key),
+            require_approval_resume=True,
+            handoff_command=(
+                sys.executable,
+                "-c",
+                "import json, sys; payload=json.load(sys.stdin); key=payload['envelope']['executionKey']; sys.exit(99) if key.endswith('.research') else print(json.dumps({'executionKey':key}))",
+            ),
+        )
+        payload = result.to_dict()
+
+        self.assertFalse(result.ok)
+        self.assertEqual(payload["handoff"]["status"], "partial")
+        self.assertEqual(payload["execution"]["status"], "partial")
+        self.assertEqual(payload["approvalResumeGate"]["blockedExecutionKeys"], [blocked_key])
+        self.assertEqual(payload["results"][1]["handoff"]["status"], "approval-blocked")
+        self.assertFalse(payload["results"][1]["execution"]["started"])
+        self.assertEqual(payload["results"][1]["error"]["code"], "approval_resume_not_safe")
+        self.assertEqual(payload["results"][2]["handoff"]["status"], "completed")
 
     def test_loads_seven_symbiote_smoke_envelope(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -574,6 +615,8 @@ class HermesBridgeTests(unittest.TestCase):
         result = live_run_seven_symbiote_smoke(
             [seven_capable_endpoint()],
             envelope,
+            approval_resume=approval_ledger(envelope.execution_keys),
+            require_approval_resume=True,
             handoff_command=(
                 sys.executable,
                 "-c",
@@ -587,6 +630,8 @@ class HermesBridgeTests(unittest.TestCase):
         self.assertEqual(payload["handoff"]["status"], "completed")
         self.assertEqual(payload["execution"]["status"], "succeeded")
         self.assertEqual(payload["aggregate"]["succeeded"], 7)
+        self.assertTrue(payload["approvalResumeGate"]["required"])
+        self.assertEqual(payload["approvalResumeGate"]["blockedExecutionKeys"], [])
         self.assertEqual(
             [item["execution"]["runtimePayload"]["executionKey"] for item in payload["results"]],
             list(envelope.execution_keys),
@@ -888,6 +933,80 @@ class HermesBridgeCliTests(unittest.TestCase):
         self.assertEqual(payload["smoke"]["symbioteCount"], 3)
         self.assertEqual(payload["aggregate"]["succeeded"], 3)
         self.assertEqual(len(payload["results"]), 3)
+
+    def test_cli_three_symbiote_live_mode_accepts_approval_ledger(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            registry_path = temp_path / "models.json"
+            envelope_path = temp_path / "three-smoke.json"
+            ledger_path = temp_path / "approval-ledger.json"
+            smoke_payload = three_symbiote_payload()
+            envelope = HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(smoke_payload)
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "models": [
+                            {
+                                "modelId": "local-echo",
+                                "provider": "local",
+                                "privacyLevel": "local",
+                                "contextWindowTokens": 4096,
+                                "averageLatencyMs": 10,
+                                "invocation": [sys.executable, "-c", "print('ready')"],
+                                "capabilities": {
+                                    "conversation": 0.95,
+                                    "instruction_following": 0.9,
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            envelope_path.write_text(json.dumps(smoke_payload), encoding="utf-8")
+            ledger_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "records": [
+                            approval_record_payload(execution_key)
+                            for execution_key in envelope.execution_keys
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-three-smoke",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(envelope_path),
+                    "--approval-resume-ledger",
+                    str(ledger_path),
+                    "--require-approval-resume",
+                    "--handoff-command",
+                    sys.executable,
+                    "-c",
+                    "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'received':payload['envelope']['executionKey']}))",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["aggregate"]["succeeded"], 3)
+        self.assertTrue(payload["approvalResumeGate"]["required"])
+        self.assertEqual(payload["approvalResumeGate"]["blockedExecutionKeys"], [])
 
     def test_cli_seven_symbiote_dry_run_outputs_aggregate_report(self):
         with tempfile.TemporaryDirectory() as temp_dir:
