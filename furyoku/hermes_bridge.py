@@ -129,6 +129,69 @@ class HermesBridgeEnvelope:
 
 
 @dataclass(frozen=True)
+class HermesBridgeThreeSymbioteSmokeEnvelope:
+    """A bounded three-Symbiote smoke envelope for the next Hermes/FURYOKU scale step."""
+
+    schema_version: int
+    smoke_id: str
+    symbiotes: tuple[HermesBridgeEnvelope, ...]
+
+    @property
+    def execution_keys(self) -> tuple[str, ...]:
+        return tuple(symbiote.execution_key for symbiote in self.symbiotes)
+
+    @classmethod
+    def from_dict(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        source: str = "<memory>",
+    ) -> "HermesBridgeThreeSymbioteSmokeEnvelope":
+        if not isinstance(payload, Mapping):
+            raise HermesBridgeError(f"{source}: three-Symbiote smoke envelope must be a JSON object")
+
+        schema_version = int(payload.get("schemaVersion", payload.get("schema_version", 1)) or 1)
+        if schema_version != 1:
+            raise HermesBridgeError(f"{source}: unsupported three-Symbiote smoke schemaVersion {schema_version!r}")
+
+        smoke_id = _required_string(payload, "smokeId", "smoke_id", source=source)
+        raw_symbiotes = payload.get("symbiotes")
+        if not isinstance(raw_symbiotes, list):
+            raise HermesBridgeError(f"{source}: symbiotes must be a JSON array with exactly three items")
+        if len(raw_symbiotes) != 3:
+            raise HermesBridgeError(f"{source}: three-Symbiote smoke requires exactly three Symbiotes")
+
+        symbiotes: list[HermesBridgeEnvelope] = []
+        for index, raw_symbiote in enumerate(raw_symbiotes, start=1):
+            if not isinstance(raw_symbiote, Mapping):
+                raise HermesBridgeError(f"{source}:symbiotes[{index - 1}] must be a JSON object")
+            symbiote_payload = dict(raw_symbiote)
+            symbiote_payload.setdefault("schemaVersion", 1)
+            try:
+                symbiotes.append(
+                    HermesBridgeEnvelope.from_dict(
+                        symbiote_payload,
+                        source=f"{source}:symbiotes[{index - 1}]",
+                    )
+                )
+            except HermesBridgeError:
+                raise
+            except ValueError as exc:
+                raise HermesBridgeError(str(exc)) from exc
+
+        return cls(schema_version=schema_version, smoke_id=smoke_id, symbiotes=tuple(symbiotes))
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": self.schema_version,
+            "smokeId": self.smoke_id,
+            "symbioteCount": len(self.symbiotes),
+            "executionKeys": list(self.execution_keys),
+            "symbiotes": [symbiote.to_dict() for symbiote in self.symbiotes],
+        }
+
+
+@dataclass(frozen=True)
 class HermesBridgeDryRunResult:
     """Structured dry-run result for the first Hermes/FURYOKU one-Symbiote bridge."""
 
@@ -174,6 +237,84 @@ class HermesBridgeDryRunResult:
             "decisionReport": self.report.to_dict() if self.report is not None else None,
             "error": dict(self.error) if self.error is not None else None,
         }
+
+
+@dataclass(frozen=True)
+class HermesBridgeThreeSymbioteSmokeResult:
+    """Aggregate result for a bounded three-Symbiote smoke run."""
+
+    envelope: HermesBridgeThreeSymbioteSmokeEnvelope
+    mode: str
+    results: tuple[HermesBridgeDryRunResult | HermesBridgeLiveResult, ...]
+    elapsed_ms: float
+    handoff_command: tuple[str, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return len(self.results) == 3 and all(result.ok for result in self.results)
+
+    def to_dict(self) -> dict:
+        result_payloads = [result.to_dict() for result in self.results]
+        duplicate_keys = [
+            _bridge_result_execution_key(result)
+            for result in self.results
+            if _bridge_result_duplicate(result)
+        ]
+        failed_keys = [
+            _bridge_result_execution_key(result)
+            for result in self.results
+            if not result.ok
+        ]
+        succeeded_keys = [
+            _bridge_result_execution_key(result)
+            for result in self.results
+            if result.ok
+        ]
+        dry_run = self.mode == "dry_run"
+        payload = {
+            "schemaVersion": 1,
+            "ok": self.ok,
+            "mode": self.mode,
+            "bridge": "hermes-furyoku",
+            "smoke": self.envelope.to_dict(),
+            "handoff": {
+                "status": _aggregate_handoff_status(self.mode, self.results),
+                "dryRun": dry_run,
+                "runtime": "Hermes/FURYOKU",
+                "boundary": "FURYOKU routing and envelope validation with three ordered one-Symbiote handoffs",
+            },
+            "execution": {
+                "status": _aggregate_execution_status(self.mode, self.results),
+                "started": any(_bridge_result_started(result) for result in self.results),
+                "elapsedMs": round(self.elapsed_ms, 3),
+                "ordered": True,
+            },
+            "aggregate": {
+                "totalSymbiotes": len(self.results),
+                "succeeded": len(succeeded_keys),
+                "failed": len(failed_keys),
+                "duplicatesPrevented": len(duplicate_keys),
+                "executionKeys": [_bridge_result_execution_key(result) for result in self.results],
+                "succeededExecutionKeys": succeeded_keys,
+                "failedExecutionKeys": failed_keys,
+            },
+            "duplicateGuard": {
+                "enabled": True,
+                "uniqueExecutionKeys": len(set(self.envelope.execution_keys)),
+                "duplicates": duplicate_keys,
+            },
+            "results": result_payloads,
+            "error": None,
+        }
+        if self.handoff_command:
+            payload["handoff"]["command"] = list(self.handoff_command)
+        if not self.ok:
+            payload["error"] = {
+                "recoverable": True,
+                "code": "three_symbiote_smoke_incomplete",
+                "message": "one or more three-Symbiote smoke handoffs did not complete successfully",
+            }
+        return payload
 
 
 @dataclass(frozen=True)
@@ -232,6 +373,13 @@ def load_hermes_bridge_envelope(path: str | Path) -> HermesBridgeEnvelope:
     with envelope_path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
     return HermesBridgeEnvelope.from_dict(payload, source=str(envelope_path))
+
+
+def load_hermes_three_symbiote_smoke(path: str | Path) -> HermesBridgeThreeSymbioteSmokeEnvelope:
+    envelope_path = Path(path)
+    with envelope_path.open("r", encoding="utf-8-sig") as handle:
+        payload = json.load(handle)
+    return HermesBridgeThreeSymbioteSmokeEnvelope.from_dict(payload, source=str(envelope_path))
 
 
 def dry_run_hermes_bridge(
@@ -310,6 +458,40 @@ def dry_run_hermes_bridge(
         selected=selected,
         report=report,
         readiness=readiness_results,
+        elapsed_ms=_elapsed_ms(started),
+    )
+
+
+def dry_run_three_symbiote_smoke(
+    models: list[ModelEndpoint],
+    envelope: HermesBridgeThreeSymbioteSmokeEnvelope,
+    *,
+    seen_execution_keys: Iterable[str] | None = None,
+    readiness: ReadinessEvidenceInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    command_resolver: CommandResolver | None = None,
+) -> HermesBridgeThreeSymbioteSmokeResult:
+    """Validate and route three bounded Symbiote handoffs without invoking Hermes."""
+
+    started = time.perf_counter()
+    seen_keys = set(seen_execution_keys or ())
+    results: list[HermesBridgeDryRunResult] = []
+    for symbiote in envelope.symbiotes:
+        result = dry_run_hermes_bridge(
+            models,
+            symbiote,
+            seen_execution_keys=seen_keys,
+            readiness=readiness,
+            routing_policy=routing_policy,
+            command_resolver=command_resolver,
+        )
+        results.append(result)
+        if not result.duplicate:
+            seen_keys.add(symbiote.execution_key)
+    return HermesBridgeThreeSymbioteSmokeResult(
+        envelope=envelope,
+        mode="dry_run",
+        results=tuple(results),
         elapsed_ms=_elapsed_ms(started),
     )
 
@@ -436,6 +618,47 @@ def live_run_hermes_bridge(
     )
 
 
+def live_run_three_symbiote_smoke(
+    models: list[ModelEndpoint],
+    envelope: HermesBridgeThreeSymbioteSmokeEnvelope,
+    *,
+    handoff_command: tuple[str, ...],
+    seen_execution_keys: Iterable[str] | None = None,
+    readiness: ReadinessEvidenceInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    command_resolver: CommandResolver | None = None,
+    timeout_seconds: float | None = 60.0,
+    cwd: str | Path | None = None,
+) -> HermesBridgeThreeSymbioteSmokeResult:
+    """Run three ordered one-Symbiote handoffs through one configured Hermes process boundary."""
+
+    started = time.perf_counter()
+    seen_keys = set(seen_execution_keys or ())
+    results: list[HermesBridgeLiveResult] = []
+    for symbiote in envelope.symbiotes:
+        result = live_run_hermes_bridge(
+            models,
+            symbiote,
+            handoff_command=handoff_command,
+            seen_execution_keys=seen_keys,
+            readiness=readiness,
+            routing_policy=routing_policy,
+            command_resolver=command_resolver,
+            timeout_seconds=timeout_seconds,
+            cwd=cwd,
+        )
+        results.append(result)
+        if not result.dry_run.duplicate:
+            seen_keys.add(symbiote.execution_key)
+    return HermesBridgeThreeSymbioteSmokeResult(
+        envelope=envelope,
+        mode="live",
+        results=tuple(results),
+        elapsed_ms=_elapsed_ms(started),
+        handoff_command=tuple(handoff_command),
+    )
+
+
 def _provider_health_results(readiness: ReadinessEvidenceInput | None) -> tuple[ProviderHealthCheckResult, ...]:
     if readiness is None:
         return ()
@@ -514,6 +737,50 @@ def _parse_runtime_payload(stdout: str) -> Mapping[str, Any] | str | None:
     if isinstance(payload, Mapping):
         return payload
     return stripped
+
+
+def _bridge_result_execution_key(result: HermesBridgeDryRunResult | HermesBridgeLiveResult) -> str:
+    if isinstance(result, HermesBridgeLiveResult):
+        return result.dry_run.envelope.execution_key
+    return result.envelope.execution_key
+
+
+def _bridge_result_duplicate(result: HermesBridgeDryRunResult | HermesBridgeLiveResult) -> bool:
+    if isinstance(result, HermesBridgeLiveResult):
+        return result.dry_run.duplicate
+    return result.duplicate
+
+
+def _bridge_result_started(result: HermesBridgeDryRunResult | HermesBridgeLiveResult) -> bool:
+    if isinstance(result, HermesBridgeLiveResult):
+        return result.started
+    return False
+
+
+def _aggregate_handoff_status(
+    mode: str,
+    results: tuple[HermesBridgeDryRunResult | HermesBridgeLiveResult, ...],
+) -> str:
+    if all(result.ok for result in results):
+        return "dry-run-ready" if mode == "dry_run" else "completed"
+    if any(result.ok for result in results):
+        return "partial"
+    if any(_bridge_result_duplicate(result) for result in results):
+        return "duplicate-prevented"
+    return "failed"
+
+
+def _aggregate_execution_status(
+    mode: str,
+    results: tuple[HermesBridgeDryRunResult | HermesBridgeLiveResult, ...],
+) -> str:
+    if all(result.ok for result in results):
+        return "not-started" if mode == "dry_run" else "succeeded"
+    if any(result.ok for result in results):
+        return "partial"
+    if any(_bridge_result_duplicate(result) for result in results):
+        return "skipped"
+    return "error"
 
 
 def _coerce_text(value: str | bytes | None) -> str:

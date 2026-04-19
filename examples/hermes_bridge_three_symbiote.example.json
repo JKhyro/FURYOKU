@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "smokeId": "hermes.bridge.three-symbiote",
+  "symbiotes": [
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-01",
+      "role": "primary",
+      "task": {
+        "taskId": "hermes.bridge.three-symbiote.primary",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the primary three-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-02",
+      "role": "research",
+      "task": {
+        "taskId": "hermes.bridge.three-symbiote.research",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "retrieval": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the research three-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-03",
+      "role": "synthesis",
+      "task": {
+        "taskId": "hermes.bridge.three-symbiote.synthesis",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "summarization": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the synthesis three-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    }
+  ]
+}

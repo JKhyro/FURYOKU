@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document tracks issue [#232](https://github.com/JKhyro/FURYOKU/issues/232): prepare the first executable Hermes-derived FURYOKU launch bridge and one-Symbiote smoke.
+This document records the completed issue [#232](https://github.com/JKhyro/FURYOKU/issues/232) launch bridge and the active issue [#238](https://github.com/JKhyro/FURYOKU/issues/238) three-Symbiote coordination smoke.
 
 Parent migration lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230).
 
@@ -158,19 +158,19 @@ FURYOKU still records the selected model from its own routing evidence. The adap
 
 ## Hermes Provider/Auth Gate
 
-On this host, the Hermes checkout and venv are usable, but the actual agent cannot execute a prompt yet because no provider credentials/config are present:
+On this host, the Hermes checkout and venv are usable. Initial execution was blocked until a provider path was supplied:
 
 ```powershell
 wsl -d Ubuntu -- /root/.venvs/hermes-agent-smoke/bin/hermes status
 wsl -d Ubuntu -- /root/.venvs/hermes-agent-smoke/bin/hermes chat --query "Reply with one short sentence confirming the Hermes/FURYOKU bridge received this task." --quiet --source furyoku-bridge --max-turns 1
 ```
 
-Observed blocker:
+Previously observed blocker:
 
-- `/root/.hermes/.env` is not present.
-- Hermes model/provider is not set.
-- API-key providers and OAuth providers report not configured.
-- `hermes chat --query ...` exits before execution with first-run non-interactive setup guidance.
+- `/root/.hermes/.env` was not present.
+- Hermes model/provider was not set.
+- API-key providers and OAuth providers reported not configured.
+- `hermes chat --query ...` exited before execution with first-run non-interactive setup guidance.
 
 Minimum non-interactive configuration is provider-specific. Hermes currently suggests either setting provider environment variables such as `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, or configuring a custom endpoint with:
 
@@ -180,4 +180,41 @@ hermes config set model.base_url http://localhost:8080/v1
 hermes config set model.default your-model-name
 ```
 
-After that provider/auth gate is resolved, rerun the adapter command above. A successful one-Symbiote Hermes execution is required before the lane advances to any three-Symbiote smoke.
+OpenAI provider wiring now reaches Hermes through transient `OPENAI_API_KEY` pass-through, but the current account is quota-blocked. A successful one-Symbiote Hermes execution was proven with a transient `GH_TOKEN`/Copilot provider override and model `gpt-4.1`; no provider secret was stored or migrated.
+
+## Three-Symbiote Smoke Contract
+
+Issue [#238](https://github.com/JKhyro/FURYOKU/issues/238) scales the proven one-Symbiote bridge into exactly three ordered one-Symbiote handoffs. This is still not the full seven-Symbiote runtime.
+
+Example dry-run:
+
+```powershell
+python -m furyoku.cli hermes-three-smoke `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_three_symbiote.example.json `
+  --dry-run
+```
+
+Expected aggregate output contract:
+
+- exactly three Symbiote handoff results
+- ordered execution keys derived from `symbioteId`, `role`, and `taskId`
+- per-Symbiote selected model, handoff status, execution status, timing, and recoverable error details
+- aggregate counts for succeeded, failed, and duplicate-prevented handoffs
+- no duplicate execution if two handoffs claim the same execution key
+
+Live mode reuses the existing one-Symbiote process boundary and invokes the configured handoff command once per ordered Symbiote:
+
+```powershell
+python -m furyoku.cli hermes-three-smoke `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_three_symbiote.example.json `
+  --timeout-seconds 180 `
+  --handoff-command wsl -d Ubuntu python3 /mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh/examples/hermes_bridge_hermes_runtime.py `
+    --hermes-command /root/.venvs/hermes-agent-smoke/bin/hermes `
+    --provider copilot `
+    --model gpt-4.1 `
+    --max-turns 1
+```
+
+Do not advance to seven-Symbiote coordination until this three-Symbiote smoke establishes bounded coordination behavior.
