@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#244](https://github.com/JKhyro/FURYOKU/issues/244) define the Hermes/FURYOKU routing evidence contract from retained OpenClaw benchmark truth
+- Current support lane: [#246](https://github.com/JKhyro/FURYOKU/issues/246) prototype a typed FURYOKU workflow envelope for operator-reviewed Hermes handoffs
 
 ## Current Baseline
 
@@ -28,6 +28,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Launch bridge plan: [Hermes/FURYOKU launch bridge](docs/hermes-launch-bridge.md)
 - OpenClaw carryover inventory: [OpenClaw carryover inventory](docs/openclaw-carryover-inventory.md)
 - Routing evidence contract: [Hermes/FURYOKU routing evidence contract](docs/routing-evidence-contract.md)
+- Operator-reviewed workflow envelope: [Operator-reviewed Hermes workflow envelope](docs/operator-reviewed-workflow-envelope.md)
 
 ### Provisional Local Usage Tiers
 
@@ -112,6 +113,7 @@ Current routing core:
 - [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
 - [`furyoku/routing_evidence.py`](furyoku/routing_evidence.py) normalizes retained OpenClaw benchmark outputs into Hermes/FURYOKU routing evidence without bypassing task, health, privacy, or duplicate-execution gates.
 - [`furyoku/task_profiles.py`](furyoku/task_profiles.py) loads reusable JSON task profiles into router-ready task requirements.
+- [`furyoku/workflow_envelope.py`](furyoku/workflow_envelope.py) validates a typed operator-reviewed workflow envelope around one Hermes/FURYOKU handoff without adding a second scheduler or hidden shared state.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
@@ -128,6 +130,7 @@ Current routing core:
 - [`examples/decision_outcomes.example.jsonl`](examples/decision_outcomes.example.jsonl) is a runnable outcome fixture for the summary and recommendation workflow.
 - [`examples/feedback_policy.example.json`](examples/feedback_policy.example.json) shows the configurable feedback adjustment policy contract for tuning max adjustment, verdict weights, default outcome scores, and optional recency decay.
 - [`examples/routing_score_policy.speed-first.json`](examples/routing_score_policy.speed-first.json) shows a speed-heavy routing score policy profile.
+- [`examples/operator_reviewed_hermes_workflow.example.json`](examples/operator_reviewed_hermes_workflow.example.json) shows the typed operator-reviewed Hermes handoff envelope.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.
