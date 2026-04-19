@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#252](https://github.com/JKhyro/FURYOKU/issues/252) extend approval/resume ledger gating to multi-Symbiote Hermes smoke handoffs
+- Current support lane: [#254](https://github.com/JKhyro/FURYOKU/issues/254) publish the seven-Symbiote approval/resume smoke fixture after #252 closed multi-Symbiote ledger gating
 
 ## Current Baseline
 
@@ -137,6 +137,7 @@ Current routing core:
 - [`examples/hermes_approval_resume_contract.example.json`](examples/hermes_approval_resume_contract.example.json) shows approval and resume records keyed to the reviewed handoff envelope.
 - [`examples/hermes_approval_resume_gate.approved.json`](examples/hermes_approval_resume_gate.approved.json) shows a single approved record for a gated one-Symbiote bridge handoff.
 - [`examples/hermes_approval_resume_three_smoke.approved.json`](examples/hermes_approval_resume_three_smoke.approved.json) shows approved records for a gated three-Symbiote smoke handoff ledger.
+- [`examples/hermes_approval_resume_seven_smoke.approved.json`](examples/hermes_approval_resume_seven_smoke.approved.json) shows approved records for a gated seven-Symbiote smoke handoff ledger.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.

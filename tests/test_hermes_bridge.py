@@ -26,6 +26,10 @@ from furyoku import (
     load_hermes_three_symbiote_smoke,
 )
 
+ROOT = Path(__file__).resolve().parents[1]
+SEVEN_SMOKE_ENVELOPE_PATH = ROOT / "examples" / "hermes_bridge_seven_symbiote.example.json"
+SEVEN_SMOKE_APPROVAL_PATH = ROOT / "examples" / "hermes_approval_resume_seven_smoke.approved.json"
+
 
 def local_endpoint() -> ModelEndpoint:
     return ModelEndpoint(
@@ -1066,3 +1070,68 @@ class HermesBridgeCliTests(unittest.TestCase):
         self.assertEqual(payload["smoke"]["symbioteCount"], 7)
         self.assertEqual(payload["aggregate"]["succeeded"], 7)
         self.assertEqual(len(payload["results"]), 7)
+
+    def test_cli_seven_symbiote_live_mode_accepts_checked_in_approval_ledger(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "models": [
+                            {
+                                "modelId": "local-echo",
+                                "provider": "local",
+                                "privacyLevel": "local",
+                                "contextWindowTokens": 4096,
+                                "averageLatencyMs": 10,
+                                "invocation": [sys.executable, "-c", "print('ready')"],
+                                "capabilities": {
+                                    "conversation": 0.95,
+                                    "instruction_following": 0.9,
+                                    "reasoning": 0.8,
+                                    "retrieval": 0.8,
+                                    "coding": 0.8,
+                                    "summarization": 0.8,
+                                    "safety": 0.8,
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "furyoku.cli",
+                    "hermes-seven-smoke",
+                    "--registry",
+                    str(registry_path),
+                    "--envelope",
+                    str(SEVEN_SMOKE_ENVELOPE_PATH),
+                    "--approval-resume-ledger",
+                    str(SEVEN_SMOKE_APPROVAL_PATH),
+                    "--require-approval-resume",
+                    "--handoff-command",
+                    sys.executable,
+                    "-c",
+                    "import json, sys; payload=json.load(sys.stdin); print(json.dumps({'received':payload['envelope']['executionKey'],'gate':payload['approvalResumeGate']['status']}))",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["aggregate"]["succeeded"], 7)
+        self.assertTrue(payload["approvalResumeGate"]["required"])
+        self.assertEqual(payload["approvalResumeGate"]["blockedExecutionKeys"], [])
+        self.assertEqual(
+            [item["execution"]["runtimePayload"]["gate"] for item in payload["results"]],
+            ["approved"] * 7,
+        )

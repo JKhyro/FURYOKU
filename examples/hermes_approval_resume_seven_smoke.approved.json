@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.seven-symbiote.primary",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-02:planning:hermes.bridge.seven-symbiote.planning",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-03:research:hermes.bridge.seven-symbiote.research",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-04:implementation:hermes.bridge.seven-symbiote.implementation",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-05:verification:hermes.bridge.seven-symbiote.verification",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-06:synthesis:hermes.bridge.seven-symbiote.synthesis",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-seven-smoke",
+      "executionId": "reviewed-seven-smoke-001",
+      "handoffExecutionKey": "symbiote-07:guard:hermes.bridge.seven-symbiote.guard",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_seven_symbiote.example.json",
+        "issue": "#254"
+      }
+    }
+  ]
+}
