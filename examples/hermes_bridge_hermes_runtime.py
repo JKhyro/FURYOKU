@@ -153,7 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 127
 
-    ok = completed.returncode == 0
+    reported_error = _detect_hermes_reported_failure(completed.stdout or "")
+    ok = completed.returncode == 0 and reported_error is None
     _emit(
         _result_payload(
             started,
@@ -165,14 +166,15 @@ def main(argv: list[str] | None = None) -> int:
             stderr=completed.stderr or "",
             error=None
             if ok
-            else {
+            else reported_error
+            or {
                 "recoverable": True,
                 "code": "hermes_execution_failed",
                 "message": f"Hermes command exited with code {completed.returncode}",
             },
         )
     )
-    return completed.returncode
+    return completed.returncode if reported_error is None else 1
 
 
 def _build_hermes_command(args: argparse.Namespace, envelope: Mapping[str, Any], selected: Mapping[str, Any]) -> list[str]:
@@ -271,6 +273,23 @@ def _coerce_text(value: str | bytes | None) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return value
+
+
+def _detect_hermes_reported_failure(stdout: str) -> Mapping[str, Any] | None:
+    lowered = stdout.lower()
+    failure_markers = (
+        "api call failed after",
+        "final error:",
+        "rate limit persisted",
+        "max retries",
+    )
+    if not any(marker in lowered for marker in failure_markers):
+        return None
+    return {
+        "recoverable": True,
+        "code": "hermes_reported_failure",
+        "message": "Hermes reported a failed agent execution despite exiting successfully",
+    }
 
 
 def _positive_int_env(name: str, default: int) -> int:

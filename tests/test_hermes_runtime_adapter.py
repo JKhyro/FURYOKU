@@ -130,6 +130,39 @@ class HermesRuntimeAdapterTests(unittest.TestCase):
         self.assertEqual(payload["stderr"], "no provider configured")
         self.assertEqual(payload["error"]["code"], "hermes_execution_failed")
 
+    def test_adapter_reports_hermes_stdout_failure_even_with_zero_exit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            fake_hermes = temp_path / "fake_hermes_soft_fail.py"
+            fake_hermes.write_text(
+                "print('API call failed after 3 retries: quota exceeded')\n"
+                "print('Final error: quota exceeded')\n",
+                encoding="utf-8",
+            )
+            command_json = json.dumps([sys.executable, str(fake_hermes)])
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ADAPTER),
+                    "--hermes-command-json",
+                    command_json,
+                    "--max-turns",
+                    "1",
+                ],
+                input=json.dumps(bridge_payload()),
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(completed.returncode, 1)
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "error")
+        self.assertEqual(payload["exitCode"], 0)
+        self.assertIn("quota exceeded", payload["stdout"])
+        self.assertEqual(payload["error"]["code"], "hermes_reported_failure")
+
     def test_adapter_rejects_malformed_bridge_payload(self):
         completed = subprocess.run(
             [sys.executable, str(ADAPTER), "--hermes-command-json", json.dumps([sys.executable])],
