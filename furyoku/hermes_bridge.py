@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
@@ -18,7 +18,12 @@ from .provider_health import (
 from .task_profiles import parse_task_profile
 
 if TYPE_CHECKING:
-    from .approval_resume import ApprovalResumeLedger, ApprovalResumeRecord
+    from .approval_resume import (
+        ApprovalResumeConsumptionEvent,
+        ApprovalResumeLedger,
+        ApprovalResumeRecord,
+        LocalApprovalResumeLedgerAdapter,
+    )
 
 
 class HermesBridgeError(ValueError):
@@ -371,6 +376,7 @@ class HermesBridgeApprovalGateResult:
     safe_to_handoff: bool
     source: str = "none"
     record: ApprovalResumeRecord | None = None
+    consumption_event: ApprovalResumeConsumptionEvent | None = None
     error: Mapping[str, Any] | None = None
 
     @property
@@ -391,6 +397,7 @@ class HermesBridgeApprovalGateResult:
             "owner": self.record.owner if self.record is not None else None,
             "resumable": self.record.is_resume if self.record is not None else False,
             "recordSource": self.record.source if self.record is not None else None,
+            "consumptionEvent": self.consumption_event.to_dict() if self.consumption_event is not None else None,
             "error": dict(self.error) if self.error is not None else None,
         }
 
@@ -605,7 +612,7 @@ def live_run_hermes_bridge(
     command_resolver: CommandResolver | None = None,
     timeout_seconds: float | None = 60.0,
     cwd: str | Path | None = None,
-    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | LocalApprovalResumeLedgerAdapter | None = None,
     require_approval_resume: bool = False,
 ) -> HermesBridgeLiveResult:
     """Route exactly one Symbiote task, then hand it to one configured Hermes process boundary."""
@@ -637,6 +644,18 @@ def live_run_hermes_bridge(
         approval_resume,
         required=require_approval_resume,
     )
+    if not approval_gate.ok:
+        return HermesBridgeLiveResult(
+            dry_run=dry_run,
+            handoff_command=tuple(handoff_command),
+            handoff_status="approval-blocked",
+            execution_status="not-started",
+            elapsed_ms=_elapsed_ms(started),
+            started=False,
+            approval_gate=approval_gate,
+            error=approval_gate.error,
+        )
+    approval_gate = _consume_local_approval_resume_record(envelope, approval_resume, approval_gate)
     if not approval_gate.ok:
         return HermesBridgeLiveResult(
             dry_run=dry_run,
@@ -742,13 +761,13 @@ def live_run_hermes_bridge(
 
 def validate_hermes_bridge_approval_gate(
     envelope: HermesBridgeEnvelope,
-    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | LocalApprovalResumeLedgerAdapter | None = None,
     *,
     required: bool = False,
 ) -> HermesBridgeApprovalGateResult:
     """Validate approval/resume evidence for one external Hermes/FURYOKU handoff."""
 
-    from .approval_resume import ApprovalResumeLedger, ApprovalResumeRecord
+    from .approval_resume import ApprovalResumeError, ApprovalResumeLedger, ApprovalResumeRecord, LocalApprovalResumeLedgerAdapter
 
     if approval_resume is None:
         if required:
@@ -822,8 +841,55 @@ def validate_hermes_bridge_approval_gate(
             )
         record = max(records, key=lambda item: item.attempt_index)
         source = "ledger"
+    elif isinstance(approval_resume, LocalApprovalResumeLedgerAdapter):
+        try:
+            record = approval_resume.latest_gate_record(envelope.execution_key)
+        except ApprovalResumeError as exc:
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                source="local-ledger",
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_ambiguous_handoff",
+                    "message": str(exc),
+                },
+            )
+        if record is None:
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                source="local-ledger",
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_record_missing",
+                    "message": f"approval/resume local ledger has no record for {envelope.execution_key}",
+                },
+            )
+        if approval_resume.is_record_consumed(record.record_key):
+            return HermesBridgeApprovalGateResult(
+                status="blocked",
+                execution_key=envelope.execution_key,
+                required=required,
+                safe_to_handoff=False,
+                source="local-ledger",
+                record=record,
+                error={
+                    "recoverable": True,
+                    "code": "approval_resume_record_consumed",
+                    "message": f"approval/resume record {record.record_key} was already consumed",
+                },
+            )
+        source = "local-ledger"
     else:
-        raise HermesBridgeError("approval_resume must be an ApprovalResumeRecord, ApprovalResumeLedger, or None")
+        raise HermesBridgeError(
+            "approval_resume must be an ApprovalResumeRecord, ApprovalResumeLedger, "
+            "LocalApprovalResumeLedgerAdapter, or None"
+        )
 
     if not record.safe_to_handoff:
         return HermesBridgeApprovalGateResult(
@@ -850,6 +916,40 @@ def validate_hermes_bridge_approval_gate(
     )
 
 
+def _consume_local_approval_resume_record(
+    envelope: HermesBridgeEnvelope,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | LocalApprovalResumeLedgerAdapter | None,
+    approval_gate: HermesBridgeApprovalGateResult,
+) -> HermesBridgeApprovalGateResult:
+    from .approval_resume import ApprovalResumeConsumptionEvent, ApprovalResumeError, LocalApprovalResumeLedgerAdapter
+
+    if not isinstance(approval_resume, LocalApprovalResumeLedgerAdapter) or approval_gate.record is None:
+        return approval_gate
+    try:
+        event = approval_resume.append_consumption_event(
+            ApprovalResumeConsumptionEvent.from_record(
+                approval_gate.record,
+                execution_key=envelope.execution_key,
+                result_status="started",
+            )
+        )
+    except ApprovalResumeError as exc:
+        return HermesBridgeApprovalGateResult(
+            status="blocked",
+            execution_key=envelope.execution_key,
+            required=approval_gate.required,
+            safe_to_handoff=False,
+            source=approval_gate.source,
+            record=approval_gate.record,
+            error={
+                "recoverable": True,
+                "code": "approval_resume_record_consumed",
+                "message": str(exc),
+            },
+        )
+    return replace(approval_gate, consumption_event=event)
+
+
 def live_run_three_symbiote_smoke(
     models: list[ModelEndpoint],
     envelope: HermesBridgeThreeSymbioteSmokeEnvelope,
@@ -861,7 +961,7 @@ def live_run_three_symbiote_smoke(
     command_resolver: CommandResolver | None = None,
     timeout_seconds: float | None = 60.0,
     cwd: str | Path | None = None,
-    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | LocalApprovalResumeLedgerAdapter | None = None,
     require_approval_resume: bool = False,
 ) -> HermesBridgeThreeSymbioteSmokeResult:
     """Run three ordered one-Symbiote handoffs through one configured Hermes process boundary."""
@@ -893,7 +993,7 @@ def live_run_seven_symbiote_smoke(
     command_resolver: CommandResolver | None = None,
     timeout_seconds: float | None = 60.0,
     cwd: str | Path | None = None,
-    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None = None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | LocalApprovalResumeLedgerAdapter | None = None,
     require_approval_resume: bool = False,
 ) -> HermesBridgeSevenSymbioteSmokeResult:
     """Run seven ordered one-Symbiote handoffs through one configured Hermes process boundary."""
@@ -958,7 +1058,7 @@ def _live_run_symbiote_smoke(
     command_resolver: CommandResolver | None,
     timeout_seconds: float | None,
     cwd: str | Path | None,
-    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | None,
+    approval_resume: ApprovalResumeRecord | ApprovalResumeLedger | LocalApprovalResumeLedgerAdapter | None,
     require_approval_resume: bool,
     result_factory: type[HermesBridgeThreeSymbioteSmokeResult],
 ) -> HermesBridgeThreeSymbioteSmokeResult:
