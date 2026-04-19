@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -175,6 +176,57 @@ class HermesBridgeDryRunResult:
         }
 
 
+@dataclass(frozen=True)
+class HermesBridgeLiveResult:
+    """Structured result for a one-Symbiote Hermes/FURYOKU process-boundary handoff."""
+
+    dry_run: HermesBridgeDryRunResult
+    handoff_command: tuple[str, ...]
+    handoff_status: str
+    execution_status: str
+    elapsed_ms: float
+    started: bool = False
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    timed_out: bool = False
+    runtime_payload: Mapping[str, Any] | str | None = None
+    error: Mapping[str, Any] | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.dry_run.ok and self.handoff_status == "completed" and self.execution_status == "succeeded"
+
+    def to_dict(self) -> dict:
+        payload = self.dry_run.to_dict()
+        payload.update(
+            {
+                "ok": self.ok,
+                "mode": "live",
+                "selectedModel": _score_to_dict(self.dry_run.selected) if self.dry_run.selected is not None else None,
+                "handoff": {
+                    "status": self.handoff_status,
+                    "dryRun": False,
+                    "runtime": "Hermes/FURYOKU",
+                    "boundary": "FURYOKU routing and envelope validation with one external process-boundary handoff",
+                    "command": list(self.handoff_command),
+                },
+                "execution": {
+                    "status": self.execution_status,
+                    "started": self.started,
+                    "elapsedMs": round(self.elapsed_ms, 3),
+                    "exitCode": self.exit_code,
+                    "stdout": self.stdout,
+                    "stderr": self.stderr,
+                    "timedOut": self.timed_out,
+                    "runtimePayload": self.runtime_payload,
+                },
+                "error": dict(self.error) if self.error is not None else None,
+            }
+        )
+        return payload
+
+
 def load_hermes_bridge_envelope(path: str | Path) -> HermesBridgeEnvelope:
     envelope_path = Path(path)
     with envelope_path.open("r", encoding="utf-8-sig") as handle:
@@ -262,6 +314,128 @@ def dry_run_hermes_bridge(
     )
 
 
+def live_run_hermes_bridge(
+    models: list[ModelEndpoint],
+    envelope: HermesBridgeEnvelope,
+    *,
+    handoff_command: tuple[str, ...],
+    seen_execution_keys: Iterable[str] | None = None,
+    readiness: ReadinessEvidenceInput | None = None,
+    routing_policy: RoutingScorePolicyInput | None = None,
+    command_resolver: CommandResolver | None = None,
+    timeout_seconds: float | None = 60.0,
+    cwd: str | Path | None = None,
+) -> HermesBridgeLiveResult:
+    """Route exactly one Symbiote task, then hand it to one configured Hermes process boundary."""
+
+    started = time.perf_counter()
+    if not handoff_command:
+        raise HermesBridgeError("live Hermes bridge requires a non-empty handoff command")
+
+    dry_run = dry_run_hermes_bridge(
+        models,
+        envelope,
+        seen_execution_keys=seen_execution_keys,
+        readiness=readiness,
+        routing_policy=routing_policy,
+        command_resolver=command_resolver,
+    )
+    if not dry_run.ok:
+        return HermesBridgeLiveResult(
+            dry_run=dry_run,
+            handoff_command=tuple(handoff_command),
+            handoff_status=dry_run.handoff_status,
+            execution_status=dry_run.execution_status,
+            elapsed_ms=_elapsed_ms(started),
+            error=dry_run.error,
+        )
+
+    handoff_payload = {
+        "schemaVersion": 1,
+        "bridge": "hermes-furyoku",
+        "mode": "live",
+        "envelope": envelope.to_dict(),
+        "selectedModel": _score_to_dict(dry_run.selected) if dry_run.selected is not None else None,
+        "decisionReport": dry_run.report.to_dict() if dry_run.report is not None else None,
+        "readiness": [_health_to_dict(result) for result in dry_run.readiness],
+    }
+    try:
+        completed = subprocess.run(
+            list(handoff_command),
+            input=json.dumps(handoff_payload),
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=timeout_seconds,
+            cwd=str(cwd) if cwd is not None else None,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return HermesBridgeLiveResult(
+            dry_run=dry_run,
+            handoff_command=tuple(handoff_command),
+            handoff_status="timeout",
+            execution_status="timeout",
+            elapsed_ms=_elapsed_ms(started),
+            started=True,
+            stdout=_coerce_text(exc.stdout),
+            stderr=_coerce_text(exc.stderr),
+            timed_out=True,
+            error={
+                "recoverable": True,
+                "code": "handoff_timeout",
+                "message": f"Hermes/FURYOKU handoff timed out after {exc.timeout} seconds",
+            },
+        )
+    except OSError as exc:
+        return HermesBridgeLiveResult(
+            dry_run=dry_run,
+            handoff_command=tuple(handoff_command),
+            handoff_status="failed",
+            execution_status="error",
+            elapsed_ms=_elapsed_ms(started),
+            error={
+                "recoverable": True,
+                "code": "handoff_launch_failed",
+                "message": str(exc),
+            },
+        )
+
+    runtime_payload = _parse_runtime_payload(completed.stdout)
+    if completed.returncode != 0:
+        return HermesBridgeLiveResult(
+            dry_run=dry_run,
+            handoff_command=tuple(handoff_command),
+            handoff_status="failed",
+            execution_status="error",
+            elapsed_ms=_elapsed_ms(started),
+            started=True,
+            exit_code=completed.returncode,
+            stdout=completed.stdout or "",
+            stderr=completed.stderr or "",
+            runtime_payload=runtime_payload,
+            error={
+                "recoverable": True,
+                "code": "handoff_process_failed",
+                "message": f"Hermes/FURYOKU handoff exited with code {completed.returncode}",
+            },
+        )
+
+    return HermesBridgeLiveResult(
+        dry_run=dry_run,
+        handoff_command=tuple(handoff_command),
+        handoff_status="completed",
+        execution_status="succeeded",
+        elapsed_ms=_elapsed_ms(started),
+        started=True,
+        exit_code=completed.returncode,
+        stdout=completed.stdout or "",
+        stderr=completed.stderr or "",
+        runtime_payload=runtime_payload,
+    )
+
+
 def _provider_health_results(readiness: ReadinessEvidenceInput | None) -> tuple[ProviderHealthCheckResult, ...]:
     if readiness is None:
         return ()
@@ -327,6 +501,27 @@ def _health_to_dict(result: ProviderHealthCheckResult) -> dict:
             "timedOut": result.execution.timed_out,
         }
     return payload
+
+
+def _parse_runtime_payload(stdout: str) -> Mapping[str, Any] | str | None:
+    stripped = stdout.strip()
+    if not stripped:
+        return None
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        return stripped
+    if isinstance(payload, Mapping):
+        return payload
+    return stripped
+
+
+def _coerce_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
 
 
 def _required_string(payload: Mapping[str, Any], *keys: str, source: str) -> str:
