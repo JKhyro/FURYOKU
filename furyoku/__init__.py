@@ -77,6 +77,14 @@ from .provider_health import (
     check_provider_health,
     check_provider_health_many,
 )
+from .hermes_bridge import (
+    HermesBridgeDryRunResult,
+    HermesBridgeEnvelope,
+    HermesBridgeError,
+    HermesBridgeRoutingOptions,
+    dry_run_hermes_bridge,
+    load_hermes_bridge_envelope,
+)
 from .outcome_feedback import (
     DecisionOutcomeRecord,
     FeedbackAdjustmentInput,
@@ -147,6 +155,10 @@ __all__ = [
     "FeedbackAdjustmentPolicy",
     "FeedbackAdjustmentPolicyInput",
     "FeedbackPolicyMetadata",
+    "HermesBridgeDryRunResult",
+    "HermesBridgeEnvelope",
+    "HermesBridgeError",
+    "HermesBridgeRoutingOptions",
     "ModelCoverage",
     "ModelDecisionAggregate",
     "ModelDecisionError",
@@ -194,6 +206,7 @@ __all__ = [
     "default_character_role_tasks",
     "default_decision_scenarios",
     "default_provider_adapters",
+    "dry_run_hermes_bridge",
     "evaluate_model_decisions",
     "execute_model",
     "compare_decision_situation_executions",
@@ -215,6 +228,7 @@ __all__ = [
     "load_decision_suite",
     "load_decision_outcomes",
     "load_feedback_adjustment_policy",
+    "load_hermes_bridge_envelope",
     "load_task_profile",
     "outcome_feedback_source",
     "parse_feedback_adjustment_policy",

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "symbioteId": "symbiote-01",
+  "role": "primary",
+  "task": {
+    "taskId": "hermes.bridge.one-symbiote",
+    "requiredCapabilities": {
+      "conversation": 0.8,
+      "instruction_following": 0.8
+    },
+    "privacyRequirement": "local_preferred"
+  },
+  "prompt": "Reply with one short sentence confirming the Hermes/FURYOKU bridge received this task.",
+  "routing": {
+    "checkHealth": true,
+    "fallback": true,
+    "maxAttempts": 2
+  }
+}

@@ -91,3 +91,15 @@ After WSL2 and the Hermes source path are confirmed, add the smallest bridge sca
 4. A live mode that invokes one Hermes/FURYOKU task and captures structured output.
 
 The scale path is one Symbiote first, then three, then seven.
+
+## Dry-Run Scaffold
+
+The first FURYOKU-side scaffold is intentionally dry-run only. It can be exercised before Ubuntu WSL2 is available because it does not invoke Hermes:
+
+```powershell
+python -m furyoku.cli hermes-bridge --registry .\examples\model_registry.example.json --envelope .\examples\hermes_bridge_one_symbiote.example.json --dry-run
+```
+
+The dry-run validates that the input describes exactly one Symbiote task, derives a duplicate-prevention execution key from `symbioteId`, `role`, and `taskId`, runs FURYOKU model selection with optional provider health evidence from the envelope, and emits the structured handoff result expected by the live bridge.
+
+Live mode remains blocked until a usable Ubuntu WSL2 distro and Hermes source path are confirmed. The scaffold must not be widened into multi-Symbiote execution until the one-Symbiote live handoff is proven.
