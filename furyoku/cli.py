@@ -32,10 +32,13 @@ from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
 from .hermes_bridge import (
     HermesBridgeError,
     dry_run_hermes_bridge,
+    dry_run_seven_symbiote_smoke,
     dry_run_three_symbiote_smoke,
     live_run_hermes_bridge,
+    live_run_seven_symbiote_smoke,
     live_run_three_symbiote_smoke,
     load_hermes_bridge_envelope,
+    load_hermes_seven_symbiote_smoke,
     load_hermes_three_symbiote_smoke,
 )
 from .runtime import (
@@ -294,6 +297,35 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             else:
                 result = live_run_three_symbiote_smoke(
+                    models,
+                    envelope,
+                    handoff_command=tuple(args.handoff_command),
+                    seen_execution_keys=args.seen_execution_key,
+                    routing_policy=_routing_policy_from_args(args),
+                    timeout_seconds=args.timeout_seconds,
+                    cwd=args.handoff_cwd,
+                )
+        except HermesBridgeError as exc:
+            parser.error(str(exc))
+        _write_json(result.to_dict(), output_path=args.output)
+        return 0 if result.ok else 2
+
+    if args.command == "hermes-seven-smoke":
+        if args.dry_run and args.handoff_command:
+            parser.error("--dry-run cannot be combined with --handoff-command")
+        if not args.dry_run and not args.handoff_command:
+            parser.error("hermes-seven-smoke live mode requires --handoff-command, or use --dry-run")
+        try:
+            envelope = load_hermes_seven_symbiote_smoke(args.envelope)
+            if args.dry_run:
+                result = dry_run_seven_symbiote_smoke(
+                    models,
+                    envelope,
+                    seen_execution_keys=args.seen_execution_key,
+                    routing_policy=_routing_policy_from_args(args),
+                )
+            else:
+                result = live_run_seven_symbiote_smoke(
                     models,
                     envelope,
                     handoff_command=tuple(args.handoff_command),
@@ -607,6 +639,41 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_routing_policy_arg(three_smoke_parser)
     three_smoke_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON three-Symbiote smoke report.")
     three_smoke_parser.add_argument(
+        "--handoff-command",
+        nargs=argparse.REMAINDER,
+        help="Live handoff command to invoke for each Symbiote. Must be the final CLI option; the validated payload is sent on stdin.",
+    )
+    seven_smoke_parser = subparsers.add_parser(
+        "hermes-seven-smoke",
+        help="Run a bounded seven-Symbiote Hermes/FURYOKU coordination smoke.",
+    )
+    seven_smoke_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    seven_smoke_parser.add_argument("--envelope", required=True, type=Path, help="Path to a seven-Symbiote smoke envelope JSON file.")
+    seven_smoke_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate, route, and aggregate seven handoffs without invoking Hermes.",
+    )
+    seven_smoke_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=60.0,
+        help="Live handoff process timeout in seconds for each Symbiote.",
+    )
+    seven_smoke_parser.add_argument(
+        "--handoff-cwd",
+        type=Path,
+        help="Optional working directory for each live handoff process.",
+    )
+    seven_smoke_parser.add_argument(
+        "--seen-execution-key",
+        action="append",
+        default=[],
+        help="Execution key already claimed by this smoke cycle. Repeat to prevent duplicate Symbiote execution.",
+    )
+    _add_routing_policy_arg(seven_smoke_parser)
+    seven_smoke_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON seven-Symbiote smoke report.")
+    seven_smoke_parser.add_argument(
         "--handoff-command",
         nargs=argparse.REMAINDER,
         help="Live handoff command to invoke for each Symbiote. Must be the final CLI option; the validated payload is sent on stdin.",

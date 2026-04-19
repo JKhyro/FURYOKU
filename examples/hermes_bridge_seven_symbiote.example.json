@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "smokeId": "hermes.bridge.seven-symbiote",
+  "symbiotes": [
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-01",
+      "role": "primary",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.primary",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the primary seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-02",
+      "role": "planning",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.planning",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "reasoning": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the planning seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-03",
+      "role": "research",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.research",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "retrieval": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the research seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-04",
+      "role": "implementation",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.implementation",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "coding": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the implementation seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-05",
+      "role": "verification",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.verification",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "reasoning": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the verification seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-06",
+      "role": "synthesis",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.synthesis",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "summarization": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the synthesis seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "symbioteId": "symbiote-07",
+      "role": "guard",
+      "task": {
+        "taskId": "hermes.bridge.seven-symbiote.guard",
+        "requiredCapabilities": {
+          "conversation": 0.8,
+          "instruction_following": 0.8,
+          "safety": 0.6
+        },
+        "privacyRequirement": "local_preferred"
+      },
+      "prompt": "Reply with one short sentence confirming the guard seven-Symbiote smoke handoff.",
+      "routing": {
+        "checkHealth": true,
+        "fallback": true,
+        "maxAttempts": 2
+      }
+    }
+  ]
+}
