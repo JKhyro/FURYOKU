@@ -29,6 +29,7 @@ from .outcome_feedback import (
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
+from .approval_resume import ApprovalResumeError, load_approval_resume_ledger, load_approval_resume_record
 from .hermes_bridge import (
     HermesBridgeError,
     dry_run_hermes_bridge,
@@ -259,6 +260,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             parser.error("hermes-bridge live mode requires --handoff-command, or use --dry-run")
         try:
             envelope = load_hermes_bridge_envelope(args.envelope)
+            approval_resume = _approval_resume_from_args(args, parser)
             if args.dry_run:
                 result = dry_run_hermes_bridge(
                     models,
@@ -275,8 +277,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     routing_policy=_routing_policy_from_args(args),
                     timeout_seconds=args.timeout_seconds,
                     cwd=args.handoff_cwd,
+                    approval_resume=approval_resume,
+                    require_approval_resume=args.require_approval_resume,
                 )
-        except HermesBridgeError as exc:
+        except (ApprovalResumeError, HermesBridgeError) as exc:
             parser.error(str(exc))
         _write_json(result.to_dict(), output_path=args.output)
         return 0 if result.ok else 2
@@ -600,6 +604,21 @@ def _build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Execution key already claimed by this handoff cycle. Repeat to prevent duplicate Symbiote execution.",
+    )
+    bridge_parser.add_argument(
+        "--approval-resume-record",
+        type=Path,
+        help="Approval/resume record JSON that must match the one-Symbiote bridge execution key.",
+    )
+    bridge_parser.add_argument(
+        "--approval-resume-ledger",
+        type=Path,
+        help="Approval/resume ledger JSON; the latest matching record gates the handoff.",
+    )
+    bridge_parser.add_argument(
+        "--require-approval-resume",
+        action="store_true",
+        help="Block live handoff unless an approved approval/resume record or ledger entry is present.",
     )
     _add_routing_policy_arg(bridge_parser)
     bridge_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON bridge handoff report.")
@@ -1223,6 +1242,18 @@ def _feedback_from_args(args: argparse.Namespace, parser: argparse.ArgumentParse
         load_decision_outcomes(feedback_log),
         load_feedback_adjustment_policy(feedback_policy_path) if feedback_policy_path else None,
     )
+
+
+def _approval_resume_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser):
+    record_path = getattr(args, "approval_resume_record", None)
+    ledger_path = getattr(args, "approval_resume_ledger", None)
+    if record_path and ledger_path:
+        parser.error("--approval-resume-record cannot be combined with --approval-resume-ledger")
+    if record_path:
+        return load_approval_resume_record(record_path)
+    if ledger_path:
+        return load_approval_resume_ledger(ledger_path)
+    return None
 
 
 def _load_feedback_logs(paths: Sequence[Path]):

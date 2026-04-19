@@ -270,6 +270,19 @@ class ApprovalResumeLedger:
     def workflow_execution_keys(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys(record.workflow_execution_key for record in self.records))
 
+    def records_for_handoff(self, handoff_execution_key: str) -> tuple[ApprovalResumeRecord, ...]:
+        return tuple(
+            record
+            for record in self.records
+            if record.handoff_execution_key == handoff_execution_key
+        )
+
+    def latest_for_handoff(self, handoff_execution_key: str) -> ApprovalResumeRecord | None:
+        records = self.records_for_handoff(handoff_execution_key)
+        if not records:
+            return None
+        return max(records, key=lambda record: record.attempt_index)
+
     def to_dict(self) -> dict:
         return {
             "schemaVersion": self.schema_version,

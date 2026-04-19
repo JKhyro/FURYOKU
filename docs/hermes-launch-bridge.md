@@ -107,12 +107,16 @@ The dry-run validates that the input describes exactly one Symbiote task, derive
 
 Live mode invokes exactly one configured handoff command after the same one-Symbiote envelope validation, duplicate guard, and FURYOKU model routing used by dry-run mode. The validated handoff payload is written to the command on stdin, and the command's stdout/stderr, exit code, timing, and recoverable errors are captured in the structured bridge report.
 
+The live one-Symbiote bridge can now require an execution-keyed approval/resume record before process invocation. With `--require-approval-resume`, FURYOKU blocks the handoff unless the supplied record or latest matching ledger entry is `approved` or `resume_approved` for the exact bridge `executionKey`.
+
 This command proves the Windows-to-WSL process boundary without claiming a full Hermes agent execution. The example runtime reads the bridge payload from stdin and echoes the execution key plus selected model evidence:
 
 ```powershell
 python -m furyoku.cli hermes-bridge `
   --registry .\examples\model_registry.example.json `
   --envelope .\examples\hermes_bridge_one_symbiote.example.json `
+  --approval-resume-record .\examples\hermes_approval_resume_gate.approved.json `
+  --require-approval-resume `
   --timeout-seconds 10 `
   --handoff-command wsl -d Ubuntu python3 <furyoku-repo-wsl-path>/examples/hermes_bridge_echo_runtime.py
 ```
@@ -141,6 +145,8 @@ Current host command shape:
 python -m furyoku.cli hermes-bridge `
   --registry .\examples\model_registry.example.json `
   --envelope .\examples\hermes_bridge_one_symbiote.example.json `
+  --approval-resume-record .\examples\hermes_approval_resume_gate.approved.json `
+  --require-approval-resume `
   --timeout-seconds 180 `
   --handoff-command wsl -d Ubuntu python3 /mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh/examples/hermes_bridge_hermes_runtime.py `
     --hermes-command /root/.venvs/hermes-agent-smoke/bin/hermes `
@@ -252,4 +258,4 @@ python -m furyoku.cli hermes-seven-smoke `
     --max-turns 1
 ```
 
-The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), the routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), and the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246). The active follow-on is [#248](https://github.com/JKhyro/FURYOKU/issues/248), which defines execution-keyed approval/resume records before any durable workflow state is introduced.
+The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), the routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246), and the execution-keyed approval/resume contract completed in [#248](https://github.com/JKhyro/FURYOKU/issues/248). The active follow-on is [#250](https://github.com/JKhyro/FURYOKU/issues/250), which gates live one-Symbiote bridge handoffs with approval/resume records before durable workflow state is introduced.

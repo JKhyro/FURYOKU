@@ -8,6 +8,8 @@ FURYOKU now has a typed operator-reviewed workflow envelope for one Hermes/FURYO
 
 The contract is execution-keyed, not scheduler-owned. It records approval, rejection, and explicit resume intent for a handoff already described by the [operator-reviewed workflow envelope](operator-reviewed-workflow-envelope.md). It does not execute Hermes, persist state, or create a workflow runtime.
 
+Issue [#250](https://github.com/JKhyro/FURYOKU/issues/250) wires this contract into the live Hermes bridge. When a live one-Symbiote handoff is run with approval required, FURYOKU evaluates the approval/resume record after dry-run routing succeeds and before invoking the external Hermes process boundary.
+
 ## Identity
 
 Each record binds these fields:
@@ -74,6 +76,28 @@ Approval/resume records may not carry:
 - multi-handoff arrays: `handoffs`, `symbiotes`, or `tasks`
 
 These records are validation and audit artifacts only. Durable persistence, queueing, and runtime execution remain out of scope for this contract.
+
+## Live Bridge Gate
+
+The live one-Symbiote bridge accepts either one approval/resume record or a ledger. The gate blocks before process invocation when:
+
+- `--require-approval-resume` is set and no record or ledger is provided
+- the record `handoffExecutionKey` does not match the bridge envelope `executionKey`
+- the latest matching ledger record is not `approved` or `resume_approved`
+- a ledger has multiple workflow executions for the same bridge handoff execution key
+
+The live bridge result includes `approvalResumeGate` with the gate status, record state, record key, attempt index, owner, and recoverable error details when blocked. Only `approved` and `resume_approved` records are safe to hand off.
+
+Example gated live bridge:
+
+```powershell
+python -m furyoku.cli hermes-bridge `
+  --registry .\examples\model_registry.example.json `
+  --envelope .\examples\hermes_bridge_one_symbiote.example.json `
+  --approval-resume-record .\examples\hermes_approval_resume_gate.approved.json `
+  --require-approval-resume `
+  --handoff-command python .\examples\hermes_bridge_echo_runtime.py
+```
 
 ## Example
 
