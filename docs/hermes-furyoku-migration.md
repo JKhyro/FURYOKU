@@ -43,7 +43,7 @@ Immediate risk: this project is currently operating from Windows, while upstream
 4. Run a one-Symbiote smoke, then a three-Symbiote coordination smoke, then the full seven-Symbiote smoke.
 5. Inventory OpenClaw features and port only the pieces that improve Hermes/FURYOKU without recreating the coordination failure modes.
 
-The smoke path through seven ordered Symbiote handoffs is complete through issue [#240](https://github.com/JKhyro/FURYOKU/issues/240). The active follow-on is the OpenClaw carryover inventory in [#242](https://github.com/JKhyro/FURYOKU/issues/242), recorded in [OpenClaw carryover inventory](openclaw-carryover-inventory.md).
+The smoke path through seven ordered Symbiote handoffs is complete through issue [#240](https://github.com/JKhyro/FURYOKU/issues/240). The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), recorded in [OpenClaw carryover inventory](openclaw-carryover-inventory.md). The active follow-on is [#244](https://github.com/JKhyro/FURYOKU/issues/244), which defines the [Hermes/FURYOKU routing evidence contract](routing-evidence-contract.md) from retained benchmark truth before any wider OpenClaw feature port.
 
 ## OpenClaw Feature Harvest Rules
 

@@ -71,7 +71,7 @@ Reject or defer features that:
 
 Open follow-on implementation issues only after this inventory is accepted:
 
-1. Carry benchmark-truth and machine-profile checks forward as explicit Hermes/FURYOKU routing evidence.
+1. Carry benchmark-truth and machine-profile checks forward as explicit Hermes/FURYOKU routing evidence in [#244](https://github.com/JKhyro/FURYOKU/issues/244).
 2. Prototype a FURYOKU-native typed workflow envelope for operator-reviewed Hermes handoffs.
 3. Define an execution-keyed approval/resume contract before adding any durable workflow state.
 

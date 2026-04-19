@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#242](https://github.com/JKhyro/FURYOKU/issues/242) inventory OpenClaw feature carryover for the Hermes/FURYOKU runtime
+- Current support lane: [#244](https://github.com/JKhyro/FURYOKU/issues/244) define the Hermes/FURYOKU routing evidence contract from retained OpenClaw benchmark truth
 
 ## Current Baseline
 
@@ -27,6 +27,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Migration plan: [Hermes-derived FURYOKU migration](docs/hermes-furyoku-migration.md)
 - Launch bridge plan: [Hermes/FURYOKU launch bridge](docs/hermes-launch-bridge.md)
 - OpenClaw carryover inventory: [OpenClaw carryover inventory](docs/openclaw-carryover-inventory.md)
+- Routing evidence contract: [Hermes/FURYOKU routing evidence contract](docs/routing-evidence-contract.md)
 
 ### Provisional Local Usage Tiers
 
@@ -109,6 +110,7 @@ Current routing core:
 - [`furyoku/model_decisions.py`](furyoku/model_decisions.py) evaluates multiple local, CLI, and API models across representative decision situations.
 - [`furyoku/character_profiles.py`](furyoku/character_profiles.py) loads flexible JSON CHARACTER role compositions for Symbiote/Curator/Synth/Agent-style arrays and serializes selected role assignments into CHARACTER orchestration envelopes.
 - [`furyoku/model_registry.py`](furyoku/model_registry.py) loads JSON endpoint registries into router-ready model definitions.
+- [`furyoku/routing_evidence.py`](furyoku/routing_evidence.py) normalizes retained OpenClaw benchmark outputs into Hermes/FURYOKU routing evidence without bypassing task, health, privacy, or duplicate-execution gates.
 - [`furyoku/task_profiles.py`](furyoku/task_profiles.py) loads reusable JSON task profiles into router-ready task requirements.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
@@ -192,6 +194,7 @@ python -m furyoku.cli character-run --registry .\examples\model_registry.example
 ## Benchmark Evidence Lane
 
 - Historical OpenClaw local-model benchmark, retained as FURYOKU routing evidence during the Hermes migration: [`benchmarks/openclaw-local-llm`](benchmarks/openclaw-local-llm)
+- Hermes/FURYOKU routing evidence contract: [docs/routing-evidence-contract.md](docs/routing-evidence-contract.md)
 - Current deployed-baseline manifest: [2026-04-13 approved-ready current-baseline manifest](benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-current-baseline.json)
 - Current deployed-baseline evidence: [2026-04-13 approved-ready compare summary](benchmarks/openclaw-local-llm/results/2026-04-13-approved-ready-compare-summary.md)
 - Current blocked-roster evidence: [2026-04-13 approved blocked-roster probe](benchmarks/openclaw-local-llm/results/2026-04-13-approved-blocked-roster-probe.json)
