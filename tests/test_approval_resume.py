@@ -23,6 +23,7 @@ from furyoku.cli import main as cli_main
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_PATH = ROOT / "examples" / "hermes_approval_resume_contract.example.json"
+OPERATOR_RESUME_WORKFLOW_PATH = ROOT / "examples" / "operator_resume_workflow.example.json"
 SEVEN_SMOKE_ENVELOPE_PATH = ROOT / "examples" / "hermes_bridge_seven_symbiote.example.json"
 SEVEN_SMOKE_APPROVAL_PATH = ROOT / "examples" / "hermes_approval_resume_seven_smoke.approved.json"
 HANDOFF_EXECUTION_KEY = "symbiote-01:primary:hermes.bridge.one-symbiote"
@@ -440,6 +441,20 @@ class ApprovalResumeContractTests(unittest.TestCase):
         self.assertEqual(len(ledger.records), 2)
         self.assertIn(WORKFLOW_EXECUTION_KEY, ledger.workflow_execution_keys)
         self.assertTrue(ledger.records[1].is_resume)
+
+    def test_checked_in_operator_resume_workflow_fixture_is_safe_retry(self):
+        ledger = load_approval_resume_ledger(OPERATOR_RESUME_WORKFLOW_PATH)
+        resume_record = ledger.records[1]
+
+        self.assertEqual(len(ledger.records), 2)
+        self.assertEqual(resume_record.state, "resume_approved")
+        self.assertEqual(resume_record.attempt_index, 2)
+        self.assertTrue(resume_record.safe_to_handoff)
+        self.assertTrue(resume_record.is_resume)
+        self.assertEqual(resume_record.resume.resume_of, WORKFLOW_EXECUTION_KEY)
+        self.assertEqual(resume_record.resume.previous_attempt_index, 1)
+        self.assertEqual(resume_record.evidence["issue"], "#266")
+        self.assertIn("consumptionEventKey", resume_record.evidence)
 
     def test_checked_in_seven_smoke_fixture_matches_smoke_execution_keys(self):
         ledger = load_approval_resume_ledger(SEVEN_SMOKE_APPROVAL_PATH)
