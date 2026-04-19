@@ -292,6 +292,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             parser.error("hermes-three-smoke live mode requires --handoff-command, or use --dry-run")
         try:
             envelope = load_hermes_three_symbiote_smoke(args.envelope)
+            approval_resume = _approval_resume_from_args(args, parser)
             if args.dry_run:
                 result = dry_run_three_symbiote_smoke(
                     models,
@@ -308,8 +309,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     routing_policy=_routing_policy_from_args(args),
                     timeout_seconds=args.timeout_seconds,
                     cwd=args.handoff_cwd,
+                    approval_resume=approval_resume,
+                    require_approval_resume=args.require_approval_resume,
                 )
-        except HermesBridgeError as exc:
+        except (ApprovalResumeError, HermesBridgeError) as exc:
             parser.error(str(exc))
         _write_json(result.to_dict(), output_path=args.output)
         return 0 if result.ok else 2
@@ -321,6 +324,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             parser.error("hermes-seven-smoke live mode requires --handoff-command, or use --dry-run")
         try:
             envelope = load_hermes_seven_symbiote_smoke(args.envelope)
+            approval_resume = _approval_resume_from_args(args, parser)
             if args.dry_run:
                 result = dry_run_seven_symbiote_smoke(
                     models,
@@ -337,8 +341,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     routing_policy=_routing_policy_from_args(args),
                     timeout_seconds=args.timeout_seconds,
                     cwd=args.handoff_cwd,
+                    approval_resume=approval_resume,
+                    require_approval_resume=args.require_approval_resume,
                 )
-        except HermesBridgeError as exc:
+        except (ApprovalResumeError, HermesBridgeError) as exc:
             parser.error(str(exc))
         _write_json(result.to_dict(), output_path=args.output)
         return 0 if result.ok else 2
@@ -605,21 +611,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Execution key already claimed by this handoff cycle. Repeat to prevent duplicate Symbiote execution.",
     )
-    bridge_parser.add_argument(
-        "--approval-resume-record",
-        type=Path,
-        help="Approval/resume record JSON that must match the one-Symbiote bridge execution key.",
-    )
-    bridge_parser.add_argument(
-        "--approval-resume-ledger",
-        type=Path,
-        help="Approval/resume ledger JSON; the latest matching record gates the handoff.",
-    )
-    bridge_parser.add_argument(
-        "--require-approval-resume",
-        action="store_true",
-        help="Block live handoff unless an approved approval/resume record or ledger entry is present.",
-    )
+    _add_approval_resume_args(bridge_parser)
     _add_routing_policy_arg(bridge_parser)
     bridge_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON bridge handoff report.")
     bridge_parser.add_argument(
@@ -655,6 +647,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Execution key already claimed by this smoke cycle. Repeat to prevent duplicate Symbiote execution.",
     )
+    _add_approval_resume_args(three_smoke_parser)
     _add_routing_policy_arg(three_smoke_parser)
     three_smoke_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON three-Symbiote smoke report.")
     three_smoke_parser.add_argument(
@@ -690,6 +683,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Execution key already claimed by this smoke cycle. Repeat to prevent duplicate Symbiote execution.",
     )
+    _add_approval_resume_args(seven_smoke_parser)
     _add_routing_policy_arg(seven_smoke_parser)
     seven_smoke_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON seven-Symbiote smoke report.")
     seven_smoke_parser.add_argument(
@@ -927,6 +921,24 @@ def _add_comparison_outcome_capture_args(parser: argparse.ArgumentParser) -> Non
         action="append",
         default=[],
         help="Optional tag stored on comparison outcome feedback records. Repeat for multiple tags.",
+    )
+
+
+def _add_approval_resume_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--approval-resume-record",
+        type=Path,
+        help="Approval/resume record JSON that must match the live bridge execution key.",
+    )
+    parser.add_argument(
+        "--approval-resume-ledger",
+        type=Path,
+        help="Approval/resume ledger JSON; the latest matching record gates each live handoff.",
+    )
+    parser.add_argument(
+        "--require-approval-resume",
+        action="store_true",
+        help="Block live handoff unless an approved approval/resume record or ledger entry is present.",
     )
 
 

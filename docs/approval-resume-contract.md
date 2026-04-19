@@ -79,14 +79,14 @@ These records are validation and audit artifacts only. Durable persistence, queu
 
 ## Live Bridge Gate
 
-The live one-Symbiote bridge accepts either one approval/resume record or a ledger. The gate blocks before process invocation when:
+The live bridge accepts either one approval/resume record or a ledger. Multi-Symbiote smoke commands use the ledger to gate each ordered handoff independently. The gate blocks before process invocation when:
 
 - `--require-approval-resume` is set and no record or ledger is provided
 - the record `handoffExecutionKey` does not match the bridge envelope `executionKey`
 - the latest matching ledger record is not `approved` or `resume_approved`
 - a ledger has multiple workflow executions for the same bridge handoff execution key
 
-The live bridge result includes `approvalResumeGate` with the gate status, record state, record key, attempt index, owner, and recoverable error details when blocked. Only `approved` and `resume_approved` records are safe to hand off.
+The live bridge result includes `approvalResumeGate` with the gate status, record state, record key, attempt index, owner, and recoverable error details when blocked. Multi-Symbiote aggregate reports also list `blockedExecutionKeys`. Only `approved` and `resume_approved` records are safe to hand off.
 
 Example gated live bridge:
 

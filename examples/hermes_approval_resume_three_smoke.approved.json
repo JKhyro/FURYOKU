@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-three-smoke",
+      "executionId": "reviewed-three-smoke-001",
+      "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.three-symbiote.primary",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_three_symbiote.example.json",
+        "issue": "#252"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-three-smoke",
+      "executionId": "reviewed-three-smoke-001",
+      "handoffExecutionKey": "symbiote-02:research:hermes.bridge.three-symbiote.research",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_three_symbiote.example.json",
+        "issue": "#252"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-three-smoke",
+      "executionId": "reviewed-three-smoke-001",
+      "handoffExecutionKey": "symbiote-03:synthesis:hermes.bridge.three-symbiote.synthesis",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "smokeEnvelope": "examples/hermes_bridge_three_symbiote.example.json",
+        "issue": "#252"
+      }
+    }
+  ]
+}
