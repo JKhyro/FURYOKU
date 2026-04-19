@@ -14,7 +14,7 @@ Inspection/report issue: [#262](https://github.com/JKhyro/FURYOKU/issues/262)
 
 FURYOKU now has approval/resume records for one-Symbiote handoffs, multi-Symbiote ledger gating, and a checked-in seven-Symbiote approval fixture. This document defines the durable state boundary that a later implementation can use without adding a second scheduler, hidden shared state, or Hermes-owned coordination state.
 
-This boundary started as a contract only. Issue #258 added the first local JSON-backed adapter prototype for the ledger operations below, issue #260 wires that adapter into the existing bridge gate path, and issue #262 adds an operator-facing inspection report for the local store. Durable workflow scheduling and a full runtime store remain out of scope.
+This boundary started as a contract only. Issue #258 added the first local JSON-backed adapter prototype for the ledger operations below, issue #260 wired that adapter into the existing bridge gate path, and issue #262 added an operator-facing inspection report for the local store. Durable workflow scheduling and a full runtime store remain out of scope.
 
 ## Ownership Boundary
 

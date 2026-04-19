@@ -6,29 +6,29 @@ This document records the completed issues [#232](https://github.com/JKhyro/FURY
 
 Parent migration lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230).
 
-## Current Host Check
+## Historical Host Check
 
-The Windows host now exposes an Ubuntu WSL2 distro for the Hermes launch path:
+Earlier bridge work checked an Ubuntu WSL2 path for Hermes launch readiness:
 
 ```powershell
 wsl -l -v
 wsl -d Ubuntu -- uname -a
 ```
 
-Observed result in this thread: `wsl --install -d Ubuntu` timed out after registering Ubuntu, the first `uname` probe returned `Wsl/Service/E_UNEXPECTED`, then `wsl --shutdown` cleared the WSL service state and `wsl -d Ubuntu -- uname -a` succeeded.
+Observed result in that thread: `wsl --install -d Ubuntu` timed out after registering Ubuntu, the first `uname` probe returned `Wsl/Service/E_UNEXPECTED`, then `wsl --shutdown` cleared the WSL service state and `wsl -d Ubuntu -- uname -a` succeeded.
 
-Upstream Hermes says native Windows is not supported and recommends WSL2 for Windows users. That makes WSL2 launch readiness the first practical gate before we claim the Hermes runtime is runnable on this machine.
+This is historical context, not the current active execution requirement. Do not launch Ubuntu, WSL, or Ubuntu-VM for #230 work unless a new bounded child issue explicitly selects that path.
 
-## Operator Handoff If WSL2 Is Missing
+## Historical WSL Handoff Notes
 
-Run this from an elevated or normal PowerShell session as appropriate for the host policy:
+The previous WSL handoff notes were:
 
 ```powershell
 wsl --install -d Ubuntu
 wsl -d Ubuntu -- uname -a
 ```
 
-Once Ubuntu is available, prepare a read-only Hermes source checkout inside WSL:
+Once Ubuntu was available, prepare a read-only Hermes source checkout inside WSL:
 
 ```bash
 mkdir -p ~/src
@@ -38,7 +38,7 @@ cd HERMES-AGENT
 python3 --version
 ```
 
-Do not migrate secrets yet. First prove the source checkout, Python version, and launch command.
+Do not use these notes as a standing instruction to launch WSL. They remain here only as prior host context.
 
 ## One-Symbiote Smoke Contract
 
@@ -82,20 +82,20 @@ Expected output contract:
 - The first smoke must not start all seven Symbiotes.
 - The first smoke must not import broad Hermes source into the FURYOKU package.
 
-## Next Code Slice
+## Completed Bridge Slice Sequence
 
-After WSL2 and the Hermes source path are confirmed, add the smallest bridge scaffold:
+The completed bridge scaffold sequence added:
 
 1. A FURYOKU bridge module or CLI command that serializes the one-Symbiote task envelope.
 2. A configurable Hermes launch command/path.
 3. A dry-run mode that validates the envelope without invoking Hermes.
 4. A live mode that invokes one Hermes/FURYOKU task and captures structured output.
 
-The scale path is one Symbiote first, then three, then seven.
+The scale path of one Symbiote first, then three, then seven is complete for the bounded smoke sequence recorded here.
 
 ## Dry-Run Scaffold
 
-The first FURYOKU-side scaffold is intentionally dry-run only. It can be exercised before Ubuntu WSL2 is available because it does not invoke Hermes:
+The first FURYOKU-side scaffold was intentionally dry-run only. It can be exercised without launching Hermes:
 
 ```powershell
 python -m furyoku.cli hermes-bridge --registry .\examples\model_registry.example.json --envelope .\examples\hermes_bridge_one_symbiote.example.json --dry-run
@@ -109,7 +109,7 @@ Live mode invokes exactly one configured handoff command after the same one-Symb
 
 The live one-Symbiote bridge can now require execution-keyed approval/resume evidence before process invocation. With `--require-approval-resume`, FURYOKU blocks the handoff unless the supplied record, latest matching ledger entry, or latest matching local-store entry is `approved` or `resume_approved` for the exact bridge `executionKey`. When `--approval-resume-store` is used, FURYOKU appends a consumption event before invoking the external process so the same approval record cannot authorize a second handoff.
 
-This command proves the Windows-to-WSL process boundary without claiming a full Hermes agent execution. The example runtime reads the bridge payload from stdin and echoes the execution key plus selected model evidence:
+Earlier live bridge runs used a configured handoff command to prove the process boundary without claiming a full Hermes agent execution. The example runtime reads the bridge payload from stdin and echoes the execution key plus selected model evidence:
 
 ```powershell
 python -m furyoku.cli hermes-bridge `
@@ -121,9 +121,9 @@ python -m furyoku.cli hermes-bridge `
   --handoff-command wsl -d Ubuntu python3 <furyoku-repo-wsl-path>/examples/hermes_bridge_echo_runtime.py
 ```
 
-On the current handoff host, `<furyoku-repo-wsl-path>` resolved to `/mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh`.
+On that handoff host, `<furyoku-repo-wsl-path>` resolved to `/mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh`.
 
-To execute Hermes itself, replace the handoff command with the confirmed Hermes/FURYOKU launch command from the read-only WSL checkout. The scaffold must not be widened into multi-Symbiote execution until the one-Symbiote live handoff is proven.
+Future Hermes launch work must be selected by a new bounded child issue before changing the current process-boundary path.
 
 ## Hermes Runtime Adapter
 
@@ -262,4 +262,4 @@ python -m furyoku.cli hermes-seven-smoke `
     --max-turns 1
 ```
 
-The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), the routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246), the execution-keyed approval/resume contract completed in [#248](https://github.com/JKhyro/FURYOKU/issues/248), one-Symbiote approval gating completed in [#250](https://github.com/JKhyro/FURYOKU/issues/250), multi-Symbiote approval/resume ledger gating completed in [#252](https://github.com/JKhyro/FURYOKU/issues/252), the reusable seven-Symbiote approval fixture completed in [#254](https://github.com/JKhyro/FURYOKU/issues/254), the durable approval/resume ledger boundary completed in [#256](https://github.com/JKhyro/FURYOKU/issues/256), the local durable approval/resume adapter completed in [#258](https://github.com/JKhyro/FURYOKU/issues/258), and local-store bridge gate integration completed in [#260](https://github.com/JKhyro/FURYOKU/issues/260). The active follow-on is [#262](https://github.com/JKhyro/FURYOKU/issues/262), which adds an operator-facing local approval/resume store inspection report without invoking Hermes or introducing a scheduler.
+The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), the routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246), the execution-keyed approval/resume contract completed in [#248](https://github.com/JKhyro/FURYOKU/issues/248), one-Symbiote approval gating completed in [#250](https://github.com/JKhyro/FURYOKU/issues/250), multi-Symbiote approval/resume ledger gating completed in [#252](https://github.com/JKhyro/FURYOKU/issues/252), the reusable seven-Symbiote approval fixture completed in [#254](https://github.com/JKhyro/FURYOKU/issues/254), the durable approval/resume ledger boundary completed in [#256](https://github.com/JKhyro/FURYOKU/issues/256), the local durable approval/resume adapter completed in [#258](https://github.com/JKhyro/FURYOKU/issues/258), local-store bridge gate integration completed in [#260](https://github.com/JKhyro/FURYOKU/issues/260), and the operator-facing local approval/resume store inspection report completed in [#262](https://github.com/JKhyro/FURYOKU/issues/262). The next runtime step should be a separately scoped bounded resume/operator workflow child under [#230](https://github.com/JKhyro/FURYOKU/issues/230).

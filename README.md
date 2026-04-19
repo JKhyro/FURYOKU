@@ -15,7 +15,8 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#262](https://github.com/JKhyro/FURYOKU/issues/262) add a local approval/resume store inspection report
+- Latest completed support lane: [#262](https://github.com/JKhyro/FURYOKU/issues/262) added a local approval/resume store inspection report
+- Next support lane: formalize a bounded resume/operator workflow child under [#230](https://github.com/JKhyro/FURYOKU/issues/230) before implementation
 
 ## Current Baseline
 
