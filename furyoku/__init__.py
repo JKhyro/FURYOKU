@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version as package_version
 
 try:
-    __version__ = package_version("furyoku")
+    __version__ = package_version("furyoku") or "0.1.0"
 except PackageNotFoundError:
     __version__ = "0.1.0"
 
