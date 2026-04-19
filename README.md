@@ -16,7 +16,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Latest completed support lane: [#262](https://github.com/JKhyro/FURYOKU/issues/262) added a local approval/resume store inspection report
-- Next support lane: formalize a bounded resume/operator workflow child under [#230](https://github.com/JKhyro/FURYOKU/issues/230) before implementation
+- Bounded resume/operator contract lane: [#266](https://github.com/JKhyro/FURYOKU/issues/266) defines the operator resume workflow before any generation command or runtime implementation
 
 ## Current Baseline
 
@@ -32,6 +32,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Operator-reviewed workflow envelope: [Operator-reviewed Hermes workflow envelope](docs/operator-reviewed-workflow-envelope.md)
 - Approval/resume contract: [Execution-keyed approval/resume contract](docs/approval-resume-contract.md)
 - Durable approval/resume ledger boundary: [Durable approval/resume ledger state boundary](docs/durable-approval-resume-ledger-boundary.md)
+- Operator resume workflow contract: [Operator resume workflow contract](docs/operator-resume-workflow-contract.md)
 
 ### Provisional Local Usage Tiers
 
@@ -120,6 +121,7 @@ Current routing core:
 - [`furyoku/approval_resume.py`](furyoku/approval_resume.py) validates execution-keyed approval/resume records and provides a small local JSON-backed durable adapter for append/read, latest gate selection, and consumption-event replay blocking.
 - Live Hermes bridge handoffs can require approval/resume evidence from a record, ledger fixture, or local JSON-backed store and block before process invocation unless the latest matching record is `approved` or `resume_approved` for the exact bridge execution key.
 - Local approval/resume stores can be inspected with `approval-resume-store-report` to review matching records, consumption events, and gate readiness without loading a model registry or invoking Hermes.
+- The operator resume workflow contract defines how a consumed or blocked local-store report becomes a new append-only `resume_requested` or `resume_approved` record without adding a scheduler or hidden runtime state.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
 - [`furyoku/provider_health.py`](furyoku/provider_health.py) checks registered endpoint readiness before routing work to a provider.
@@ -141,6 +143,7 @@ Current routing core:
 - [`examples/hermes_approval_resume_gate.approved.json`](examples/hermes_approval_resume_gate.approved.json) shows a single approved record for a gated one-Symbiote bridge handoff.
 - [`examples/hermes_approval_resume_three_smoke.approved.json`](examples/hermes_approval_resume_three_smoke.approved.json) shows approved records for a gated three-Symbiote smoke handoff ledger.
 - [`examples/hermes_approval_resume_seven_smoke.approved.json`](examples/hermes_approval_resume_seven_smoke.approved.json) shows approved records for a gated seven-Symbiote smoke handoff ledger.
+- [`examples/operator_resume_workflow.example.json`](examples/operator_resume_workflow.example.json) shows a consumed first attempt followed by a safe `resume_approved` retry record.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.
