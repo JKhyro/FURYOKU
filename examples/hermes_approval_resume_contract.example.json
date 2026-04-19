@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-handoff",
+      "executionId": "reviewed-handoff-001",
+      "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.one-symbiote",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "workflowEnvelope": "docs/operator-reviewed-workflow-envelope.md",
+        "issue": "#248"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-handoff",
+      "executionId": "reviewed-handoff-001",
+      "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.one-symbiote",
+      "attemptIndex": 2,
+      "recordState": "resume_requested",
+      "owner": "furyoku-operator",
+      "createdAtUtc": "2026-04-19T01:10:00Z",
+      "resume": {
+        "resumeOf": "operator.reviewed.hermes-handoff:reviewed-handoff-001:symbiote-01:primary:hermes.bridge.one-symbiote",
+        "previousAttemptIndex": 1,
+        "requestedBy": "operator",
+        "reason": "recoverable provider timeout after approved handoff"
+      },
+      "evidence": {
+        "workflowEnvelope": "docs/operator-reviewed-workflow-envelope.md",
+        "issue": "#248"
+      }
+    }
+  ]
+}

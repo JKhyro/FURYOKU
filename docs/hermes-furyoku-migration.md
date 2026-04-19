@@ -43,7 +43,7 @@ Immediate risk: this project is currently operating from Windows, while upstream
 4. Run a one-Symbiote smoke, then a three-Symbiote coordination smoke, then the full seven-Symbiote smoke.
 5. Inventory OpenClaw features and port only the pieces that improve Hermes/FURYOKU without recreating the coordination failure modes.
 
-The smoke path through seven ordered Symbiote handoffs is complete through issue [#240](https://github.com/JKhyro/FURYOKU/issues/240). The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), recorded in [OpenClaw carryover inventory](openclaw-carryover-inventory.md). The routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244). The active follow-on is [#246](https://github.com/JKhyro/FURYOKU/issues/246), which prototypes the [operator-reviewed Hermes workflow envelope](operator-reviewed-workflow-envelope.md) before any broader workflow or approval-state carryover.
+The smoke path through seven ordered Symbiote handoffs is complete through issue [#240](https://github.com/JKhyro/FURYOKU/issues/240). The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), recorded in [OpenClaw carryover inventory](openclaw-carryover-inventory.md). The routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), and the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246). The active follow-on is [#248](https://github.com/JKhyro/FURYOKU/issues/248), which defines the [execution-keyed approval/resume contract](approval-resume-contract.md) before any durable workflow state is introduced.
 
 ## OpenClaw Feature Harvest Rules
 
