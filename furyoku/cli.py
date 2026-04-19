@@ -29,6 +29,7 @@ from .outcome_feedback import (
 )
 from .provider_health import ProviderHealthCheckRequest, ProviderHealthCheckResult, check_provider_health_many
 from .provider_adapters import ProviderExecutionRequest, ProviderExecutionResult
+from .hermes_bridge import HermesBridgeError, dry_run_hermes_bridge, load_hermes_bridge_envelope
 from .runtime import (
     CharacterRoleExecutionResult,
     ComparativeExecutionBatchResult,
@@ -239,6 +240,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         _write_json({"ok": all(result.ready for result in results), "providers": [_health_to_dict(result) for result in results]})
         return 0 if all(result.ready for result in results) else 2
+
+    if args.command == "hermes-bridge":
+        if not args.dry_run:
+            parser.error("hermes-bridge currently supports --dry-run only until the WSL2 live handoff is available")
+        try:
+            envelope = load_hermes_bridge_envelope(args.envelope)
+            result = dry_run_hermes_bridge(
+                models,
+                envelope,
+                seen_execution_keys=args.seen_execution_key,
+                routing_policy=_routing_policy_from_args(args),
+            )
+        except HermesBridgeError as exc:
+            parser.error(str(exc))
+        _write_json(result.to_dict(), output_path=args.output)
+        return 0 if result.ok else 2
 
     if args.command == "decide":
         if args.decision_suite and (args.task_profile or _has_inline_decision_task_args(args)):
@@ -474,6 +491,25 @@ def _build_parser() -> argparse.ArgumentParser:
     health_parser.add_argument("--probe", action="store_true", help="Run a lightweight probe instead of only checking configuration.")
     health_parser.add_argument("--probe-prompt", default="", help="Prompt text used when --probe is set.")
     health_parser.add_argument("--timeout-seconds", type=float, default=5.0, help="Health probe timeout in seconds.")
+    bridge_parser = subparsers.add_parser(
+        "hermes-bridge",
+        help="Validate and route a one-Symbiote Hermes/FURYOKU handoff envelope.",
+    )
+    bridge_parser.add_argument("--registry", required=True, type=Path, help="Path to a FURYOKU model registry JSON file.")
+    bridge_parser.add_argument("--envelope", required=True, type=Path, help="Path to a one-Symbiote bridge envelope JSON file.")
+    bridge_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate, route, and shape the handoff result without invoking Hermes.",
+    )
+    bridge_parser.add_argument(
+        "--seen-execution-key",
+        action="append",
+        default=[],
+        help="Execution key already claimed by this handoff cycle. Repeat to prevent duplicate Symbiote execution.",
+    )
+    _add_routing_policy_arg(bridge_parser)
+    bridge_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON dry-run handoff report.")
     decide_parser = subparsers.add_parser(
         "decide",
         help="Evaluate local, CLI, and API models across multiple decision situations.",
