@@ -97,6 +97,8 @@ The [operator resume workflow contract](operator-resume-workflow-contract.md) de
 
 `approval-resume-create` implements the local operator command for that step. It previews the candidate record by default and appends it only with `--append`.
 
+The checked-in local smoke fixture `examples/operator_resume_loop_store.example.json` proves the report -> preview -> append -> report readiness loop without invoking Hermes.
+
 Example gated live bridge:
 
 ```powershell

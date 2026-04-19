@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "schemaVersion": 1,
+      "workflowId": "operator.reviewed.hermes-handoff",
+      "executionId": "reviewed-handoff-001",
+      "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.one-symbiote",
+      "attemptIndex": 1,
+      "recordState": "approved",
+      "owner": "furyoku-operator",
+      "approvedBy": "operator",
+      "approvedAtUtc": "2026-04-19T01:00:00Z",
+      "createdAtUtc": "2026-04-19T00:00:00Z",
+      "evidence": {
+        "workflowEnvelope": "docs/operator-reviewed-workflow-envelope.md",
+        "approvalStoreReport": "reports/local-approval-resume-store-001.json",
+        "issue": "#272"
+      }
+    }
+  ],
+  "consumptionEvents": [
+    {
+      "schemaVersion": 1,
+      "recordKey": "operator.reviewed.hermes-handoff:reviewed-handoff-001:symbiote-01:primary:hermes.bridge.one-symbiote:attempt:1",
+      "handoffExecutionKey": "symbiote-01:primary:hermes.bridge.one-symbiote",
+      "executionKey": "bridge-run-001",
+      "resultStatus": "failed",
+      "startedAtUtc": "2026-04-19T01:01:00Z",
+      "finishedAtUtc": "2026-04-19T01:02:00Z",
+      "recoverableErrorCode": "provider_timeout"
+    }
+  ]
+}

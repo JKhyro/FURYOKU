@@ -25,6 +25,7 @@ from furyoku.cli import main as cli_main
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_PATH = ROOT / "examples" / "hermes_approval_resume_contract.example.json"
 OPERATOR_RESUME_WORKFLOW_PATH = ROOT / "examples" / "operator_resume_workflow.example.json"
+OPERATOR_RESUME_LOOP_STORE_PATH = ROOT / "examples" / "operator_resume_loop_store.example.json"
 SEVEN_SMOKE_ENVELOPE_PATH = ROOT / "examples" / "hermes_bridge_seven_symbiote.example.json"
 SEVEN_SMOKE_APPROVAL_PATH = ROOT / "examples" / "hermes_approval_resume_seven_smoke.approved.json"
 HANDOFF_EXECUTION_KEY = "symbiote-01:primary:hermes.bridge.one-symbiote"
@@ -537,6 +538,93 @@ class ApprovalResumeContractTests(unittest.TestCase):
         self.assertEqual(reloaded_records[1].state, "resume_approved")
         self.assertEqual(reloaded_records[1].attempt_index, 2)
 
+    def test_cli_smokes_operator_resume_loop_from_report_to_ready_retry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "operator-resume-loop-store.json"
+            path.write_text(OPERATOR_RESUME_LOOP_STORE_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+
+            before_report = self._run_cli_json(
+                [
+                    "approval-resume-store-report",
+                    "--store",
+                    str(path),
+                    "--handoff-execution-key",
+                    HANDOFF_EXECUTION_KEY,
+                ]
+            )
+            preview_report = self._run_cli_json(
+                [
+                    "approval-resume-create",
+                    "--store",
+                    str(path),
+                    "--handoff-execution-key",
+                    HANDOFF_EXECUTION_KEY,
+                    "--record-state",
+                    "resume_approved",
+                    "--requested-by",
+                    "operator",
+                    "--reason",
+                    "recoverable provider timeout",
+                    "--approved-by",
+                    "operator",
+                    "--approved-at-utc",
+                    "2026-04-19T01:20:00Z",
+                    "--created-at-utc",
+                    "2026-04-19T01:15:00Z",
+                    "--evidence",
+                    "issue=#272",
+                ]
+            )
+            records_after_preview = LocalApprovalResumeLedgerAdapter(path).records
+            append_report = self._run_cli_json(
+                [
+                    "approval-resume-create",
+                    "--store",
+                    str(path),
+                    "--handoff-execution-key",
+                    HANDOFF_EXECUTION_KEY,
+                    "--record-state",
+                    "resume_approved",
+                    "--requested-by",
+                    "operator",
+                    "--reason",
+                    "recoverable provider timeout",
+                    "--approved-by",
+                    "operator",
+                    "--approved-at-utc",
+                    "2026-04-19T01:20:00Z",
+                    "--created-at-utc",
+                    "2026-04-19T01:15:00Z",
+                    "--evidence",
+                    "issue=#272",
+                    "--append",
+                ]
+            )
+            after_report = self._run_cli_json(
+                [
+                    "approval-resume-store-report",
+                    "--store",
+                    str(path),
+                    "--handoff-execution-key",
+                    HANDOFF_EXECUTION_KEY,
+                ]
+            )
+            records_after_append = LocalApprovalResumeLedgerAdapter(path).records
+
+        self.assertFalse(before_report["gate"]["ready"])
+        self.assertEqual(before_report["gate"]["error"]["code"], "approval_resume_record_consumed")
+        self.assertEqual(before_report["summary"]["consumedRecords"], 1)
+        self.assertEqual(preview_report["action"], "preview")
+        self.assertEqual(preview_report["record"]["attemptIndex"], 2)
+        self.assertEqual(len(records_after_preview), 1)
+        self.assertEqual(append_report["action"], "appended")
+        self.assertEqual(len(records_after_append), 2)
+        self.assertEqual(after_report["gate"]["status"], "resume-ready")
+        self.assertTrue(after_report["gate"]["ready"])
+        self.assertEqual(after_report["gate"]["recordState"], "resume_approved")
+        self.assertEqual(after_report["summary"]["readyRecords"], 1)
+        self.assertEqual(after_report["summary"]["consumedRecords"], 1)
+
     def test_local_adapter_rejects_consumption_event_for_wrong_handoff(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             adapter = LocalApprovalResumeLedgerAdapter(Path(temp_dir) / "approval-store.json")
@@ -627,6 +715,13 @@ class ApprovalResumeContractTests(unittest.TestCase):
             record = load_approval_resume_record(path)
 
         self.assertEqual(record.source, str(path))
+
+    def _run_cli_json(self, args: list[str]) -> dict:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = cli_main(args)
+        self.assertEqual(exit_code, 0)
+        return json.loads(stdout.getvalue())
 
 
 if __name__ == "__main__":

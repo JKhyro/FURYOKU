@@ -145,6 +145,7 @@ Current routing core:
 - [`examples/hermes_approval_resume_three_smoke.approved.json`](examples/hermes_approval_resume_three_smoke.approved.json) shows approved records for a gated three-Symbiote smoke handoff ledger.
 - [`examples/hermes_approval_resume_seven_smoke.approved.json`](examples/hermes_approval_resume_seven_smoke.approved.json) shows approved records for a gated seven-Symbiote smoke handoff ledger.
 - [`examples/operator_resume_workflow.example.json`](examples/operator_resume_workflow.example.json) shows a consumed first attempt followed by a safe `resume_approved` retry record.
+- [`examples/operator_resume_loop_store.example.json`](examples/operator_resume_loop_store.example.json) shows the local store input for the report -> preview -> append -> readiness operator resume smoke.
 - Feedback-informed decision and execution reports include `feedbackPolicy` metadata so operators can audit whether default or custom policy settings shaped routing.
 - [`furyoku/runtime.py`](furyoku/runtime.py) combines task-based routing with provider execution and returns selection evidence plus execution output.
 - Routed `run` execution can use fallback chains to try the next eligible ranked model when the selected provider fails or times out, while preserving every execution attempt in JSON output.

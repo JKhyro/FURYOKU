@@ -69,6 +69,8 @@ Blocking records may use `stale_blocked`, `duplicate_blocked`, or `rejected` to 
 
 The checked-in fixture [operator_resume_workflow.example.json](../examples/operator_resume_workflow.example.json) shows a consumed first attempt followed by a safe `resume_approved` record for attempt `2`. It parses through the existing approval/resume contract and does not launch Hermes.
 
+The local store fixture [operator_resume_loop_store.example.json](../examples/operator_resume_loop_store.example.json) is used for the operator smoke that runs `approval-resume-store-report`, previews a retry, appends it with `approval-resume-create --append`, and confirms the appended `resume_approved` record is ready.
+
 ## Non-Goals
 
 This contract does not authorize:
