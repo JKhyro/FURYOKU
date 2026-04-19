@@ -62,3 +62,5 @@ assert envelope.handoff.execution_key == "symbiote-01:primary:hermes.bridge.one-
 ```
 
 The checked-in example stays in `approval_required` state so it can be loaded and validated without starting Hermes.
+
+The follow-on [execution-keyed approval/resume contract](approval-resume-contract.md) defines how approval and resume records bind to this envelope before durable workflow state exists.
