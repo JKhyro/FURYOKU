@@ -304,6 +304,273 @@ class ApprovalResumeLedger:
             seen[record.record_key] = record
 
 
+@dataclass(frozen=True)
+class ApprovalResumeConsumptionEvent:
+    """Append-only evidence that a handoff consumed one approval/resume record."""
+
+    schema_version: int
+    record_key: str
+    handoff_execution_key: str
+    execution_key: str
+    result_status: str
+    started_at_utc: str = ""
+    finished_at_utc: str = ""
+    recoverable_error_code: str = ""
+    source: str = "<memory>"
+
+    @property
+    def event_key(self) -> str:
+        return f"{self.record_key}:consumed:{self.execution_key}"
+
+    @classmethod
+    def from_record(
+        cls,
+        record: ApprovalResumeRecord,
+        *,
+        execution_key: str | None = None,
+        result_status: str = "started",
+        started_at_utc: str = "",
+        finished_at_utc: str = "",
+        recoverable_error_code: str = "",
+        source: str = "<memory>",
+    ) -> "ApprovalResumeConsumptionEvent":
+        event = cls(
+            schema_version=1,
+            record_key=record.record_key,
+            handoff_execution_key=record.handoff_execution_key,
+            execution_key=(execution_key or record.handoff_execution_key).strip(),
+            result_status=result_status,
+            started_at_utc=started_at_utc,
+            finished_at_utc=finished_at_utc,
+            recoverable_error_code=recoverable_error_code,
+            source=source,
+        )
+        event._validate()
+        return event
+
+    @classmethod
+    def from_dict(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        source: str = "<memory>",
+    ) -> "ApprovalResumeConsumptionEvent":
+        if not isinstance(payload, Mapping):
+            raise ApprovalResumeError(f"{source}: approval/resume consumption event must be a JSON object")
+        event = cls(
+            schema_version=_schema_version(payload, source=source),
+            record_key=_required_string(payload, "recordKey", "record_key", source=source),
+            handoff_execution_key=_required_string(
+                payload,
+                "handoffExecutionKey",
+                "handoff_execution_key",
+                source=source,
+            ),
+            execution_key=_required_string(payload, "executionKey", "execution_key", source=source),
+            result_status=_required_string(payload, "resultStatus", "result_status", source=source),
+            started_at_utc=_optional_string(payload, "startedAtUtc", "started_at_utc") or "",
+            finished_at_utc=_optional_string(payload, "finishedAtUtc", "finished_at_utc") or "",
+            recoverable_error_code=_optional_string(
+                payload,
+                "recoverableErrorCode",
+                "recoverable_error_code",
+            )
+            or "",
+            source=source,
+        )
+        event._validate()
+        return event
+
+    def to_dict(self) -> dict:
+        return {
+            "schemaVersion": self.schema_version,
+            "eventKey": self.event_key,
+            "recordKey": self.record_key,
+            "handoffExecutionKey": self.handoff_execution_key,
+            "executionKey": self.execution_key,
+            "resultStatus": self.result_status,
+            "startedAtUtc": self.started_at_utc,
+            "finishedAtUtc": self.finished_at_utc,
+            "recoverableErrorCode": self.recoverable_error_code,
+        }
+
+    def _validate(self) -> None:
+        if self.schema_version != 1:
+            raise ApprovalResumeError(f"{self.source}: unsupported consumption event schemaVersion {self.schema_version!r}")
+        for field_name in ("record_key", "handoff_execution_key", "execution_key", "result_status"):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value.strip():
+                raise ApprovalResumeError(f"{self.source}: {field_name} is required")
+
+
+@dataclass(frozen=True)
+class LocalApprovalResumeLedgerAdapter:
+    """Small JSON-backed approval/resume ledger adapter for local durable proof."""
+
+    path: Path
+
+    def __init__(self, path: str | Path):
+        object.__setattr__(self, "path", Path(path))
+
+    @property
+    def records(self) -> tuple[ApprovalResumeRecord, ...]:
+        return tuple(self._read_records_payload()[0])
+
+    @property
+    def consumption_events(self) -> tuple[ApprovalResumeConsumptionEvent, ...]:
+        return tuple(self._read_records_payload()[1])
+
+    def append_record(self, record: ApprovalResumeRecord) -> ApprovalResumeRecord:
+        records, events, payload = self._read_records_payload()
+        for existing in records:
+            if existing.record_key == record.record_key:
+                if existing.owner != record.owner:
+                    raise ApprovalResumeError(f"{self.path}: ambiguous ownership for {record.record_key}")
+                raise ApprovalResumeError(f"{self.path}: duplicate approval/resume record for {record.record_key}")
+        payload["records"] = [existing.to_dict() for existing in records] + [record.to_dict()]
+        payload["consumptionEvents"] = [event.to_dict() for event in events]
+        self._write_payload(payload)
+        return record
+
+    def append_consumption_event(
+        self,
+        event: ApprovalResumeConsumptionEvent,
+    ) -> ApprovalResumeConsumptionEvent:
+        records, events, payload = self._read_records_payload()
+        records_by_key = {record.record_key: record for record in records}
+        record = records_by_key.get(event.record_key)
+        if record is None:
+            raise ApprovalResumeError(f"{self.path}: consumption event references unknown record {event.record_key}")
+        if event.handoff_execution_key != record.handoff_execution_key:
+            raise ApprovalResumeError(
+                f"{self.path}: consumption event handoffExecutionKey does not match record {event.record_key}"
+            )
+        for existing in events:
+            if existing.event_key == event.event_key:
+                raise ApprovalResumeError(f"{self.path}: duplicate consumption event for {event.event_key}")
+            if existing.record_key == event.record_key:
+                raise ApprovalResumeError(f"{self.path}: approval/resume record {event.record_key} is already consumed")
+        payload["records"] = [record.to_dict() for record in records]
+        payload["consumptionEvents"] = [existing.to_dict() for existing in events] + [event.to_dict()]
+        self._write_payload(payload)
+        return event
+
+    def records_for_handoff(self, handoff_execution_key: str) -> tuple[ApprovalResumeRecord, ...]:
+        return tuple(
+            sorted(
+                (
+                    record
+                    for record in self.records
+                    if record.handoff_execution_key == handoff_execution_key
+                ),
+                key=_record_order_key,
+            )
+        )
+
+    def records_for_workflow(self, workflow_execution_key: str) -> tuple[ApprovalResumeRecord, ...]:
+        return tuple(
+            sorted(
+                (
+                    record
+                    for record in self.records
+                    if record.workflow_execution_key == workflow_execution_key
+                ),
+                key=_record_order_key,
+            )
+        )
+
+    def consumption_events_for_record(self, record_key: str) -> tuple[ApprovalResumeConsumptionEvent, ...]:
+        return tuple(event for event in self.consumption_events if event.record_key == record_key)
+
+    def is_record_consumed(self, record_key: str) -> bool:
+        return bool(self.consumption_events_for_record(record_key))
+
+    def latest_gate_record(
+        self,
+        handoff_execution_key: str,
+        *,
+        workflow_execution_key: str | None = None,
+    ) -> ApprovalResumeRecord | None:
+        records = self.records_for_handoff(handoff_execution_key)
+        if workflow_execution_key:
+            records = tuple(record for record in records if record.workflow_execution_key == workflow_execution_key)
+        if not records:
+            return None
+        workflow_keys = {record.workflow_execution_key for record in records}
+        if len(workflow_keys) > 1:
+            raise ApprovalResumeError(
+                f"{self.path}: approval/resume ledger has multiple workflow executions for {handoff_execution_key}"
+            )
+        return max(records, key=_record_order_key)
+
+    def select_gate_record_for_handoff(
+        self,
+        handoff_execution_key: str,
+        *,
+        workflow_execution_key: str | None = None,
+    ) -> ApprovalResumeRecord | None:
+        record = self.latest_gate_record(
+            handoff_execution_key,
+            workflow_execution_key=workflow_execution_key,
+        )
+        if record is None:
+            return None
+        if not record.safe_to_handoff:
+            raise ApprovalResumeError(f"{self.path}: approval/resume record state {record.state!r} is not safe to hand off")
+        if self.is_record_consumed(record.record_key):
+            raise ApprovalResumeError(f"{self.path}: approval/resume record {record.record_key} is already consumed")
+        return record
+
+    def to_dict(self) -> dict:
+        records, events, _payload = self._read_records_payload()
+        return {
+            "schemaVersion": 1,
+            "records": [record.to_dict() for record in records],
+            "consumptionEvents": [event.to_dict() for event in events],
+        }
+
+    def _read_records_payload(
+        self,
+    ) -> tuple[list[ApprovalResumeRecord], list[ApprovalResumeConsumptionEvent], dict]:
+        payload = self._read_payload()
+        raw_records = payload.get("records", [])
+        raw_events = payload.get("consumptionEvents", payload.get("consumption_events", []))
+        if not isinstance(raw_records, list):
+            raise ApprovalResumeError(f"{self.path}: records must be an array")
+        if not isinstance(raw_events, list):
+            raise ApprovalResumeError(f"{self.path}: consumptionEvents must be an array")
+        records = [
+            ApprovalResumeRecord.from_dict(record, source=f"{self.path}:records[{index}]")
+            for index, record in enumerate(raw_records)
+        ]
+        events = [
+            ApprovalResumeConsumptionEvent.from_dict(event, source=f"{self.path}:consumptionEvents[{index}]")
+            for index, event in enumerate(raw_events)
+        ]
+        return records, events, payload
+
+    def _read_payload(self) -> dict:
+        if not self.path.exists():
+            return {"schemaVersion": 1, "records": [], "consumptionEvents": []}
+        with self.path.open("r", encoding="utf-8-sig") as handle:
+            payload = json.load(handle)
+        if not isinstance(payload, Mapping):
+            raise ApprovalResumeError(f"{self.path}: local approval/resume ledger store must be a JSON object")
+        _schema_version(payload, source=str(self.path))
+        return dict(payload)
+
+    def _write_payload(self, payload: Mapping[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        normalized = {
+            "schemaVersion": 1,
+            "records": list(payload.get("records", [])),
+            "consumptionEvents": list(payload.get("consumptionEvents", [])),
+        }
+        with self.path.open("w", encoding="utf-8") as handle:
+            json.dump(normalized, handle, indent=2)
+            handle.write("\n")
+
+
 def load_approval_resume_record(path: str | Path) -> ApprovalResumeRecord:
     record_path = Path(path)
     with record_path.open("r", encoding="utf-8-sig") as handle:
@@ -343,6 +610,14 @@ def approval_resume_record_from_workflow_envelope(
         return ApprovalResumeRecord.from_workflow_envelope(envelope, owner=owner)
     except WorkflowEnvelopeError as exc:
         raise ApprovalResumeError(str(exc)) from exc
+
+
+def load_local_approval_resume_ledger_adapter(path: str | Path) -> LocalApprovalResumeLedgerAdapter:
+    return LocalApprovalResumeLedgerAdapter(path)
+
+
+def _record_order_key(record: ApprovalResumeRecord) -> tuple[int, str, str]:
+    return (record.attempt_index, record.created_at_utc, record.record_key)
 
 
 def _schema_version(payload: Mapping[str, Any], *, source: str) -> int:

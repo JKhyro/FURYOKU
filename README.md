@@ -15,7 +15,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Charter feedback discussion: [#3](https://github.com/JKhyro/FURYOKU/discussions/3)
 - Current active lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) Hermes Agent becomes the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
-- Current support lane: [#256](https://github.com/JKhyro/FURYOKU/issues/256) define the durable approval/resume ledger state boundary before implementation
+- Current support lane: [#258](https://github.com/JKhyro/FURYOKU/issues/258) prototype the local durable approval/resume ledger adapter
 
 ## Current Baseline
 
@@ -116,7 +116,7 @@ Current routing core:
 - [`furyoku/routing_evidence.py`](furyoku/routing_evidence.py) normalizes retained OpenClaw benchmark outputs into Hermes/FURYOKU routing evidence without bypassing task, health, privacy, or duplicate-execution gates.
 - [`furyoku/task_profiles.py`](furyoku/task_profiles.py) loads reusable JSON task profiles into router-ready task requirements.
 - [`furyoku/workflow_envelope.py`](furyoku/workflow_envelope.py) validates a typed operator-reviewed workflow envelope around one Hermes/FURYOKU handoff without adding a second scheduler or hidden shared state.
-- [`furyoku/approval_resume.py`](furyoku/approval_resume.py) validates execution-keyed approval/resume records before any durable workflow state is introduced.
+- [`furyoku/approval_resume.py`](furyoku/approval_resume.py) validates execution-keyed approval/resume records and provides a small local JSON-backed durable adapter for append/read, latest gate selection, and consumption-event replay blocking.
 - Live Hermes bridge handoffs can require approval/resume evidence and block before process invocation unless the latest matching record is `approved` or `resume_approved` for the exact bridge execution key.
 - [`furyoku/provider_adapters.py`](furyoku/provider_adapters.py) executes selected local, CLI, and API endpoints through one observable result contract.
 - Registry-configured API endpoints can use OpenAI-compatible chat-completions HTTP metadata (`apiUrl`, `apiKeyEnv`, `apiModel`, `apiFormat`) or an injected transport.
