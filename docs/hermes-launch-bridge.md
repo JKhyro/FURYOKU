@@ -252,6 +252,8 @@ Live mode reuses the one-Symbiote process boundary and invokes the configured ha
 python -m furyoku.cli hermes-seven-smoke `
   --registry .\examples\model_registry.example.json `
   --envelope .\examples\hermes_bridge_seven_symbiote.example.json `
+  --approval-resume-ledger .\examples\hermes_approval_resume_seven_smoke.approved.json `
+  --require-approval-resume `
   --timeout-seconds 180 `
   --handoff-command wsl -d Ubuntu python3 /mnt/c/Users/Allan/OneDrive/Documents/FURYOKU-local-model-roster-refresh/examples/hermes_bridge_hermes_runtime.py `
     --hermes-command /root/.venvs/hermes-agent-smoke/bin/hermes `
@@ -260,4 +262,4 @@ python -m furyoku.cli hermes-seven-smoke `
     --max-turns 1
 ```
 
-The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), the routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246), the execution-keyed approval/resume contract completed in [#248](https://github.com/JKhyro/FURYOKU/issues/248), and one-Symbiote approval gating completed in [#250](https://github.com/JKhyro/FURYOKU/issues/250). The active follow-on is [#252](https://github.com/JKhyro/FURYOKU/issues/252), which extends approval/resume ledger gating across multi-Symbiote smoke handoffs before durable workflow state is introduced.
+The seven-Symbiote smoke has established bounded coordination behavior for the current bridge sequence. The first OpenClaw carryover inventory completed in [#242](https://github.com/JKhyro/FURYOKU/issues/242), the routing evidence contract completed in [#244](https://github.com/JKhyro/FURYOKU/issues/244), the operator-reviewed workflow envelope completed in [#246](https://github.com/JKhyro/FURYOKU/issues/246), the execution-keyed approval/resume contract completed in [#248](https://github.com/JKhyro/FURYOKU/issues/248), one-Symbiote approval gating completed in [#250](https://github.com/JKhyro/FURYOKU/issues/250), and multi-Symbiote approval/resume ledger gating completed in [#252](https://github.com/JKhyro/FURYOKU/issues/252). The active follow-on is [#254](https://github.com/JKhyro/FURYOKU/issues/254), which publishes the reusable seven-Symbiote approval/resume smoke fixture before durable workflow state is introduced.

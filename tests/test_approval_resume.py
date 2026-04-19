@@ -16,6 +16,8 @@ from furyoku import (
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_PATH = ROOT / "examples" / "hermes_approval_resume_contract.example.json"
+SEVEN_SMOKE_ENVELOPE_PATH = ROOT / "examples" / "hermes_bridge_seven_symbiote.example.json"
+SEVEN_SMOKE_APPROVAL_PATH = ROOT / "examples" / "hermes_approval_resume_seven_smoke.approved.json"
 HANDOFF_EXECUTION_KEY = "symbiote-01:primary:hermes.bridge.one-symbiote"
 WORKFLOW_ID = "operator.reviewed.hermes-handoff"
 EXECUTION_ID = "reviewed-handoff-001"
@@ -197,6 +199,19 @@ class ApprovalResumeContractTests(unittest.TestCase):
         self.assertEqual(len(ledger.records), 2)
         self.assertIn(WORKFLOW_EXECUTION_KEY, ledger.workflow_execution_keys)
         self.assertTrue(ledger.records[1].is_resume)
+
+    def test_checked_in_seven_smoke_fixture_matches_smoke_execution_keys(self):
+        ledger = load_approval_resume_ledger(SEVEN_SMOKE_APPROVAL_PATH)
+        smoke_payload = json.loads(SEVEN_SMOKE_ENVELOPE_PATH.read_text(encoding="utf-8"))
+        expected_keys = [
+            f"{symbiote['symbioteId']}:{symbiote['role']}:{symbiote['task']['taskId']}"
+            for symbiote in smoke_payload["symbiotes"]
+        ]
+
+        self.assertEqual(len(ledger.records), 7)
+        self.assertEqual([record.handoff_execution_key for record in ledger.records], expected_keys)
+        self.assertTrue(all(record.safe_to_handoff for record in ledger.records))
+        self.assertEqual({record.evidence["issue"] for record in ledger.records}, {"#254"})
 
     def test_loads_single_record_from_json_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
