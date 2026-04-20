@@ -2578,6 +2578,151 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["members"][1]["character"]["characterId"], "cli-support")
             self.assertIn("generatedAt", persisted["reportMetadata"])
 
+    def test_character_array_run_executes_primary_member_default_role(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            array_path = Path(temp_dir) / "array.json"
+            output_path = Path(temp_dir) / "reports" / "character-array-run.json"
+            write_executable_character_registry(registry_path)
+            write_character_profile(character_path)
+            array_payload = {
+                "schemaVersion": 1,
+                "arrayId": "cli-aca-run",
+                "class": "Symbiote",
+                "rank": "Prototype",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "profilePath": str(character_path),
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "cli-support",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "maxSubagents": 0,
+                                    "task": {
+                                        "taskId": "cli-support.primary",
+                                        "requiredCapabilities": {"conversation": 0.7},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+            array_path.write_text(json.dumps(array_payload), encoding="utf-8")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-array-run",
+                        "--registry",
+                        str(registry_path),
+                        "--character-array",
+                        str(array_path),
+                        "--prompt",
+                        "hello",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["arrayId"], "cli-aca-run")
+            self.assertEqual(payload["slotId"], "lead")
+            self.assertTrue(payload["primary"])
+            self.assertEqual(payload["characterId"], "test-character")
+            self.assertEqual(payload["executedRoleId"], "primary")
+            self.assertEqual(payload["selectedModel"]["modelId"], "local-echo")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "echo:hello")
+            self.assertEqual(payload["roleAssignments"]["primaryRole"], "primary")
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+            self.assertEqual(persisted["slotId"], "lead")
+
+    def test_character_array_run_executes_named_slot_and_role(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            array_path = Path(temp_dir) / "array.json"
+            write_executable_character_registry(registry_path)
+            write_character_profile(character_path)
+            array_payload = {
+                "schemaVersion": 1,
+                "arrayId": "cli-aca-named",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "profilePath": str(character_path),
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "cli-support-named",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "cli-support-named.primary",
+                                        "requiredCapabilities": {"conversation": 0.7},
+                                    },
+                                },
+                                {
+                                    "roleId": "coding",
+                                    "maxSubagents": 2,
+                                    "task": {
+                                        "taskId": "cli-support-named.coding",
+                                        "requireTools": True,
+                                        "requiredCapabilities": {"coding": 0.9},
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            }
+            array_path.write_text(json.dumps(array_payload), encoding="utf-8")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-array-run",
+                        "--registry",
+                        str(registry_path),
+                        "--character-array",
+                        str(array_path),
+                        "--slot-id",
+                        "support",
+                        "--role-id",
+                        "coding",
+                        "--prompt",
+                        "write code",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["slotId"], "support")
+            self.assertFalse(payload["primary"])
+            self.assertEqual(payload["executedRoleId"], "coding")
+            self.assertEqual(payload["selectedModel"]["modelId"], "cli-coder")
+            self.assertEqual(payload["execution"]["responseText"].strip(), "code:write code")
+
 
 if __name__ == "__main__":
     unittest.main()

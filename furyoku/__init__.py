@@ -152,6 +152,7 @@ from .outcome_feedback import (
     summarize_outcome_feedback,
 )
 from .runtime import (
+    CharacterArrayMemberExecutionResult,
     CharacterRoleExecutionResult,
     ComparativeExecutionBatchResult,
     ComparativeEvaluationResult,
@@ -163,6 +164,7 @@ from .runtime import (
     compare_model_executions,
     execute_decision_situation,
     execute_decision_situation_with_fallback,
+    execute_character_array_member,
     execute_character_role,
     route_and_execute,
     route_and_execute_with_fallback,
@@ -206,6 +208,7 @@ __all__ = [
     "CharacterArrayError",
     "CharacterArrayMember",
     "CharacterArrayMemberEnvelope",
+    "CharacterArrayMemberExecutionResult",
     "CharacterArrayMemberSelection",
     "CharacterArraySelection",
     "CharacterCompositionSelection",
@@ -305,6 +308,7 @@ __all__ = [
     "execute_model",
     "compare_decision_situation_executions",
     "compare_model_executions",
+    "execute_character_array_member",
     "execute_character_role",
     "execute_decision_situation",
     "execute_decision_situation_with_fallback",

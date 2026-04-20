@@ -16,7 +16,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Completed runtime adoption lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) established Hermes Agent as the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Completed closeout lane: [#278](https://github.com/JKhyro/FURYOKU/issues/278) aligned local/GitHub truth for the [#230](https://github.com/JKhyro/FURYOKU/issues/230) parent closeout after [#276](https://github.com/JKhyro/FURYOKU/issues/276) reconciled bridge/migration docs
-- Current active lane: [#280](https://github.com/JKhyro/FURYOKU/issues/280) formalizes the Adaptive Response Array (ARA) and Agentic Character Array (ACA) composition surfaces on top of the completed [#97](https://github.com/JKhyro/FURYOKU/issues/97) CHARACTER envelope groundwork
+- Current active lane: [#282](https://github.com/JKhyro/FURYOKU/issues/282) adds the `character-array-run` ACA execution surface (`execute_character_array_member` + CLI) on top of the landed [#280](https://github.com/JKhyro/FURYOKU/issues/280) ARA/ACA composition contract
 - Future runtime work: open a new explicitly scoped issue; do not infer runtime launch, scheduler expansion, OpenClaw work, or Ubuntu/WSL/Ubuntu-VM work from the completed [#230](https://github.com/JKhyro/FURYOKU/issues/230) lane
 
 ## Current Baseline
@@ -213,6 +213,8 @@ python -m furyoku.cli character-select --registry .\examples\model_registry.exam
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json --output .\character-envelope.json
 python -m furyoku.cli character-run --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.tertiary-symbiote.json --prompt "Hello"
 python -m furyoku.cli character-array-select --registry .\examples\model_registry.example.json --character-array .\examples\character_array.dual-symbiote.json --output .\aca-envelope.json
+python -m furyoku.cli character-array-run --registry .\examples\model_registry.example.json --character-array .\examples\character_array.dual-symbiote.json --prompt "Hello"
+python -m furyoku.cli character-array-run --registry .\examples\model_registry.example.json --character-array .\examples\character_array.dual-symbiote.json --slot-id tertiary-support --role-id primary --prompt "Summarise"
 ```
 
 ## Character Composition Doctrine (ARA / ACA)
@@ -220,7 +222,8 @@ python -m furyoku.cli character-array-select --registry .\examples\model_registr
 FURYOKU names the two CHARACTER composition surfaces explicitly, in line with the CORTEX character doctrine:
 
 - **Adaptive Response Array (ARA)** — one CHARACTER. An ARA is a bound set of role components (one optional primary plus any number of secondaries, each with its own task requirements and up to twelve subagents). This is the surface produced by [`furyoku/character_profiles.py`](furyoku/character_profiles.py) and consumed by `character-select` / `character-run`.
-- **Agentic Character Array (ACA)** — an array of CHARACTERS. An ACA composes one or more ARA profiles (each one full CHARACTER) into a single executable orchestration envelope, preserving per-character primary/secondary responsibility as well as array-level totals (character count, total role count, total subagent capacity). This is the surface produced by [`furyoku/character_arrays.py`](furyoku/character_arrays.py) and consumed by `character-array-select`.
+- **Agentic Character Array (ACA)** — an array of CHARACTERS. An ACA composes one or more ARA profiles (each one full CHARACTER) into a single executable orchestration envelope, preserving per-character primary/secondary responsibility as well as array-level totals (character count, total role count, total subagent capacity). This is the surface produced by [`furyoku/character_arrays.py`](furyoku/character_arrays.py) and consumed by `character-array-select` / `character-array-run`.
+- **ACA execution** — `character-array-run` (and the `execute_character_array_member` runtime helper) resolves one ACA member at a time: by default the primary member plus that member's primary role, or a named `--slot-id` / `--role-id` pair. The JSON report carries the selected slot, character id, executed role, chosen model, execution outcome, and the full per-role assignment envelope for that CHARACTER.
 
 An ACA member can reference an existing CHARACTER profile on disk through `profilePath`, embed one inline through `character`, or attach one through `profile`. Exactly one of those three fields must be present per member. Aliases and responsibilities are optional metadata that travel into the envelope for downstream orchestration.
 

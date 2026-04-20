@@ -2,6 +2,7 @@ import subprocess
 import unittest
 
 from furyoku import (
+    CharacterArrayError,
     DecisionOutcomeRecord,
     ModelDecisionError,
     ModelEndpoint,
@@ -14,9 +15,11 @@ from furyoku import (
     compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
+    execute_character_array_member,
     execute_decision_situation,
     execute_decision_situation_with_fallback,
     execute_character_role,
+    parse_character_array,
     parse_decision_suite,
     parse_character_profile,
     route_and_execute,
@@ -736,6 +739,196 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(result.provider, "cli")
         self.assertEqual(result.character_selection.max_subagents_for("coding"), 4)
         self.assertEqual(result.execution.response_text, "cli-coder:write code")
+
+    def test_execute_character_array_member_defaults_to_primary_slot_and_role(self):
+        array = parse_character_array(
+            {
+                "schemaVersion": 1,
+                "arrayId": "runtime-aca",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "lead-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "lead-character.primary",
+                                        "privacyRequirement": "local_only",
+                                        "requiredCapabilities": {"conversation": 0.9},
+                                    },
+                                },
+                                {
+                                    "roleId": "coding",
+                                    "task": {
+                                        "taskId": "lead-character.coding",
+                                        "requireTools": True,
+                                        "requiredCapabilities": {"coding": 0.9},
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "support-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "support-character.primary",
+                                        "requireTools": True,
+                                        "requiredCapabilities": {"coding": 0.9},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_character_array_member(
+            [local_endpoint(), cli_endpoint()],
+            array,
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.array_id, "runtime-aca")
+        self.assertEqual(result.slot_id, "lead")
+        self.assertTrue(result.primary)
+        self.assertEqual(result.character_id, "lead-character")
+        self.assertEqual(result.role_id, "primary")
+        self.assertEqual(result.model_id, "local-chat")
+        self.assertEqual(result.execution.response_text, "local-chat:hello")
+
+    def test_execute_character_array_member_selects_named_slot_and_role(self):
+        array = parse_character_array(
+            {
+                "schemaVersion": 1,
+                "arrayId": "runtime-aca-named",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "lead-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "lead-character.primary",
+                                        "privacyRequirement": "local_only",
+                                        "requiredCapabilities": {"conversation": 0.9},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "support-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "support-character.primary",
+                                        "requiredCapabilities": {"conversation": 0.5},
+                                    },
+                                },
+                                {
+                                    "roleId": "coding",
+                                    "maxSubagents": 3,
+                                    "task": {
+                                        "taskId": "support-character.coding",
+                                        "requireTools": True,
+                                        "requiredCapabilities": {"coding": 0.9},
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_character_array_member(
+            [local_endpoint(), cli_endpoint()],
+            array,
+            ProviderExecutionRequest("write code", timeout_seconds=2),
+            slot_id="support",
+            role_id="coding",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.slot_id, "support")
+        self.assertFalse(result.primary)
+        self.assertEqual(result.character_id, "support-character")
+        self.assertEqual(result.role_id, "coding")
+        self.assertEqual(result.model_id, "cli-coder")
+        self.assertEqual(result.provider, "cli")
+        self.assertEqual(result.execution.response_text, "cli-coder:write code")
+        self.assertEqual(result.character_selection.max_subagents_for("coding"), 3)
+
+    def test_execute_character_array_member_rejects_unknown_slot(self):
+        array = parse_character_array(
+            {
+                "schemaVersion": 1,
+                "arrayId": "runtime-aca-unknown-slot",
+                "members": [
+                    {
+                        "alias": "solo",
+                        "primary": True,
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "solo-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "solo-character.primary",
+                                        "requiredCapabilities": {"conversation": 0.5},
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        )
+
+        with self.assertRaises(CharacterArrayError) as error:
+            execute_character_array_member([local_endpoint()], array, "hello", slot_id="missing")
+
+        self.assertIn("Unknown CHARACTER ARRAY slot", str(error.exception))
 
     def test_execute_character_role_rejects_unknown_role(self):
         profile = parse_character_profile(
