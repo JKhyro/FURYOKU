@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "arrayId": "dual-symbiote",
+  "class": "Symbiote",
+  "rank": "Prototype",
+  "description": "Example Agentic Character Array (ACA) composing a Kira-style primary Character with a tertiary-Symbiote support Character.",
+  "members": [
+    {
+      "alias": "kira-lead",
+      "responsibility": "primary orchestration CHARACTER driving the conversation",
+      "primary": true,
+      "profilePath": "character_profile.kira-array.json"
+    },
+    {
+      "alias": "tertiary-support",
+      "responsibility": "single-role support CHARACTER handling follow-up fan-out",
+      "profilePath": "character_profile.tertiary-symbiote.json"
+    }
+  ]
+}

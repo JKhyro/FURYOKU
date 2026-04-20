@@ -16,6 +16,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Completed runtime adoption lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) established Hermes Agent as the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Completed closeout lane: [#278](https://github.com/JKhyro/FURYOKU/issues/278) aligned local/GitHub truth for the [#230](https://github.com/JKhyro/FURYOKU/issues/230) parent closeout after [#276](https://github.com/JKhyro/FURYOKU/issues/276) reconciled bridge/migration docs
+- Current active lane: [#280](https://github.com/JKhyro/FURYOKU/issues/280) formalizes the Adaptive Response Array (ARA) and Agentic Character Array (ACA) composition surfaces on top of the completed [#97](https://github.com/JKhyro/FURYOKU/issues/97) CHARACTER envelope groundwork
 - Future runtime work: open a new explicitly scoped issue; do not infer runtime launch, scheduler expansion, OpenClaw work, or Ubuntu/WSL/Ubuntu-VM work from the completed [#230](https://github.com/JKhyro/FURYOKU/issues/230) lane
 
 ## Current Baseline
@@ -154,7 +155,8 @@ Current routing core:
 - Comparative execution reports can append one feedback record per executed candidate so future recommendation and routing runs can learn from same-prompt comparison results.
 - Suite-level comparative execution batches can now compare multiple decision-suite situations in one aggregate report using a prompt-map input.
 - Suite-level `compare-batch` reports can append one feedback record per executed candidate so aggregate comparative batches feed the same reusable feedback-evidence loop.
-- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `compare-batch`, `health`, `approval-resume-store-report`, `approval-resume-create`, `character-select`, and `character-run` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, local approval/resume store inspection and retry-record creation, comparative execution, CHARACTER role selection, and selected role execution.
+- [`furyoku/character_arrays.py`](furyoku/character_arrays.py) composes one or more CHARACTER (ARA) profiles into an Agentic Character Array (ACA) orchestration envelope with per-member selection, primary/secondary responsibility, and aggregate role/subagent totals.
+- [`furyoku/cli.py`](furyoku/cli.py) provides `select`, `decide`, `run`, `compare-run`, `compare-batch`, `health`, `approval-resume-store-report`, `approval-resume-create`, `character-select`, `character-run`, and `character-array-select` commands for registry-backed model routing, multi-situation decisions, execution, readiness checks, local approval/resume store inspection and retry-record creation, comparative execution, CHARACTER (ARA) role selection, selected role execution, and Agentic Character Array (ACA) envelope selection.
 - [`examples/model_registry.example.json`](examples/model_registry.example.json) shows local, CLI, and API endpoint configuration.
 - [`examples/decision_suite.primary-routing.json`](examples/decision_suite.primary-routing.json) shows a reusable multi-situation decision suite.
 - [`examples/comparison_prompt_map.primary-routing.json`](examples/comparison_prompt_map.primary-routing.json) shows a reusable prompt-map for suite-level comparative execution batches.
@@ -163,7 +165,9 @@ Current routing core:
 - [`examples/task_profile.tradeoff-speed-chat.json`](examples/task_profile.tradeoff-speed-chat.json) shows task-level soft tradeoff weighting for a latency-sensitive chat task.
 - [`examples/character_profile.tertiary-symbiote.json`](examples/character_profile.tertiary-symbiote.json) shows a one-role tertiary Symbiote composition.
 - [`examples/character_profile.kira-array.json`](examples/character_profile.kira-array.json) shows a larger Kira-style one-primary/seven-secondary role array.
+- [`examples/character_array.dual-symbiote.json`](examples/character_array.dual-symbiote.json) shows an Agentic Character Array (ACA) that composes the Kira-style primary CHARACTER with the tertiary-Symbiote support CHARACTER into one executable envelope.
 - [`tests/test_character_profiles.py`](tests/test_character_profiles.py) verifies flexible CHARACTER profile loading and validation.
+- [`tests/test_character_arrays.py`](tests/test_character_arrays.py) verifies ACA loading, validation, envelope totals, and readiness-aware selection flow-through.
 - [`tests/test_model_router.py`](tests/test_model_router.py) verifies local-only selection, CLI/API routing, blocker reporting, flexible CHARACTER composition, and the three-role compatibility helper.
 - [`tests/test_model_registry.py`](tests/test_model_registry.py) verifies registry loading, validation, and routing from configuration.
 - [`tests/test_task_profiles.py`](tests/test_task_profiles.py) verifies task profile loading and validation.
@@ -208,7 +212,17 @@ python -m furyoku.cli character-select --registry .\examples\model_registry.exam
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.tertiary-symbiote.json --check-health
 python -m furyoku.cli character-select --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.kira-array.json --output .\character-envelope.json
 python -m furyoku.cli character-run --registry .\examples\model_registry.example.json --character-profile .\examples\character_profile.tertiary-symbiote.json --prompt "Hello"
+python -m furyoku.cli character-array-select --registry .\examples\model_registry.example.json --character-array .\examples\character_array.dual-symbiote.json --output .\aca-envelope.json
 ```
+
+## Character Composition Doctrine (ARA / ACA)
+
+FURYOKU names the two CHARACTER composition surfaces explicitly, in line with the CORTEX character doctrine:
+
+- **Adaptive Response Array (ARA)** — one CHARACTER. An ARA is a bound set of role components (one optional primary plus any number of secondaries, each with its own task requirements and up to twelve subagents). This is the surface produced by [`furyoku/character_profiles.py`](furyoku/character_profiles.py) and consumed by `character-select` / `character-run`.
+- **Agentic Character Array (ACA)** — an array of CHARACTERS. An ACA composes one or more ARA profiles (each one full CHARACTER) into a single executable orchestration envelope, preserving per-character primary/secondary responsibility as well as array-level totals (character count, total role count, total subagent capacity). This is the surface produced by [`furyoku/character_arrays.py`](furyoku/character_arrays.py) and consumed by `character-array-select`.
+
+An ACA member can reference an existing CHARACTER profile on disk through `profilePath`, embed one inline through `character`, or attach one through `profile`. Exactly one of those three fields must be present per member. Aliases and responsibilities are optional metadata that travel into the envelope for downstream orchestration.
 
 ## Benchmark Evidence Lane
 
