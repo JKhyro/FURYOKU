@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
+from .character_arrays import (
+    CharacterArray,
+    CharacterArrayError,
+    CharacterArrayMember,
+)
 from .character_profiles import CharacterProfile, CharacterProfileSelection, select_character_profile_models
 from .model_decisions import (
     DecisionSuite,
@@ -82,6 +87,56 @@ class CharacterRoleExecutionResult:
     @property
     def provider(self) -> str:
         return self.selection.model.provider
+
+
+@dataclass(frozen=True)
+class CharacterArrayMemberExecutionResult:
+    """One CHARACTER ARRAY (ACA) member's selected role executed through a provider adapter."""
+
+    array: CharacterArray
+    member: CharacterArrayMember
+    slot_id: str
+    role_result: CharacterRoleExecutionResult
+
+    @property
+    def ok(self) -> bool:
+        return self.role_result.ok
+
+    @property
+    def array_id(self) -> str:
+        return self.array.array_id
+
+    @property
+    def character_id(self) -> str:
+        return self.role_result.character_id
+
+    @property
+    def role_id(self) -> str:
+        return self.role_result.role_id
+
+    @property
+    def primary(self) -> bool:
+        return self.member.primary
+
+    @property
+    def selection(self) -> ModelScore:
+        return self.role_result.selection
+
+    @property
+    def execution(self) -> ProviderExecutionResult:
+        return self.role_result.execution
+
+    @property
+    def character_selection(self) -> CharacterProfileSelection:
+        return self.role_result.character_selection
+
+    @property
+    def model_id(self) -> str:
+        return self.role_result.model_id
+
+    @property
+    def provider(self) -> str:
+        return self.role_result.provider
 
 
 @dataclass(frozen=True)
@@ -545,6 +600,47 @@ def execute_character_role(
         role_id=resolved_role_id,
         selection=selection,
         execution=execution,
+    )
+
+
+def execute_character_array_member(
+    models: list[ModelEndpoint],
+    array: CharacterArray,
+    request: ProviderExecutionRequest | str,
+    *,
+    slot_id: str | None = None,
+    role_id: str | None = None,
+    allow_reuse: bool = True,
+    readiness: ReadinessEvidenceInput | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> CharacterArrayMemberExecutionResult:
+    """Execute one role on one CHARACTER member of an Agentic Character Array."""
+
+    if not isinstance(array, CharacterArray):
+        raise CharacterArrayError(
+            "CHARACTER ARRAY execution requires a parsed CharacterArray"
+        )
+    if slot_id is None:
+        member = next(
+            (candidate for candidate in array.members if candidate.primary),
+            array.members[0],
+        )
+    else:
+        member = array.member(slot_id)
+    role_result = execute_character_role(
+        models,
+        member.profile,
+        request,
+        role_id=role_id,
+        allow_reuse=allow_reuse,
+        readiness=readiness,
+        adapters=adapters,
+    )
+    return CharacterArrayMemberExecutionResult(
+        array=array,
+        member=member,
+        slot_id=member.slot_id,
+        role_result=role_result,
     )
 
 

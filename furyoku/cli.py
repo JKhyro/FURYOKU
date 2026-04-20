@@ -54,6 +54,7 @@ from .hermes_bridge import (
     load_hermes_three_symbiote_smoke,
 )
 from .runtime import (
+    CharacterArrayMemberExecutionResult,
     CharacterRoleExecutionResult,
     ComparativeExecutionBatchResult,
     ComparativeEvaluationResult,
@@ -62,6 +63,7 @@ from .runtime import (
     compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
+    execute_character_array_member,
     execute_character_role,
     execute_decision_situation,
     execute_decision_situation_with_fallback,
@@ -499,6 +501,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         _write_json(envelope.to_dict(), output_path=args.output)
         return 0
+
+    if args.command == "character-array-run":
+        array = load_character_array(args.character_array)
+        readiness = _readiness_from_args(args, models)
+        result = execute_character_array_member(
+            models,
+            array,
+            ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
+            slot_id=args.slot_id,
+            role_id=args.role_id,
+            allow_reuse=not args.no_reuse,
+            readiness=readiness,
+        )
+        _write_json(_character_array_member_result_to_dict(result), output_path=args.output)
+        return 0 if result.ok else 2
 
     parser.error(f"unsupported command {args.command}")
     return 2
@@ -1026,6 +1043,55 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_health_decision_args(
         character_array_parser,
         "Run provider readiness checks before assigning CHARACTER ARRAY members.",
+    )
+    character_array_run_parser = subparsers.add_parser(
+        "character-array-run",
+        help="Select CHARACTER ARRAY (ACA) member assignments and execute one member's role.",
+    )
+    character_array_run_parser.add_argument(
+        "--registry",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU model registry JSON file.",
+    )
+    character_array_run_parser.add_argument(
+        "--character-array",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU Agentic Character Array (ACA) JSON file.",
+    )
+    character_array_run_parser.add_argument(
+        "--prompt",
+        required=True,
+        help="Prompt text passed to the selected CHARACTER ARRAY member role.",
+    )
+    character_array_run_parser.add_argument(
+        "--slot-id",
+        help="CHARACTER ARRAY slot (alias) to execute. Defaults to the array's primary member.",
+    )
+    character_array_run_parser.add_argument(
+        "--role-id",
+        help="CHARACTER role id inside the selected member to execute. Defaults to that member's primary role.",
+    )
+    character_array_run_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=60.0,
+        help="Execution timeout in seconds.",
+    )
+    character_array_run_parser.add_argument(
+        "--no-reuse",
+        action="store_true",
+        help="Require each CHARACTER role across every member to use a distinct registered model.",
+    )
+    character_array_run_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to persist the JSON CHARACTER ARRAY member execution report.",
+    )
+    _add_health_decision_args(
+        character_array_run_parser,
+        "Run provider readiness checks before assigning and executing a CHARACTER ARRAY member role.",
     )
     return parser
 
@@ -1740,6 +1806,24 @@ def _decision_report_to_dict(report: ModelDecisionReport, *, readiness=None) -> 
 def _character_role_result_to_dict(result: CharacterRoleExecutionResult) -> dict:
     return {
         "ok": result.ok,
+        "characterId": result.character_id,
+        "executedRoleId": result.role_id,
+        "selectedModel": _score_to_dict(result.selection),
+        "execution": _execution_to_dict(result.execution),
+        "roleAssignments": _character_profile_selection_to_dict(result.character_selection),
+    }
+
+
+def _character_array_member_result_to_dict(
+    result: CharacterArrayMemberExecutionResult,
+) -> dict:
+    return {
+        "ok": result.ok,
+        "arrayId": result.array_id,
+        "slotId": result.slot_id,
+        "alias": result.member.alias,
+        "responsibility": result.member.responsibility,
+        "primary": result.primary,
         "characterId": result.character_id,
         "executedRoleId": result.role_id,
         "selectedModel": _score_to_dict(result.selection),
