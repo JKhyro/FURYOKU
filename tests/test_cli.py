@@ -2508,6 +2508,76 @@ class CliTests(unittest.TestCase):
             self.assertIn("api transport", payload["execution"]["error"])
             self.assertEqual(payload["roleAssignments"]["roles"][1]["selection"]["modelId"], "remote-coder")
 
+    def test_character_array_select_outputs_aca_envelope_json(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            array_path = Path(temp_dir) / "array.json"
+            output_path = Path(temp_dir) / "reports" / "character-array-select.json"
+            write_registry(registry_path)
+            write_character_profile(character_path)
+            array_payload = {
+                "schemaVersion": 1,
+                "arrayId": "cli-aca",
+                "class": "Symbiote",
+                "rank": "Prototype",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "profilePath": str(character_path),
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "cli-support",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "maxSubagents": 0,
+                                    "task": {
+                                        "taskId": "cli-support.primary",
+                                        "requiredCapabilities": {"conversation": 0.7},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+            array_path.write_text(json.dumps(array_payload), encoding="utf-8")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-array-select",
+                        "--registry",
+                        str(registry_path),
+                        "--character-array",
+                        str(array_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["arrayId"], "cli-aca")
+            self.assertEqual(payload["characterCount"], 2)
+            self.assertEqual(payload["totalRoleCount"], 3)
+            self.assertEqual(payload["totalMaxSubagents"], 6)
+            self.assertEqual(payload["primaryCharacterId"], "test-character")
+            self.assertEqual(payload["members"][0]["slotId"], "lead")
+            self.assertTrue(payload["members"][0]["primary"])
+            self.assertEqual(payload["members"][0]["character"]["characterId"], "test-character")
+            self.assertEqual(payload["members"][1]["slotId"], "support")
+            self.assertEqual(payload["members"][1]["character"]["characterId"], "cli-support")
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+
 
 if __name__ == "__main__":
     unittest.main()

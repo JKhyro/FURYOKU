@@ -13,6 +13,10 @@ from .character_profiles import (
     load_character_profile,
     select_character_profile_models,
 )
+from .character_arrays import (
+    load_character_array,
+    select_character_array_envelope,
+)
 from .model_registry import load_model_registry
 from .model_router import ModelScore, RouterError, TaskProfile, load_routing_score_policy, select_model
 from .model_decisions import ModelDecisionReport, build_model_recommendation_report, evaluate_model_decisions, load_decision_suite
@@ -483,6 +487,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         _write_json(_character_role_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
+
+    if args.command == "character-array-select":
+        array = load_character_array(args.character_array)
+        readiness = _readiness_from_args(args, models)
+        envelope = select_character_array_envelope(
+            models,
+            array,
+            allow_reuse=not args.no_reuse,
+            readiness=readiness,
+        )
+        _write_json(envelope.to_dict(), output_path=args.output)
+        return 0
 
     parser.error(f"unsupported command {args.command}")
     return 2
@@ -981,6 +997,36 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     character_run_parser.add_argument("--output", type=Path, help="Optional path to persist the JSON CHARACTER execution report.")
     _add_health_decision_args(character_run_parser, "Run provider readiness checks before assigning and executing a CHARACTER role.")
+    character_array_parser = subparsers.add_parser(
+        "character-array-select",
+        help="Select concrete model endpoints for every CHARACTER in an Agentic Character Array (ACA).",
+    )
+    character_array_parser.add_argument(
+        "--registry",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU model registry JSON file.",
+    )
+    character_array_parser.add_argument(
+        "--character-array",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU Agentic Character Array (ACA) JSON file.",
+    )
+    character_array_parser.add_argument(
+        "--no-reuse",
+        action="store_true",
+        help="Require each CHARACTER role across every member to use a distinct registered model.",
+    )
+    character_array_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to persist the JSON ACA envelope.",
+    )
+    _add_health_decision_args(
+        character_array_parser,
+        "Run provider readiness checks before assigning CHARACTER ARRAY members.",
+    )
     return parser
 
 
