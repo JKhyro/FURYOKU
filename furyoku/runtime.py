@@ -140,6 +140,44 @@ class CharacterArrayMemberExecutionResult:
 
 
 @dataclass(frozen=True)
+class CharacterArrayExecutionResult:
+    """Executed role assignments for every CHARACTER member of an Agentic Character Array."""
+
+    array: CharacterArray
+    member_results: tuple[CharacterArrayMemberExecutionResult, ...]
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.member_results) and all(result.ok for result in self.member_results)
+
+    @property
+    def array_id(self) -> str:
+        return self.array.array_id
+
+    @property
+    def primary_character_id(self) -> str:
+        return self.array.primary_character_id
+
+    @property
+    def member_count(self) -> int:
+        return len(self.member_results)
+
+    @property
+    def successful_count(self) -> int:
+        return sum(1 for result in self.member_results if result.ok)
+
+    @property
+    def failed_count(self) -> int:
+        return self.member_count - self.successful_count
+
+    def member_result(self, slot_id: str) -> CharacterArrayMemberExecutionResult:
+        for result in self.member_results:
+            if result.slot_id == slot_id:
+                return result
+        raise CharacterArrayError(f"Unknown CHARACTER ARRAY slot '{slot_id}'")
+
+
+@dataclass(frozen=True)
 class DecisionSituationExecutionResult:
     """A calibrated decision-suite situation executed through a selected endpoint."""
 
@@ -642,6 +680,46 @@ def execute_character_array_member(
         slot_id=member.slot_id,
         role_result=role_result,
     )
+
+
+def execute_character_array(
+    models: list[ModelEndpoint],
+    array: CharacterArray,
+    request: ProviderExecutionRequest | str,
+    *,
+    role_id_by_slot: Mapping[str, str] | None = None,
+    default_role_id: str | None = None,
+    allow_reuse: bool = True,
+    readiness: ReadinessEvidenceInput | None = None,
+    adapters: Mapping[str, ProviderAdapter] | None = None,
+) -> CharacterArrayExecutionResult:
+    """Execute one role on every CHARACTER member of an Agentic Character Array."""
+
+    if not isinstance(array, CharacterArray):
+        raise CharacterArrayError(
+            "CHARACTER ARRAY execution requires a parsed CharacterArray"
+        )
+    overrides = dict(role_id_by_slot or {})
+    valid_slots = {member.slot_id for member in array.members}
+    unknown = sorted(slot for slot in overrides if slot not in valid_slots)
+    if unknown:
+        raise CharacterArrayError(
+            f"Unknown CHARACTER ARRAY slot(s) in role_id_by_slot: {', '.join(unknown)}"
+        )
+    member_results = tuple(
+        execute_character_array_member(
+            models,
+            array,
+            request,
+            slot_id=member.slot_id,
+            role_id=overrides.get(member.slot_id, default_role_id),
+            allow_reuse=allow_reuse,
+            readiness=readiness,
+            adapters=adapters,
+        )
+        for member in array.members
+    )
+    return CharacterArrayExecutionResult(array=array, member_results=member_results)
 
 
 def _execute_fallback_attempts(

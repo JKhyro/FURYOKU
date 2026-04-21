@@ -15,6 +15,7 @@ from furyoku import (
     compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
+    execute_character_array,
     execute_character_array_member,
     execute_decision_situation,
     execute_decision_situation_with_fallback,
@@ -929,6 +930,199 @@ class RuntimeTests(unittest.TestCase):
             execute_character_array_member([local_endpoint()], array, "hello", slot_id="missing")
 
         self.assertIn("Unknown CHARACTER ARRAY slot", str(error.exception))
+
+    def test_execute_character_array_fans_out_each_members_primary_role(self):
+        array = parse_character_array(
+            {
+                "schemaVersion": 1,
+                "arrayId": "runtime-aca-fanout",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "lead-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "lead-character.primary",
+                                        "privacyRequirement": "local_only",
+                                        "requiredCapabilities": {"conversation": 0.9},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "support-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "support-character.primary",
+                                        "requireTools": True,
+                                        "requiredCapabilities": {"coding": 0.9},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_character_array(
+            [local_endpoint(), cli_endpoint()],
+            array,
+            "hello",
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.array_id, "runtime-aca-fanout")
+        self.assertEqual(result.member_count, 2)
+        self.assertEqual(result.successful_count, 2)
+        self.assertEqual(result.failed_count, 0)
+        lead = result.member_result("lead")
+        support = result.member_result("support")
+        self.assertEqual(lead.role_id, "primary")
+        self.assertEqual(lead.model_id, "local-chat")
+        self.assertEqual(lead.execution.response_text, "local-chat:hello")
+        self.assertEqual(support.role_id, "primary")
+        self.assertEqual(support.model_id, "cli-coder")
+        self.assertEqual(support.execution.response_text, "cli-coder:hello")
+
+    def test_execute_character_array_applies_per_slot_role_overrides(self):
+        array = parse_character_array(
+            {
+                "schemaVersion": 1,
+                "arrayId": "runtime-aca-overrides",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "lead-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "lead-character.primary",
+                                        "privacyRequirement": "local_only",
+                                        "requiredCapabilities": {"conversation": 0.9},
+                                    },
+                                },
+                                {
+                                    "roleId": "coding",
+                                    "task": {
+                                        "taskId": "lead-character.coding",
+                                        "requireTools": True,
+                                        "requiredCapabilities": {"coding": 0.9},
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "support-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "support-character.primary",
+                                        "requiredCapabilities": {"conversation": 0.5},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+        )
+
+        def runner(invocation, prompt, timeout):
+            return subprocess.CompletedProcess(invocation, 0, stdout=f"{invocation[0]}:{prompt}", stderr="")
+
+        result = execute_character_array(
+            [local_endpoint(), cli_endpoint()],
+            array,
+            "hello",
+            role_id_by_slot={"lead": "coding"},
+            adapters={
+                "local": SubprocessProviderAdapter(runner),
+                "cli": SubprocessProviderAdapter(runner),
+            },
+        )
+
+        self.assertTrue(result.ok)
+        lead = result.member_result("lead")
+        support = result.member_result("support")
+        self.assertEqual(lead.role_id, "coding")
+        self.assertEqual(lead.model_id, "cli-coder")
+        self.assertEqual(lead.execution.response_text, "cli-coder:hello")
+        self.assertEqual(support.role_id, "primary")
+        self.assertTrue(support.ok)
+        self.assertEqual(
+            support.execution.response_text,
+            f"{support.model_id}:hello",
+        )
+
+    def test_execute_character_array_rejects_unknown_slot_override(self):
+        array = parse_character_array(
+            {
+                "schemaVersion": 1,
+                "arrayId": "runtime-aca-bad-override",
+                "members": [
+                    {
+                        "alias": "solo",
+                        "primary": True,
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "solo-character",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "solo-character.primary",
+                                        "requiredCapabilities": {"conversation": 0.5},
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        )
+
+        with self.assertRaises(CharacterArrayError) as error:
+            execute_character_array(
+                [local_endpoint()],
+                array,
+                "hello",
+                role_id_by_slot={"missing": "primary"},
+            )
+
+        self.assertIn("missing", str(error.exception))
 
     def test_execute_character_role_rejects_unknown_role(self):
         profile = parse_character_profile(
