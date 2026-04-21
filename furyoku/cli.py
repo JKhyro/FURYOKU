@@ -54,6 +54,7 @@ from .hermes_bridge import (
     load_hermes_three_symbiote_smoke,
 )
 from .runtime import (
+    CharacterArrayExecutionResult,
     CharacterArrayMemberExecutionResult,
     CharacterRoleExecutionResult,
     ComparativeExecutionBatchResult,
@@ -63,6 +64,7 @@ from .runtime import (
     compare_decision_suite_executions,
     compare_decision_situation_executions,
     compare_model_executions,
+    execute_character_array,
     execute_character_array_member,
     execute_character_role,
     execute_decision_situation,
@@ -515,6 +517,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             readiness=readiness,
         )
         _write_json(_character_array_member_result_to_dict(result), output_path=args.output)
+        return 0 if result.ok else 2
+
+    if args.command == "character-array-run-all":
+        array = load_character_array(args.character_array)
+        readiness = _readiness_from_args(args, models)
+        role_id_by_slot = _parse_slot_role_overrides(args.role_id_for or [])
+        result = execute_character_array(
+            models,
+            array,
+            ProviderExecutionRequest(args.prompt, timeout_seconds=args.timeout_seconds),
+            role_id_by_slot=role_id_by_slot,
+            default_role_id=args.role_id,
+            allow_reuse=not args.no_reuse,
+            readiness=readiness,
+        )
+        _write_json(_character_array_execution_result_to_dict(result), output_path=args.output)
         return 0 if result.ok else 2
 
     parser.error(f"unsupported command {args.command}")
@@ -1092,6 +1110,57 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_health_decision_args(
         character_array_run_parser,
         "Run provider readiness checks before assigning and executing a CHARACTER ARRAY member role.",
+    )
+    character_array_run_all_parser = subparsers.add_parser(
+        "character-array-run-all",
+        help="Execute every CHARACTER member of an Agentic Character Array (ACA) in one invocation.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--registry",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU model registry JSON file.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--character-array",
+        required=True,
+        type=Path,
+        help="Path to a FURYOKU Agentic Character Array (ACA) JSON file.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--prompt",
+        required=True,
+        help="Prompt text passed to every CHARACTER ARRAY member's selected role.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--role-id",
+        help="Default CHARACTER role id applied to every member. Defaults to each member's primary role.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--role-id-for",
+        action="append",
+        metavar="SLOT=ROLE",
+        help="Per-slot CHARACTER role override; repeat to set overrides for multiple slots.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=60.0,
+        help="Execution timeout in seconds applied to every member invocation.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--no-reuse",
+        action="store_true",
+        help="Require each CHARACTER role across every member to use a distinct registered model.",
+    )
+    character_array_run_all_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to persist the JSON CHARACTER ARRAY execution report.",
+    )
+    _add_health_decision_args(
+        character_array_run_all_parser,
+        "Run provider readiness checks before assigning and executing every CHARACTER ARRAY member role.",
     )
     return parser
 
@@ -1830,6 +1899,42 @@ def _character_array_member_result_to_dict(
         "execution": _execution_to_dict(result.execution),
         "roleAssignments": _character_profile_selection_to_dict(result.character_selection),
     }
+
+
+def _character_array_execution_result_to_dict(
+    result: CharacterArrayExecutionResult,
+) -> dict:
+    return {
+        "ok": result.ok,
+        "arrayId": result.array_id,
+        "primaryCharacterId": result.primary_character_id,
+        "memberCount": result.member_count,
+        "successfulCount": result.successful_count,
+        "failedCount": result.failed_count,
+        "members": [_character_array_member_result_to_dict(member) for member in result.member_results],
+    }
+
+
+def _parse_slot_role_overrides(raw: list[str]) -> dict[str, str]:
+    overrides: dict[str, str] = {}
+    for entry in raw:
+        if "=" not in entry:
+            raise SystemExit(
+                f"--role-id-for must be formatted as SLOT=ROLE (got {entry!r})"
+            )
+        slot, role = entry.split("=", 1)
+        slot = slot.strip()
+        role = role.strip()
+        if not slot or not role:
+            raise SystemExit(
+                f"--role-id-for must be formatted as SLOT=ROLE (got {entry!r})"
+            )
+        if slot in overrides:
+            raise SystemExit(
+                f"--role-id-for provided more than once for slot {slot!r}"
+            )
+        overrides[slot] = role
+    return overrides
 
 
 def _execution_to_dict(execution: ProviderExecutionResult) -> dict:

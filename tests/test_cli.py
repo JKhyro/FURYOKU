@@ -2723,6 +2723,139 @@ class CliTests(unittest.TestCase):
             self.assertEqual(payload["selectedModel"]["modelId"], "cli-coder")
             self.assertEqual(payload["execution"]["responseText"].strip(), "code:write code")
 
+    def test_character_array_run_all_fans_out_every_member(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            array_path = Path(temp_dir) / "array.json"
+            output_path = Path(temp_dir) / "reports" / "character-array-run-all.json"
+            write_executable_character_registry(registry_path)
+            write_character_profile(character_path)
+            array_payload = {
+                "schemaVersion": 1,
+                "arrayId": "cli-aca-fanout",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "profilePath": str(character_path),
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "cli-support-fanout",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "cli-support-fanout.primary",
+                                        "requiredCapabilities": {"conversation": 0.7},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+            array_path.write_text(json.dumps(array_payload), encoding="utf-8")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-array-run-all",
+                        "--registry",
+                        str(registry_path),
+                        "--character-array",
+                        str(array_path),
+                        "--prompt",
+                        "hello",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["arrayId"], "cli-aca-fanout")
+            self.assertEqual(payload["memberCount"], 2)
+            self.assertEqual(payload["successfulCount"], 2)
+            self.assertEqual(payload["failedCount"], 0)
+            self.assertEqual(payload["members"][0]["slotId"], "lead")
+            self.assertTrue(payload["members"][0]["primary"])
+            self.assertEqual(payload["members"][0]["executedRoleId"], "primary")
+            self.assertEqual(payload["members"][0]["execution"]["responseText"].strip(), "echo:hello")
+            self.assertEqual(payload["members"][1]["slotId"], "support")
+            self.assertFalse(payload["members"][1]["primary"])
+            self.assertIn("generatedAt", persisted["reportMetadata"])
+
+    def test_character_array_run_all_applies_per_slot_role_override(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry_path = Path(temp_dir) / "models.json"
+            character_path = Path(temp_dir) / "character.json"
+            array_path = Path(temp_dir) / "array.json"
+            write_executable_character_registry(registry_path)
+            write_character_profile(character_path)
+            array_payload = {
+                "schemaVersion": 1,
+                "arrayId": "cli-aca-fanout-override",
+                "members": [
+                    {
+                        "alias": "lead",
+                        "primary": True,
+                        "profilePath": str(character_path),
+                    },
+                    {
+                        "alias": "support",
+                        "character": {
+                            "schemaVersion": 1,
+                            "characterId": "cli-support-fanout-override",
+                            "roles": [
+                                {
+                                    "roleId": "primary",
+                                    "primary": True,
+                                    "task": {
+                                        "taskId": "cli-support-fanout-override.primary",
+                                        "requiredCapabilities": {"conversation": 0.7},
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                ],
+            }
+            array_path.write_text(json.dumps(array_payload), encoding="utf-8")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "character-array-run-all",
+                        "--registry",
+                        str(registry_path),
+                        "--character-array",
+                        str(array_path),
+                        "--prompt",
+                        "hello",
+                        "--role-id-for",
+                        "lead=coding",
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["memberCount"], 2)
+            self.assertEqual(payload["members"][0]["slotId"], "lead")
+            self.assertEqual(payload["members"][0]["executedRoleId"], "coding")
+            self.assertEqual(payload["members"][0]["execution"]["responseText"].strip(), "code:hello")
+            self.assertEqual(payload["members"][1]["slotId"], "support")
+            self.assertEqual(payload["members"][1]["executedRoleId"], "primary")
+
 
 if __name__ == "__main__":
     unittest.main()
