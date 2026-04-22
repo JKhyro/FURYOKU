@@ -16,7 +16,7 @@ FURYOKU is the active AI lab program for custom LLM research, implementation, op
 - Completed runtime adoption lane: [#230](https://github.com/JKhyro/FURYOKU/issues/230) established Hermes Agent as the FURYOKU runtime base
 - Downstream CHARACTER/MOA groundwork completed: [#97](https://github.com/JKhyro/FURYOKU/issues/97)
 - Completed closeout lane: [#278](https://github.com/JKhyro/FURYOKU/issues/278) aligned local/GitHub truth for the [#230](https://github.com/JKhyro/FURYOKU/issues/230) parent closeout after [#276](https://github.com/JKhyro/FURYOKU/issues/276) reconciled bridge/migration docs
-- Current active lane: [#284](https://github.com/JKhyro/FURYOKU/issues/284) adds the `character-array-run-all` full-array fan-out surface (`execute_character_array` + CLI) on top of the landed [#282](https://github.com/JKhyro/FURYOKU/issues/282) per-member ACA execution and [#280](https://github.com/JKhyro/FURYOKU/issues/280) ARA/ACA composition contract
+- Completed ACA/ARA execution lanes: [#280](https://github.com/JKhyro/FURYOKU/issues/280) formalized the ARA/ACA composition contract, [#282](https://github.com/JKhyro/FURYOKU/issues/282) added per-member ACA execution, and [#284](https://github.com/JKhyro/FURYOKU/issues/284) added the `character-array-run-all` full-array fan-out surface (`execute_character_array` + CLI)
 - Future runtime work: open a new explicitly scoped issue; do not infer runtime launch, scheduler expansion, OpenClaw work, or Ubuntu/WSL/Ubuntu-VM work from the completed [#230](https://github.com/JKhyro/FURYOKU/issues/230) lane
 
 ## Current Baseline
